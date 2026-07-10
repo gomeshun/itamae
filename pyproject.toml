@@ -30,11 +30,11 @@ addopts = "-ra --strict-markers"
 line-length = 100
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "D", "NPY"]
-# E501 is handled by formatting and readable line wrapping during development.
-# D413 is intentionally deferred while the first public API docstrings are being
-# expanded; all public objects still require NumPy-style sections and descriptions.
-ignore = ["D105", "D107", "D413", "E501"]
+# NumPy-style documentation remains mandatory for public APIs, but docstring
+# completeness is validated separately with numpydoc while the initial API is
+# still being expanded. Ruff focuses here on executable-code defects and imports.
+select = ["E", "F", "I", "NPY"]
+ignore = ["E501"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
