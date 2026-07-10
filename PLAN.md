@@ -2,168 +2,254 @@
 
 **ITAMAE: Integrated Toolkit for Analytical Merger-tree And Evolution**
 
-This document records the initial implementation policy for ITAMAE after
-reviewing the current implementations of SASHIMI-C, SASHIMI-W, SASHIMI-SI,
-SASHIMI-F, the FDM profile implementation in `dsph_fuzzy`, and the spatial
-work in the `r-dependent` branch of SASHIMI-C.
+This document defines the implementation policy for ITAMAE after reviewing the
+current SASHIMI-C, SASHIMI-W, SASHIMI-SI, and SASHIMI-F implementations, the
+FDM profile implementation in `dsph_fuzzy`, and the spatial development in the
+`r-dependent` branch of SASHIMI-C.
 
-The plan is deliberately conservative. The first goal is not to redesign every
-SASHIMI model, but to establish a common computational foundation without
-moving the scientific identity of each SASHIMI variant into ITAMAE.
+The goal is to remove duplicated computational machinery without moving the
+scientific identity of each SASHIMI variant into ITAMAE.
 
 ## 1. Executive decision
 
-ITAMAE will own the common **computational language** of the SASHIMI family:
+ITAMAE owns the common **computational language** of the SASHIMI family:
 
 1. typed state and catalog objects;
-2. cosmological and halo-profile primitives;
-3. grids, quadrature, interpolation, integration, caching, and batch execution;
-4. interfaces connecting accretion, structure, evolution, survival, and spatial
-   models;
-5. generic solvers that operate on model-supplied equations;
+2. backend-independent cosmology and unit interfaces;
+3. spherical-halo and profile primitives;
+4. grids, quadrature, interpolation, integration, caching, and batch execution;
+5. generic evolution solvers that operate on model-supplied equations;
 6. deterministic weighted measures and stochastic realizations;
-7. optional phase-space and radial-distribution infrastructure.
+7. optional radial and phase-space infrastructure.
 
-Each SASHIMI variant will continue to own its scientific prescription:
+Each SASHIMI variant continues to own its physical prescriptions and default
+composition:
 
 - **SASHIMI-C:** CDM variance/concentration choices, Yang-type accretion model,
-  calibrated average mass-loss law, tidal structural response, disruption
-  convention, and CDM observables;
-- **SASHIMI-W:** WDM transfer function, filtering convention, WDM concentration
-  calculation, and WDM-specific calibration;
-- **SASHIMI-SI:** effective cross section and gravothermal/profile-evolution
-  model;
+  calibrated average stripping law, structural response, disruption convention,
+  and CDM observables;
+- **SASHIMI-W:** WDM transfer function, filtering convention, WDM concentration,
+  and WDM-specific calibration;
+- **SASHIMI-SI:** SIDM cross section and gravothermal/profile evolution;
 - **SASHIMI-F:** FDM transfer function, variance/filter choices, and FDM-specific
   structure assignment;
 - **downstream dSph projects:** Jeans likelihoods, observational priors, and
   inference workflows.
 
-The boundary is summarized as:
-
 > ITAMAE defines how components communicate and how a calculation is executed.  
-> A SASHIMI variant defines the physical components that should be used.
+> A SASHIMI variant defines which physical components constitute its model.
 
-ITAMAE must therefore not contain a default monolithic `SashimiModel` whose
-hidden defaults reproduce SASHIMI-C. Such a class would make SASHIMI-C a thin
-wrapper and obscure which assumptions define each scientific model.
+ITAMAE must not provide a monolithic default `SashimiModel` whose hidden choices
+silently reproduce SASHIMI-C.
 
-## 2. Findings from the current implementations
+## 2. Common computational pipeline
 
-### 2.1 Common pipeline
-
-All four variants follow the same high-level sequence:
+All current SASHIMI variants follow the same conceptual sequence:
 
 1. specify cosmology and a host halo at a reference redshift;
-2. construct a grid or measure in accretion mass and accretion redshift;
+2. construct an accretion measure in mass and redshift;
 3. evaluate an EPS-like accretion abundance;
 4. integrate over host-history and concentration scatter;
-5. assign internal halo structure at accretion;
+5. assign internal structure at accretion;
 6. evolve mass and structure after accretion;
-7. evaluate survival, disruption, or model-validity conditions;
-8. flatten quadrature nodes into a weighted catalog;
-9. calculate mass functions, satellite counts, boost factors, priors, or a
-   stochastic realization.
+7. evaluate survival, disruption, collapse, or validity conditions;
+8. assemble a weighted catalog;
+9. calculate observables, priors, or stochastic realizations.
 
-This common pipeline, rather than any one physical formula, is the main object
-that ITAMAE should support.
-
-### 2.2 Repeated implementations
-
-SASHIMI-C, SASHIMI-SI, and SASHIMI-F contain closely related or copied
-implementations of:
-
-- units and constants;
-- LCDM background functions;
-- growth factor and collapse threshold;
-- NFW auxiliary functions and mass-definition conversion;
-- host mass-accretion history;
-- Yang et al. conditional/accretion functions;
-- Gauss-Hermite quadrature over concentration and host-history scatter;
-- the calibrated average tidal mass-loss equation;
-- ODE and perturbative solutions, including the Shanks-accelerated solution;
-- conversion between mass fraction, `Vmax`, `rmax`, `rs`, and `rhos`;
-- inversion of the NFW enclosed-mass function to obtain a truncation
-  concentration;
-- weight normalization and array flattening.
-
-SASHIMI-W implements the same conceptual stages in an older, more procedural
-form. It differs strongly in units, cosmological parameters, power-spectrum
-input, sharp-k variance, and concentration calculation, but its output and
-post-accretion pipeline are recognizably the same.
-
-These differences argue for interfaces and adapters, not for copying the
-SASHIMI-C implementations into ITAMAE and forcing all variants to inherit from
-them.
-
-### 2.3 Model-specific parts that remain outside the core
-
-The following are not generic utilities even when they currently appear in
-several files:
-
-- the selected power-spectrum transfer function and window function;
-- the selected host mass-accretion relation;
-- the Yang-model variant and its normalization details;
-- a concentration-mass-redshift relation;
-- calibrated coefficients in the mean stripping law;
-- the Peñarrubia-type structural response to bound-mass loss;
-- a disruption threshold such as `ct > 0.77`;
-- SIDM effective-cross-section and gravothermal evolution;
-- FDM soliton/core-halo relations;
-- WDM concentration and cutoff calibration.
-
-ITAMAE may define protocols for these objects and may later host clearly named,
-opt-in reference implementations. It must not silently choose them.
+The shared pipeline and its data contracts are the main objects ITAMAE should
+support. Individual physical formulae remain explicit model components.
 
 ## 3. Architectural model
 
-The fundamental object is a weighted measure transported through a sequence of
-physical maps.
-
-Let the initial variables be represented by `x`, for example
+The basic object is a weighted measure transported through physical maps.
 
 ```text
 x = (m_acc, z_acc, concentration_node, host_history_node, orbit_node, ...)
-```
-
-with quadrature or measure weight `w(x)`. A model evolves these variables into a
-state `y` at the target epoch:
-
-```text
 y = T_model(x)
+expectation[O] = sum_i w_i O(y_i)
 ```
 
-An expectation value is then
+The existing SASHIMI catalog is a deterministic quadrature representation of a
+population measure. ITAMAE preserves this as the canonical population
+representation. Monte Carlo catalogs are generated as a separate operation.
 
-```text
-sum_i w_i O(y_i)
-```
-
-or, in continuum notation,
-
-```text
-integral dx lambda(x) O(T_model(x)).
-```
-
-The existing SASHIMI weighted catalog is therefore a deterministic quadrature
-representation of a population measure. ITAMAE will preserve this
-representation as the canonical backend. Monte Carlo catalogs are generated
-from it as a separate operation.
-
-The architecture distinguishes four layers:
+The architecture has four layers:
 
 1. **configuration and physical models** supplied by a SASHIMI package;
 2. **initial measure construction** over mass, redshift, scatter, and optional
    orbital variables;
 3. **state evolution** through mass, structure, orbit, and survival operators;
-4. **catalog and observable operations** over the transported weighted measure.
+4. **catalog and observable operations** over the transported measure.
 
-## 4. Core data model
+Backend selection is orthogonal to these layers. A physical model should not
+need to be rewritten when switching cosmology or unit backends.
 
-The data model must be implemented before the physical modules are migrated.
-The current long tuple outputs cannot accommodate SIDM fields, FDM core
-properties, or spatial coordinates cleanly.
+## 4. Backend policy
 
-### 4.1 `HostState`
+ITAMAE will support explicit, exchangeable backends. Backend choices must be
+stored in configuration metadata and included in cache keys and regression
+records.
+
+### 4.1 Cosmology backends
+
+ITAMAE will support at least two cosmology backends:
+
+1. **native backend**
+   - NumPy/SciPy implementation;
+   - reproduces the current SASHIMI formulae and conventions;
+   - minimal dependencies and low overhead;
+   - suitable for regression compatibility and large batch calculations.
+
+2. **Colossus backend**
+   - wraps `colossus.cosmology` and relevant halo utilities;
+   - allows established cosmologies and Colossus power-spectrum/growth tools;
+   - useful for independent validation and interoperability;
+   - must not mutate global Colossus cosmology state invisibly.
+
+The public interface is backend-independent:
+
+```python
+class CosmologyBackend(Protocol):
+    @property
+    def identifier(self) -> str: ...
+
+    def H(self, z): ...
+    def rho_crit(self, z): ...
+    def rho_m(self, z): ...
+    def omega_m(self, z): ...
+    def growth_factor(self, z): ...
+    def collapse_threshold(self, z): ...
+    def cosmic_time(self, z): ...
+    def lookback_time(self, z): ...
+```
+
+Proposed implementations:
+
+```text
+itamae.cosmology.NativeFlatLCDM
+itamae.cosmology.ColossusCosmology
+```
+
+A backend adapter must define conventions explicitly, including:
+
+- physical versus comoving distances;
+- masses with or without factors of `h`;
+- critical-density versus mean-density definitions;
+- normalization of the growth factor;
+- scalar and array behavior;
+- supported redshift range.
+
+Colossus is an optional dependency, exposed through an installation extra such
+as:
+
+```bash
+pip install itamae[colossus]
+```
+
+The native and Colossus backends must be compared on a common test matrix. They
+need not be bitwise identical, but differences must be understood and bounded.
+
+### 4.2 Unit backends
+
+ITAMAE will support at least two unit modes:
+
+1. **native unit backend**
+   - plain floating-point NumPy arrays;
+   - one documented canonical internal unit system;
+   - optimized for large quadrature catalogs and repeated evolution calls.
+
+2. **Astropy unit backend**
+   - accepts and returns `astropy.units.Quantity` where requested;
+   - performs dimensional validation and explicit conversion;
+   - supports user-facing, analysis-facing, and validation workflows.
+
+The backend contract is conceptually:
+
+```python
+class UnitBackend(Protocol):
+    @property
+    def identifier(self) -> str: ...
+
+    def to_internal(self, value, physical_type: str): ...
+    def from_internal(self, value, unit): ...
+    def validate(self, value, physical_type: str): ...
+```
+
+Proposed implementations:
+
+```text
+itamae.units.NativeUnits
+itamae.units.AstropyUnits
+```
+
+The canonical internal units should be documented centrally. A likely initial
+choice is:
+
+```text
+mass       : Msun
+length     : Mpc
+velocity   : km / s
+time       : Gyr
+cross section per mass : cm^2 / g
+```
+
+The exact choice should be finalized only after regression tests against C, W,
+SI, and F are prepared.
+
+Astropy support must be a real public backend, not merely a test helper.
+Nevertheless, ITAMAE should not force `Quantity` objects through every large
+internal batch. The recommended execution path is:
+
+```text
+Quantity input
+  -> dimensional validation
+  -> conversion to canonical internal floating arrays
+  -> high-performance calculation
+  -> optional Quantity output
+```
+
+This gives users safe unit-aware interfaces without imposing Quantity overhead
+on every inner-loop operation.
+
+Astropy is an optional dependency, exposed through an installation extra such
+as:
+
+```bash
+pip install itamae[astropy]
+```
+
+An aggregate extra may also be provided:
+
+```bash
+pip install itamae[full]
+```
+
+### 4.3 Backend configuration
+
+Backend selection must be explicit and immutable during a calculation:
+
+```python
+config = BackendConfig(
+    cosmology="native",       # or "colossus"
+    units="native",           # or "astropy"
+    array="numpy",
+)
+```
+
+Objects constructed under one backend configuration should retain the backend
+identifier in metadata. Changing a global Colossus cosmology or changing unit
+conventions must not silently alter an existing model or cached result.
+
+### 4.4 Array and numerical backends
+
+The initial array/numerical backend remains NumPy/SciPy. JAX or other
+accelerated/differentiable backends are future work. The first API should avoid
+unnecessary NumPy-only assumptions where a small abstraction is inexpensive,
+but backend generality must not delay regression-equivalent implementation.
+
+## 5. Core data model
+
+### 5.1 `HostState`
 
 ```python
 @dataclass(frozen=True)
@@ -175,13 +261,16 @@ class HostState:
     r200: Array
     rvir: Array
     concentration: Array
+    metadata: Mapping[str, Any]
 ```
 
-Host density, enclosed mass, potential, circular velocity, and local dynamical
-time should be obtained through a `HostPotential` interface rather than stored
-as unrelated helper functions.
+Metadata records the cosmology backend, unit backend, mass definitions, and
+physical model identifiers.
 
-### 4.2 `AccretionBatch`
+Host density, enclosed mass, potential, circular velocity, and local dynamical
+time are provided through a `HostPotential` interface.
+
+### 5.2 `AccretionBatch`
 
 ```python
 @dataclass(frozen=True)
@@ -195,10 +284,10 @@ class AccretionBatch:
     metadata: Mapping[str, Any]
 ```
 
-Optional fields should include host-history node identifiers and orbital-infall
-nodes. Arrays must use one shared leading batch shape.
+Optional fields include host-history and orbital-infall node identifiers. All
+arrays use a shared leading batch shape.
 
-### 4.3 `SubhaloState`
+### 5.3 `SubhaloState`
 
 ```python
 @dataclass
@@ -210,13 +299,10 @@ class SubhaloState:
     extra: Mapping[str, Array]
 ```
 
-The profile parameters must not be restricted to NFW. The base interface should
-support named parameter sets so that SIDM core radii and FDM soliton parameters
-can coexist with the common state.
+Profile parameters are named and extensible, allowing NFW, SIDM-cored, and
+FDM-soliton structures.
 
-### 4.4 `OrbitalState`
-
-Spatial information is represented separately from internal structure:
+### 5.4 `OrbitalState`
 
 ```python
 @dataclass
@@ -231,14 +317,13 @@ class OrbitalState:
     phase: Array | None = None
 ```
 
-Not every spatial model must populate every field. A simple radial-PDF model may
-only provide a radius node and radial weight. An orbit-averaged model may use
-`(E, L)` and derive radial kernels. An orbit-sampling backend may populate
-instantaneous phase-space coordinates.
+Spatial information is separate from internal halo structure. A radial-PDF
+model may populate radius nodes and spatial weights; an orbit-averaged model may
+use `(E, L)`; an orbit-sampling model may populate instantaneous phase space.
 
-### 4.5 `WeightedSubhaloCatalog`
+### 5.5 `WeightedSubhaloCatalog`
 
-The final catalog should retain separate weight factors:
+The catalog retains independent weight factors:
 
 ```text
 weight_base
@@ -249,25 +334,28 @@ weight_survival
 weight_final
 ```
 
-This separation is required for diagnostics, reweighting, model comparisons,
-and spatial marginalization. Boolean survival must not be irreversibly folded
-into the only available weight.
+It supports selection, concatenation, weighted reductions, serialization,
+stochastic realization, optional Quantity export, and model-specific columns.
 
-The catalog should support:
-
-- selection without losing metadata;
-- concatenation and chunked construction;
-- weighted sums and histograms;
-- conversion to NumPy structured arrays and pandas DataFrames;
-- NPZ/HDF5 or another stable serialization format;
-- stochastic Poisson realization using an explicit random generator;
-- model-specific extension columns without changing the base schema.
-
-## 5. Planned package structure
+## 6. Planned package structure
 
 ```text
 src/itamae/
   __init__.py
+
+  backends/
+    config.py
+    registry.py
+
+  units/
+    base.py
+    native.py
+    astropy.py
+
+  cosmology/
+    base.py
+    native.py
+    colossus.py
 
   types/
     arrays.py
@@ -283,11 +371,6 @@ src/itamae/
     root_finding.py
     batching.py
     cache.py
-
-  cosmology/
-    base.py
-    flat_lcdm.py
-    time.py
 
   halo/
     mass_definitions.py
@@ -334,83 +417,34 @@ src/itamae/
   testing/
     regression.py
     convergence.py
+    backend_equivalence.py
 ```
 
-This layout is a target, not a requirement that every empty module be created
-immediately.
+This is a target layout; empty modules should not be created prematurely.
 
-## 6. Interfaces to implement
+## 7. Physical interfaces
 
-Interfaces should use structural typing (`Protocol`) where practical. Physical
-classes should not be forced into a deep inheritance hierarchy.
-
-### 6.1 Cosmology and host history
+Interfaces should use structural typing (`Protocol`) where practical.
 
 ```python
-class Cosmology(Protocol):
-    def H(self, z): ...
-    def rho_crit(self, z): ...
-    def growth_factor(self, z): ...
-    def cosmic_time(self, z): ...
-
 class HostHistoryModel(Protocol):
-    def m200(self, host_reference, z): ...
-    def dmvir_dz(self, host_reference, z): ...
-```
+    def m200(self, host_reference, z, cosmology): ...
+    def dmvir_dz(self, host_reference, z, cosmology): ...
 
-The current SASHIMI-C history may remain in SASHIMI-C while using ITAMAE's
-cosmology and host-state containers.
-
-### 6.2 Variance and power spectrum
-
-```python
 class VarianceModel(Protocol):
     def sigma(self, mass, z=0.0): ...
     def variance(self, mass, z=0.0): ...
     def dvariance_dmass(self, mass, z=0.0): ...
-```
 
-This is essential for unifying the variants:
-
-- C and SI currently use an analytic CDM fit;
-- W uses a tabulated spectrum, WDM transfer suppression, and sharp-k filtering;
-- F uses a tabulated CDM spectrum, FDM transfer suppression, and selectable
-  top-hat/sharp-k backends.
-
-Power-spectrum evaluation, transfer functions, window functions, and variance
-integration should be composable objects. File caching must be keyed by all
-physical and numerical parameters, not only a particle mass.
-
-### 6.3 Accretion measure
-
-```python
 class AccretionRateModel(Protocol):
     def differential_number(self, m_acc, z_acc, host, variance): ...
-```
 
-ITAMAE initially provides the quadrature engine, broadcasting rules, and
-normalization checks. The concrete Yang-model formulas should remain in the
-variant during the first migration. After regression equivalence is
-established, identical formulas may be moved into an explicitly named optional
-module such as `itamae.reference.yang2011`.
-
-### 6.4 Concentration and initial structure
-
-```python
 class ConcentrationModel(Protocol):
-    def median(self, m200, z): ...
+    def median(self, m200, z, cosmology): ...
 
 class InitialStructureModel(Protocol):
-    def assign(self, m200, z, concentration_nodes): ...
-```
+    def assign(self, m200, z, concentration_nodes, context): ...
 
-This separation is important because W and F may change the concentration model
-independently of the EPS variance. ITAMAE must not assume that a dark-matter
-model is fully specified by its transfer function.
-
-### 6.5 Mass and profile evolution
-
-```python
 class MassLossLaw(Protocol):
     def rhs(self, state, host_state, orbital_state=None): ...
 
@@ -421,62 +455,29 @@ class SurvivalModel(Protocol):
     def evaluate(self, state, context): ...
 ```
 
-The numerical solver and the physical right-hand side must be separate. The
-current average stripping law supplies `A`, `zeta`, and dynamical-time factors;
-ITAMAE supplies ODE and perturbative integration. The Shanks transformation is
-a solver option, not a CDM physical model.
+Numerical solvers and physical right-hand sides remain separate. The current
+SASHIMI perturbative and Shanks methods belong to generic solver machinery;
+calibrated stripping coefficients remain in the relevant SASHIMI package.
 
-The evolution context should include:
+## 8. Spatial and orbital design
 
-```text
-host state
-redshift/time grid
-optional orbital state
-local host density and enclosed mass
-model metadata
-```
+Spatial support is designed from the beginning, even though implementation
+follows the non-spatial core.
 
-This allows the same mass-loss interface to support both the original global
-average law and future radius- or orbit-dependent laws.
-
-## 7. Spatial and orbital design
-
-Spatial support must be designed now even if it is implemented after the
-non-spatial core.
-
-### 7.1 Lessons from `r-dependent`
-
-The current development branch includes two related but distinct ideas:
-
-1. a conditional radial distribution `P(q | z_acc, ...)`, with
-   `q = r / Rvir` and a minimum radius related to elapsed dynamical time;
-2. a radius-dependent correction to the mean mass-loss rate.
-
-It also contains a more general theoretical direction in which infalling
-subhalos are injected into an `(E, L)` distribution and mapped to radial number
-density by an orbit-averaged kernel. Dynamical friction and disruption become
-drift and sink terms in integral-of-motion space.
-
-These should not be collapsed into one `radius` option. ITAMAE should support
-three levels.
-
-#### Level A: conditional radial weighting
-
-A spatial model returns quadrature nodes and weights in `q`:
+### Level A: conditional radial measure
 
 ```python
 class RadialMeasureModel(Protocol):
     def nodes(self, accretion_batch, host, target_redshift):
-        # returns q_nodes and normalized weight_orbit
+        # q_nodes and normalized weight_orbit
         ...
 ```
 
-This reproduces a radial-PDF approach and allows radial observables without
-tracking individual orbits.
+This supports `P(q | z_acc, ...)` without tracking individual orbits.
 
-#### Level B: local-environment evolution
+### Level B: local-environment evolution
 
-A `LocalEnvironment` object evaluates host quantities at the radius nodes:
+A `LocalEnvironment` evaluates:
 
 ```text
 rho_host(r, z)
@@ -484,368 +485,257 @@ M_host(<r, z)
 Phi(r, z)
 Vcirc(r, z)
 tdyn_local(r, z)
-tidal tensor or tidal-radius inputs
+tidal-radius or tidal-tensor inputs
 ```
 
-A mass-loss or survival model may consume this context. This avoids embedding
-functions such as `mdot_r_0`, `mdot_r_1`, or `mdot_r_2` in the catalog builder.
-The radial correction remains a physical model owned by SASHIMI-C or a future
-spatial SASHIMI package.
+Mass-loss and survival models may consume this context. Radius-dependent fitting
+laws remain physical prescriptions in SASHIMI-C or a future spatial model
+package.
 
-#### Level C: orbit-averaged phase-space transport
+### Level C: orbit-averaged transport
 
-A more advanced backend represents the ensemble in `(E, L)` or another action
-space. ITAMAE should provide reusable numerical pieces:
+The research backend may represent the ensemble in `(E, L)` or action space.
+ITAMAE provides turning points, radial periods, radial kernels, infall-variable
+transformations, cached phase tables, and conservative transport machinery.
+Infall distributions, dynamical-friction laws, Coulomb logarithms, and
+disruption models remain model-supplied.
 
-- spherical host potential interface;
-- turning-point calculation;
-- radial period;
-- orbit-averaged radial kernel;
-- mapping from infall velocity variables to `(E, L)`;
-- quadrature/interpolation tables for phase kernels;
-- conservative transport runner for source, drift, diffusion, and sink terms.
-
-The physical infall distribution, Coulomb logarithm, dynamical-friction law,
-and disruption prescription remain supplied by the model package.
-
-### 7.2 Spatial normalization requirements
-
-Every spatial backend must satisfy explicit normalization tests:
+Every spatial implementation must satisfy normalization tests:
 
 ```text
 integral dq P(q | x) = 1
 integral dV p_V(r | E, L) = 1
-sum spatial weights = parent node weight
-integral dV n(r) = total surviving catalog weight
+sum child spatial weights = parent weight
+integral dV n(r) = total surviving weight
 ```
 
-The implementation must keep clear whether a function is a density per `q`,
-per `r`, per shell, or per volume. Variable names should encode this when
-possible, for example `pdf_q`, `pdf_r`, and `number_density_3d`.
+A lone `radius` column is insufficient; its representation, epoch, and weight
+semantics must be recorded.
 
-### 7.3 Do not store only instantaneous radius
+## 9. Variant integration policy
 
-A catalog column named `radius` alone is insufficient because it cannot state
-whether the value is:
+### SASHIMI-C
 
-- a deterministic expected radius;
-- a quadrature node in a radial PDF;
-- a random orbital-phase realization;
-- a pericenter or apocenter;
-- a radius at accretion or at the target epoch.
+First migration target. It retains its public API, model composition, calibrated
+coefficients, disruption convention, observables, and scientific examples.
+ITAMAE replaces only shared mechanisms.
 
-Spatial values must be accompanied by a representation type and relevant
-weights or orbital invariants.
+### SASHIMI-W
 
-## 8. Variant integration policy
+Adapter-first migration because of its cgs units, WMAP7 setup, global file
+loading, procedural initialization, sharp-k variance, and distinct
+concentration calculation. The native and Astropy unit backends are especially
+important for reproducing and validating this migration.
 
-### 8.1 SASHIMI-C
+### SASHIMI-SI
 
-SASHIMI-C is the first migration target because it has the clearest current API
-and the shared perturbative solver.
+Uses common accretion and tidal-history infrastructure but retains SIDM physics.
+The catalog supports multiple named state views such as `cdm_reference` and
+`sidm` with shared initial nodes and base weights.
 
-SASHIMI-C retains:
+### SASHIMI-F
 
-- its public `subhalo_properties` and observable API during migration;
-- its standard physical model assembly;
-- its calibrated coefficients and references;
-- its default disruption and profile-response choices;
-- its scientific examples and regression fixtures.
+Uses composable power-spectrum and variance components. FDM population
+suppression and FDM core-halo structure remain separate model components.
+Its existing Colossus usage provides an initial integration target for the
+Colossus cosmology backend.
 
-ITAMAE replaces only the internals listed in the phased roadmap below.
+## 10. Testing policy
 
-### 8.2 SASHIMI-W
+### Golden regression data
 
-SASHIMI-W requires an adapter-first migration because it uses a different unit
-convention, WMAP7 input, global file loading, procedural initialization, and an
-older SciPy/NumPy style.
-
-The first objective is to expose:
-
-```text
-WDMVarianceModel
-WDMConcentrationModel
-WDMInitialStructureModel
-```
-
-behind common protocols while reproducing the existing output. Only after
-regression tests pass should shared post-accretion and catalog machinery be
-replaced.
-
-### 8.3 SASHIMI-SI
-
-SASHIMI-SI should use common CDM accretion and tidal-history infrastructure but
-retain its own SIDM module. Its paired CDM/SIDM outputs indicate that the
-catalog must support multiple named state views for one population node,
-rather than duplicating the entire catalog.
-
-A possible representation is:
-
-```text
-catalog.states["cdm_reference"]
-catalog.states["sidm"]
-```
-
-with shared `m_acc`, `z_acc`, quadrature nodes, and base weights. SIDM validity,
-survival, and collapse flags remain state-specific.
-
-### 8.4 SASHIMI-F
-
-SASHIMI-F provides the strongest motivation for composable power-spectrum and
-variance objects. The FDM particle-mass setter currently triggers
-power-spectrum and interpolation reconstruction. In ITAMAE this should become
-an immutable, cacheable configuration object.
-
-The FDM population suppression and FDM internal core-halo structure must be
-separate components. The former enters the variance/accretion model; the latter
-enters initial/profile structure and downstream priors.
-
-## 9. Numerical and software policies
-
-### 9.1 Units
-
-ITAMAE should choose one documented internal unit convention for the first
-release and provide explicit conversion at legacy adapters. Silent mixing of
-the normalized units used by current C/SI/F and cgs units used by W is not
-acceptable.
-
-A lightweight internal unit convention is preferred over carrying Astropy
-quantities through every large batch. Astropy may be used at boundaries and in
-validation tests.
-
-### 9.2 Array API and vectorization
-
-All public numerical methods should accept scalar and NumPy-array inputs with
-documented broadcasting rules. Batch shape must be separate from integration
-axes. Hard-coded reshaping based on `N_ma`, `N_herm`, or `len(zdist)` should be
-confined to legacy adapters.
-
-Initial backend: NumPy/SciPy. JAX or other differentiable backends are future
-work and should not shape the first API unless the abstraction is cost-free.
-
-### 9.3 Caching
-
-Cache keys must include:
-
-- physical model parameters;
-- cosmology;
-- power-spectrum source and version;
-- integration bounds and resolution;
-- code version or schema version.
-
-The current practice of excluding `self` from a pickle-cache key is unsafe when
-instances differ physically.
-
-### 9.4 Parallelism
-
-Parallel execution belongs in a runner, not in physical model functions.
-Models should expose pure batch-in/batch-out methods. The runner may chunk over
-accretion redshift, mass, concentration, or orbital nodes. Serial execution
-must remain the reference backend.
-
-### 9.5 Flags and failure handling
-
-Do not globally suppress `RuntimeWarning`. Numerical issues should be encoded
-using explicit flags such as:
-
-```text
-INVALID_VARIANCE
-OUTSIDE_INTERPOLATION_RANGE
-ROOT_NOT_BRACKETED
-PROFILE_UNPHYSICAL
-DISRUPTED
-COLLAPSED
-ORBIT_UNBOUND
-```
-
-Model packages decide whether flagged nodes are removed, assigned zero weight,
-or reported to the user.
-
-## 10. Testing strategy
-
-### 10.1 Golden regression data
-
-Before extraction, each SASHIMI repository should generate compact reference
-outputs for a small matrix of configurations:
+Each SASHIMI repository should produce compact reference outputs spanning:
 
 - multiple host masses;
-- redshift 0 and at least one nonzero target redshift;
-- low and standard grid resolutions;
+- zero and nonzero target redshifts;
+- low and standard resolutions;
 - concentration scatter on/off;
-- evolved/unevolved profile options;
+- evolved and unevolved profiles;
 - representative WDM, SIDM, and FDM parameters;
-- at least one spatial/radial configuration.
+- at least one radial configuration.
 
-Store summary arrays and selected raw nodes, not only plotted results.
-
-### 10.2 Invariant tests
+### Invariant tests
 
 Required invariants include:
 
-- nonnegative finite quadrature weights;
-- agreement between integrated weights and total expected abundance;
-- normalization of concentration and spatial quadratures;
-- `m_bound <= m_acc` for models that assume monotonic stripping;
-- profile mass consistency at the truncation radius;
+- finite, nonnegative quadrature weights;
+- integrated-weight agreement with expected abundance;
+- normalized concentration and spatial measures;
+- profile mass consistency;
 - scalar/batch equivalence;
-- convergence with grid and interpolation resolution;
 - serial/parallel equivalence;
-- recovery of the original non-spatial result after spatial marginalization
-  when the radial correction is normalized to unity.
+- recovery of the global model after normalized spatial marginalization.
 
-The last condition is particularly important for the `r-dependent` extension.
+### Backend-equivalence tests
 
-## 11. Phased roadmap
+The test suite must compare:
 
-### Phase 0: baseline and repository skeleton
+- native cosmology versus Colossus for shared cosmological quantities;
+- native floats versus Astropy Quantity inputs and outputs;
+- native and Astropy unit conversions for all public physical quantities;
+- catalog results across backend combinations within documented tolerances;
+- legacy C/W/SI/F outputs after conversion to one canonical unit system.
 
-- add `pyproject.toml`, `src/itamae`, and a minimal test configuration;
+Tests must include deliberate unit mistakes and verify that the Astropy backend
+raises clear dimensional errors.
+
+## 11. Caching and reproducibility
+
+Cache keys include:
+
+- physical parameters;
+- cosmology parameters and backend identifier;
+- unit backend and canonical-unit schema version;
+- power-spectrum source and version;
+- numerical bounds and resolution;
+- package/code version.
+
+Global backend state must not determine cached results. In particular, Colossus
+configuration should be isolated or explicitly restored, and existing objects
+must retain their construction-time cosmology definition.
+
+## 12. Phased roadmap
+
+### Phase 0: baseline and backend contracts
+
+- add packaging and CI;
 - define supported Python/NumPy/SciPy versions;
+- define `CosmologyBackend`, `UnitBackend`, and immutable `BackendConfig`;
+- document canonical internal units and mass-definition conventions;
 - add golden-output scripts to C, W, SI, and F;
-- document unit and naming conventions;
 - make no scientific changes.
 
-### Phase 1: types, numerics, and NFW primitives
+### Phase 1: native and Astropy unit support
 
-Implement:
+- implement `NativeUnits`;
+- implement `AstropyUnits` with Quantity input/output conversion;
+- add dimensional-validation tests;
+- implement legacy-unit adapters for C/W/SI/F;
+- ensure internal batch arrays remain plain floating arrays by default.
 
-- state and catalog dataclasses;
-- grid and Gauss-Hermite helpers;
-- integration/interpolation wrappers;
-- safe NFW mass and inverse-mass functions;
-- mass-definition conversion utilities;
-- flags, serialization, and regression helpers.
+### Phase 2: native and Colossus cosmology support
 
-Adopt these first in SASHIMI-C while preserving its public tuple-returning API
-through a compatibility wrapper.
+- implement native flat-LCDM backend reproducing current formulae;
+- implement the Colossus adapter without hidden global-state changes;
+- add backend-equivalence tests;
+- pass cosmology explicitly into host-history and halo utilities.
 
-### Phase 2: generic evolution solver
+### Phase 3: types, numerics, and halo primitives
 
-Extract and test:
+- implement state/catalog dataclasses;
+- implement grids and Gauss-Hermite utilities;
+- implement integration/interpolation wrappers;
+- implement robust NFW mass and inverse-mass functions;
+- implement mass-definition conversions;
+- provide unit-aware public wrappers.
 
-- ODE runner;
-- perturbative coefficients and solution assembly;
-- optional Shanks acceleration;
-- history-grid handling;
-- batch/chunk execution.
+### Phase 4: generic evolution solver
 
-The SASHIMI-C mass-loss law remains in SASHIMI-C and is supplied to the solver.
+- extract ODE and perturbative runners;
+- implement optional Shanks acceleration;
+- support history grids and chunked execution;
+- keep calibrated mass-loss laws in SASHIMI packages.
 
-### Phase 3: initial measure and common catalog builder
+### Phase 5: initial measure and common catalog builder
 
-Implement:
+- implement accretion-batch construction;
+- retain independent weight factors;
+- implement concentration quadrature;
+- implement deterministic catalogs and stochastic realizations;
+- migrate C first, then SI.
 
-- accretion-batch construction;
-- independent weight factors;
-- concentration quadrature;
-- model-component runner;
-- deterministic weighted catalog and Monte Carlo realization.
+### Phase 6: power spectrum and variance protocols
 
-Migrate C first, then SI. Do not migrate W/F until their variance interfaces
-have regression coverage.
+- implement tabulated spectra, transfer functions, top-hat and sharp-k windows;
+- implement variance integration, derivatives, interpolation, and safe caching;
+- integrate W and F through adapters;
+- allow native or Colossus-backed variance implementations where appropriate.
 
-### Phase 4: power spectrum and variance protocols
+### Phase 7: spatial Level A and Level B
 
-Implement composable:
+- implement radial measures and explicit spatial weights;
+- implement host-potential and local-environment interfaces;
+- implement normalized radial PDFs and radial observables;
+- reimplement useful `r-dependent` functionality without embedding its fitting
+  laws in the catalog builder.
 
-- tabulated power spectrum;
-- transfer function;
-- top-hat and sharp-k windows;
-- variance integration and derivative;
-- interpolation/cache objects.
-
-Integrate W and F through adapters. Compare against their original grids and
-mass functions before optimizing.
-
-### Phase 5: spatial Level A and Level B
-
-Implement:
-
-- radial-node measure and explicit spatial weights;
-- host-potential/local-environment interface;
-- normalized conditional radial PDFs;
-- context-aware mass-loss and survival protocols;
-- shell counts and radial number-density observables.
-
-Reimplement the useful parts of `r-dependent` using these interfaces. The
-existing fitting functions remain in SASHIMI-C until their physical status is
-settled.
-
-### Phase 6: SIDM and FDM structural extensions
+### Phase 8: SIDM/FDM structures and Level C research backend
 
 - support multiple named state views;
-- add profile-parameter schemas for cored/SIDM and soliton/FDM profiles;
-- provide adapters to dSph profile/prior packages;
-- keep Jeans and inference code outside ITAMAE.
+- support cored/SIDM and soliton/FDM profile schemas;
+- provide downstream dSph adapters;
+- prototype orbit-averaged phase-space transport after radial validation.
 
-### Phase 7: orbit-averaged Level C research backend
-
-After the radial implementation is validated:
-
-- implement spherical turning points and radial periods;
-- cache orbit kernels in dimensionless host coordinates where possible;
-- implement infall-to-`(E,L)` transformations;
-- prototype conservative transport with source/drift/sink operators;
-- compare radial distributions and mass segregation with simulations and
-  simpler radial-PDF models.
-
-This phase is research work and should not block a stable non-spatial ITAMAE
-release.
-
-## 12. Initial public API target
-
-ITAMAE should initially expose low-level, stable objects rather than a universal
-model constructor:
+## 13. Initial public API target
 
 ```python
+from itamae.backends import BackendConfig
+from itamae.cosmology import NativeFlatLCDM, ColossusCosmology
+from itamae.units import NativeUnits, AstropyUnits
 from itamae.types import AccretionBatch, WeightedSubhaloCatalog
-from itamae.numerics import gauss_hermite_lognormal
 from itamae.halo import NFWProfile, convert_mass_definition
 from itamae.evolution import PerturbativeEvolutionSolver
 ```
 
-A SASHIMI package assembles them:
+Example backend selection:
+
+```python
+backend = BackendConfig(
+    cosmology=ColossusCosmology(name="planck18"),
+    units=AstropyUnits(),
+)
+```
+
+A SASHIMI package assembles the physical model:
 
 ```python
 from sashimi_c import SashimiCDM
 
-model = SashimiCDM()
-catalog = model.generate_catalog(host_mass=1.0e12, redshift=0.0)
+model = SashimiCDM(backend=backend)
+catalog = model.generate_catalog(
+    host_mass=1.0e12,  # floats use documented canonical units
+    redshift=0.0,
+)
 ```
 
-Later, advanced users may construct a custom pipeline explicitly, but ITAMAE
-must not advertise a default physical configuration as the canonical SASHIMI
-calculation.
+or with Quantity input:
 
-## 13. Immediate next tasks
+```python
+import astropy.units as u
 
-The first implementation pull request should be limited to:
+catalog = model.generate_catalog(
+    host_mass=1.0e12 * u.Msun,
+    redshift=0.0,
+)
+```
+
+## 14. Immediate next tasks
+
+The first implementation pull request should contain only:
 
 1. repository packaging and CI;
-2. `HostState`, `AccretionBatch`, `SubhaloState`, `OrbitalState`, and
-   `WeightedSubhaloCatalog` drafts;
-3. grid and Gauss-Hermite utilities;
-4. NFW enclosed mass and robust inversion;
-5. unit tests and one small SASHIMI-C compatibility example.
+2. backend protocols and immutable `BackendConfig`;
+3. canonical-unit documentation;
+4. `NativeUnits` and a minimal `AstropyUnits` adapter;
+5. native flat-LCDM and a minimal Colossus adapter;
+6. backend-equivalence tests for `H(z)`, `rho_crit(z)`, time, and basic unit
+   conversions.
 
 It should not yet move EPS, concentration, stripping coefficients, or
 SIDM/WDM/FDM physics into ITAMAE.
 
-After that pull request, the second milestone is extraction of the generic
-perturbative solver with regression tests against SASHIMI-C and SASHIMI-SI.
+## 15. Definition of success
 
-## 14. Definition of success
+The initial refactor succeeds when:
 
-The initial ITAMAE refactor is successful when:
-
-- each SASHIMI variant still clearly owns its physical assumptions;
+- each SASHIMI variant still owns its physical assumptions;
 - common numerical code is no longer copied among repositories;
-- all variants produce regression-equivalent results;
-- weighted catalogs use a shared schema;
-- WDM/FDM variance implementations can be exchanged without changing EPS
-  integration code;
-- SIDM/FDM-specific profile fields do not require new long tuple signatures;
+- all variants remain regression-equivalent;
+- users can select native or Colossus cosmology explicitly;
+- users can use native floats or Astropy Quantity interfaces explicitly;
+- backend choices are reproducible and included in metadata/cache keys;
+- weighted catalogs share one schema;
+- WDM/FDM variance models are exchangeable without changing EPS integration;
 - a radial measure can be added without rewriting the non-spatial pipeline;
-- the original global result can be recovered by spatial marginalization;
-- future orbit-averaged work can reuse the same host, state, measure, and
+- future orbit-averaged work reuses the same host, state, measure, backend, and
   catalog abstractions.
