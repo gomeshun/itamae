@@ -6,6 +6,7 @@ import astropy.units as u
 import numpy as np
 
 _UNITS = {
+    "dimensionless": u.dimensionless_unscaled,
     "mass": u.Msun,
     "length": u.Mpc,
     "velocity": u.km / u.s,
