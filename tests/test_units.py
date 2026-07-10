@@ -16,5 +16,7 @@ def test_astropy_units_roundtrip():
     backend = AstropyUnits()
     value = backend.to_internal(2.0e3 * u.kpc, "length")
     assert value == pytest.approx(2.0)
+    dimensionless = backend.to_internal([0.5, 1.0] * u.dimensionless_unscaled, "dimensionless")
+    np.testing.assert_array_equal(dimensionless, np.array([0.5, 1.0]))
     with pytest.raises(u.UnitConversionError):
         backend.to_internal(1.0 * u.s, "mass")
