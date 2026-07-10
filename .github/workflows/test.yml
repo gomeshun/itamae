@@ -1,0 +1,36 @@
+name: test
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --all-extras --group dev
+      - run: uv run ruff check .
+      - run: uv run mypy src/itamae --ignore-missing-imports
+      - run: uv run pytest --cov=itamae --cov-report=term-missing
+      - run: uv build
+
+  tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+        extras: ["", "astropy", "colossus", "full"]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: uv sync --group dev
+      - if: matrix.extras != ''
+        run: uv sync --extra ${{ matrix.extras }} --group dev
+      - run: uv run pytest
