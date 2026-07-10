@@ -7,10 +7,10 @@ current SASHIMI-C, SASHIMI-W, SASHIMI-SI, and SASHIMI-F implementations, the
 FDM profile implementation in `dsph_fuzzy`, and the spatial development in the
 `r-dependent` branch of SASHIMI-C.
 
-The goal is to remove duplicated computational machinery without moving the
-scientific identity of each SASHIMI variant into ITAMAE. ITAMAE is intended to
-be distributed as a normal Python package through PyPI and installed and
-developed with modern Python tooling, including `uv`.
+ITAMAE is intended to be published on PyPI and installed and developed with
+modern Python tooling, including `uv`. Scientific reproducibility, automated
+verification, and clear documentation are first-class requirements rather than
+post-release additions.
 
 ## 1. Executive decision
 
@@ -23,7 +23,7 @@ ITAMAE owns the common **computational language** of the SASHIMI family:
 5. generic evolution solvers operating on model-supplied equations;
 6. deterministic weighted measures and stochastic realizations;
 7. optional radial and phase-space infrastructure;
-8. stable packaging, versioning, and distribution infrastructure.
+8. packaging, versioning, testing, documentation, and distribution machinery.
 
 Each SASHIMI variant continues to own its physical prescriptions and default
 composition:
@@ -98,7 +98,7 @@ ITAMAE will support at least:
 
 1. **native backend**
    - NumPy/SciPy implementation;
-   - reproduces the current SASHIMI formulae and conventions;
+   - reproduces current SASHIMI formulae and conventions;
    - minimal dependencies and low overhead;
    - suitable for regression compatibility and large batch calculations.
 
@@ -307,79 +307,36 @@ itamae/
   CHANGELOG.md
   CITATION.cff
   uv.lock
+  .github/
+    workflows/
+      test.yml
+      release.yml
   src/
     itamae/
       __init__.py
       py.typed
       backends/
-        config.py
-        registry.py
       units/
-        base.py
-        native.py
-        astropy.py
       cosmology/
-        base.py
-        native.py
-        colossus.py
       types/
-        arrays.py
-        state.py
-        catalog.py
-        flags.py
       numerics/
-        grids.py
-        quadrature.py
-        integration.py
-        interpolation.py
-        root_finding.py
-        batching.py
-        cache.py
       halo/
-        mass_definitions.py
-        profiles.py
-        nfw.py
-        truncated_nfw.py
-        potential.py
       protocols/
-        variance.py
-        host_history.py
-        accretion.py
-        concentration.py
-        mass_loss.py
-        profile_evolution.py
-        survival.py
-        infall.py
-        orbit.py
-        spatial.py
       evolution/
-        ode.py
-        perturbative.py
-        operators.py
-        runner.py
       measure/
-        builder.py
-        weights.py
-        sampling.py
       spatial/
-        radial.py
-        phase_space.py
-        orbit_averaging.py
-        kernels.py
       adapters/
-        legacy_c.py
-        legacy_w.py
-        legacy_si.py
-        legacy_f.py
       testing/
-        regression.py
-        convergence.py
-        backend_equivalence.py
   tests/
+    unit/
+    integration/
+    regression/
+    property/
   docs/
 ```
 
-This is a target layout; empty modules should not be created prematurely.
+Empty modules should not be created prematurely. Every added module must have a
+clear purpose, tests where applicable, and module-level documentation.
 
 ## 7. Packaging, PyPI, and uv policy
 
@@ -390,8 +347,9 @@ The import package is also `itamae`.
 ### 7.1 `pyproject.toml`
 
 The repository must use a standards-compliant `pyproject.toml` as the single
-source of packaging metadata and dependency declarations. A lightweight PEP 517
-backend such as Hatchling is preferred initially.
+source of packaging metadata, dependencies, development tooling, test settings,
+lint settings, and build configuration. A lightweight PEP 517 backend such as
+Hatchling is preferred initially.
 
 Illustrative configuration:
 
@@ -407,9 +365,7 @@ description = "Integrated Toolkit for Analytical Merger-tree And Evolution"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { file = "LICENSE" }
-authors = [
-  { name = "Shunichi Horigome" },
-]
+authors = [{ name = "Shunichi Horigome" }]
 dependencies = [
   "numpy>=1.26",
   "scipy>=1.11",
@@ -418,27 +374,24 @@ dependencies = [
 [project.optional-dependencies]
 astropy = ["astropy>=6"]
 colossus = ["colossus>=1.3"]
-full = [
-  "astropy>=6",
-  "colossus>=1.3",
-]
+full = ["astropy>=6", "colossus>=1.3"]
+
+[dependency-groups]
 dev = [
   "pytest>=8",
   "pytest-cov>=5",
+  "hypothesis>=6",
   "ruff>=0.5",
   "mypy>=1.10",
+  "numpydoc>=1.7",
   "build>=1.2",
   "twine>=5",
 ]
-docs = [
-  "sphinx>=7",
-  "myst-parser>=3",
-  "furo>=2024.5.6",
-]
+docs = ["sphinx>=7", "myst-parser>=3", "furo>=2024.5.6"]
 
-[project.urls]
-Repository = "https://github.com/gomeshun/itamae"
-Issues = "https://github.com/gomeshun/itamae/issues"
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--strict-markers --strict-config"
 
 [tool.hatch.version]
 path = "src/itamae/__init__.py"
@@ -448,41 +401,21 @@ packages = ["src/itamae"]
 ```
 
 Exact minimum dependency versions should be finalized after testing the current
-SASHIMI repositories. Loose but bounded compatibility is preferred over
-unnecessarily strict pins in published package metadata.
+SASHIMI repositories. Published metadata should use sensible ranges rather than
+pinning the complete development lock file.
 
-### 7.2 Versioning
+### 7.2 Installation with uv
 
-- Use semantic versioning where practical.
-- Begin with development releases such as `0.1.0a1` or `0.1.0.devN`.
-- Keep one authoritative version source.
-- Include the package version and schema version in serialized metadata and
-  cache keys.
-- Tag release commits as `vX.Y.Z`.
-
-### 7.3 Installation with uv
-
-End-user installation from PyPI:
+End-user installation:
 
 ```bash
 uv add itamae
-```
-
-With optional backends:
-
-```bash
 uv add "itamae[astropy]"
 uv add "itamae[colossus]"
 uv add "itamae[full]"
 ```
 
-One-off isolated execution may use:
-
-```bash
-uvx --from itamae python -c "import itamae; print(itamae.__version__)"
-```
-
-For local development:
+Local development:
 
 ```bash
 git clone https://github.com/gomeshun/itamae.git
@@ -491,86 +424,161 @@ uv sync --all-extras --dev
 uv run pytest
 ```
 
-The repository should commit `uv.lock` for reproducible development and CI.
-The lock file is not a substitute for sensible dependency ranges in
-`pyproject.toml`; PyPI users resolve from published metadata.
+The repository commits `uv.lock` for reproducible development and CI. The lock
+file does not replace appropriate dependency ranges in `pyproject.toml`.
 
-### 7.4 Dependency groups
-
-Where supported by the selected uv/project configuration, development tools may
-be declared through dependency groups rather than exposing all tooling as a
-runtime-style optional extra. The intended groups are:
-
-```text
-dev     : pytest, coverage, ruff, mypy, build, twine
-docs    : Sphinx/MyST/Furo
-bench   : benchmark and profiling tools
-```
-
-Runtime optional extras remain user-facing:
-
-```text
-astropy
-colossus
-full
-```
-
-### 7.5 Build and release checks
+### 7.3 Build and release checks
 
 Before every release:
 
 ```bash
 uv sync --all-extras --dev
-uv run pytest
 uv run ruff check .
 uv run mypy src/itamae
+uv run pytest --cov=itamae --cov-report=term-missing
+uv run python -m numpydoc src/itamae
 uv build
 uv run twine check dist/*
 ```
 
-CI should also install the built wheel into a clean environment and run a smoke
-test. Tests must cover the minimal installation and each supported optional
-backend combination.
+CI must install the built wheel into a clean environment and run a smoke test.
+Tests must cover the minimal installation and supported optional backends.
 
-Recommended test matrix:
-
-```text
-minimal: NumPy/SciPy only
-astropy: minimal + Astropy
-colossus: minimal + Colossus
-full: all supported optional backends
-```
-
-### 7.6 PyPI publication
+### 7.4 PyPI publication
 
 - Publish initial candidates to TestPyPI first.
-- Use GitHub Actions with PyPI trusted publishing rather than storing a long-lived
-  API token where possible.
+- Use GitHub Actions with PyPI trusted publishing where possible.
 - Build source distributions and wheels from tagged commits.
-- Do not publish directly from an unclean local working tree.
-- Verify installation of the uploaded artifact in a fresh environment.
-- Add release notes and update `CHANGELOG.md` for each public release.
+- Publish only artifacts that passed the full release workflow.
+- Verify installation of uploaded artifacts in a fresh uv environment.
+- Update `CHANGELOG.md` for every public release.
 
-A future release workflow should be triggered by a GitHub release or version
-tag, run the full test matrix, build artifacts once, and publish those exact
-artifacts.
+## 8. Documentation and code-comment policy
 
-### 7.7 Public package quality requirements
+Readable scientific software requires explanation of both software behavior and
+physical conventions. Documentation is part of the implementation, not an
+optional cleanup task.
 
-Before the first PyPI release, ITAMAE should have:
+### 8.1 NumPy-style docstrings
 
-- a selected open-source license;
-- complete project metadata and classifiers;
-- `README.md` installation and minimal usage examples;
-- `CHANGELOG.md`;
-- `CITATION.cff` and citation guidance;
-- `py.typed` if public type annotations are supported;
-- no package import-time data-file lookup relative to the current directory;
-- packaged data declared explicitly;
-- clear optional-dependency error messages;
-- API documentation for all public objects.
+All public modules, classes, functions, methods, protocols, and dataclasses must
+have sufficiently detailed NumPy-style docstrings. Important private helpers
+should also be documented when their behavior, numerical assumptions, shapes,
+or units are not obvious.
 
-## 8. Physical interfaces
+Docstrings should include the relevant NumPy documentation sections:
+
+```text
+Summary
+Extended Summary, where useful
+Parameters
+Returns
+Yields
+Raises
+Warns
+Other Parameters
+Attributes
+Notes
+References
+Examples
+See Also
+```
+
+Not every section is required for every object, but `Parameters`, `Returns`,
+`Raises`, and `Notes` must be included whenever applicable.
+
+Documentation must state:
+
+- accepted scalar and array shapes;
+- broadcasting rules;
+- expected units and returned units;
+- physical versus comoving conventions;
+- factors of `h` in masses and lengths;
+- mass-definition conventions;
+- normalization conventions;
+- valid parameter and redshift ranges;
+- behavior outside interpolation domains;
+- numerical algorithms and convergence assumptions;
+- references for nontrivial physical formulae.
+
+Example:
+
+```python
+def enclosed_mass(self, radius):
+    """Evaluate the mass enclosed by the profile.
+
+    Parameters
+    ----------
+    radius : float or numpy.ndarray or astropy.units.Quantity
+        Physical radius. Plain floating-point input is interpreted in the
+        canonical internal length unit. Array input follows NumPy broadcasting.
+
+    Returns
+    -------
+    mass : float or numpy.ndarray or astropy.units.Quantity
+        Enclosed mass with the same broadcast shape as ``radius``. Quantity
+        output is returned when requested by the active unit backend.
+
+    Raises
+    ------
+    ValueError
+        If any radius is negative.
+    astropy.units.UnitConversionError
+        If Quantity input does not have dimensions of length.
+
+    Notes
+    -----
+    The implementation uses the analytic NFW enclosed-mass function and its
+    small-radius series expansion to avoid cancellation.
+    """
+```
+
+### 8.2 Module and class documentation
+
+Each module must begin with a module-level docstring explaining:
+
+- the module's responsibility;
+- what belongs and does not belong in the module;
+- the main public objects;
+- important numerical or physical conventions;
+- relevant references when the module implements literature formulae.
+
+Each class must document its responsibility, state invariants, mutability,
+backend interactions, and thread/global-state assumptions. Dataclass fields
+whose units or semantics are not obvious must be documented in the class
+`Attributes` section.
+
+### 8.3 Inline comments
+
+Inline comments should explain **why** a non-obvious operation is necessary,
+not merely restate the code. Detailed comments are required around:
+
+- changes of variables and Jacobians;
+- quadrature normalization;
+- array reshaping and axis ordering;
+- asymptotic expansions and numerical-stability branches;
+- root-bracketing choices;
+- cache-key construction;
+- backend convention conversion;
+- physical approximations and empirical calibration boundaries.
+
+Comments must be kept synchronized with the implementation. Obsolete or
+misleading comments are bugs and should be corrected in the same pull request.
+
+### 8.4 Documentation enforcement
+
+CI should run documentation-related checks, initially including:
+
+- Ruff docstring rules selected for NumPy-style documentation;
+- `numpydoc` validation for public API objects;
+- Sphinx documentation build with warnings treated as errors once docs exist;
+- doctests for stable executable examples where appropriate.
+
+Documentation checks may begin with a documented temporary allow-list during
+the initial migration, but new public APIs must not be added without compliant
+docstrings.
+
+## 9. Physical interfaces
 
 Interfaces should use structural typing (`Protocol`) where practical.
 
@@ -607,7 +615,7 @@ Numerical solvers and physical right-hand sides remain separate. The current
 SASHIMI perturbative and Shanks methods belong to generic solver machinery;
 calibrated stripping coefficients remain in the relevant SASHIMI package.
 
-## 9. Spatial and orbital design
+## 10. Spatial and orbital design
 
 Spatial support is designed from the beginning, even though implementation
 follows the non-spatial core.
@@ -616,9 +624,7 @@ follows the non-spatial core.
 
 ```python
 class RadialMeasureModel(Protocol):
-    def nodes(self, accretion_batch, host, target_redshift):
-        # q_nodes and normalized weight_orbit
-        ...
+    def nodes(self, accretion_batch, host, target_redshift): ...
 ```
 
 This supports `P(q | z_acc, ...)` without tracking individual orbits.
@@ -637,8 +643,7 @@ tidal-radius or tidal-tensor inputs
 ```
 
 Mass-loss and survival models may consume this context. Radius-dependent fitting
-laws remain physical prescriptions in SASHIMI-C or a future spatial model
-package.
+laws remain physical prescriptions in SASHIMI-C or a future spatial package.
 
 ### Level C: orbit-averaged transport
 
@@ -660,7 +665,7 @@ integral dV n(r) = total surviving weight
 A lone `radius` column is insufficient; its representation, epoch, and weight
 semantics must be recorded.
 
-## 10. Variant integration policy
+## 11. Variant integration policy
 
 ### SASHIMI-C
 
@@ -688,51 +693,230 @@ suppression and FDM core-halo structure remain separate model components. Its
 existing Colossus usage is an initial integration target for the Colossus
 backend.
 
-## 11. Testing, caching, and reproducibility
+## 12. Test strategy and bug prevention
 
-Required regression and invariant coverage includes:
+Every implemented behavior must have tests proportional to its scientific and
+software risk. A feature is not complete when it merely runs for one example;
+it is complete when its contract and important failure modes are tested.
 
-- compact golden outputs for C, W, SI, F, and at least one radial case;
-- finite and nonnegative quadrature weights;
-- integrated-weight agreement with expected abundance;
-- normalized concentration and spatial measures;
-- profile mass consistency;
-- scalar/batch and serial/parallel equivalence;
+### 12.1 Test categories
+
+The repository should distinguish:
+
+1. **unit tests**
+   - individual functions, classes, validation, and edge cases;
+   - small and deterministic;
+   - run on every pull request.
+
+2. **integration tests**
+   - interactions among backends, profiles, solvers, and catalogs;
+   - package installation and import behavior;
+   - run on every pull request where practical.
+
+3. **golden regression tests**
+   - compact reference outputs from SASHIMI-C/W/SI/F;
+   - protect scientific results during extraction and refactoring;
+   - tolerances and fixture provenance must be documented.
+
+4. **invariant and property-based tests**
+   - mathematical identities, monotonicity, normalization, and dimensional
+     consistency;
+   - use Hypothesis where random generation adds meaningful coverage.
+
+5. **convergence tests**
+   - verify stability under grid, quadrature, interpolation, and solver
+     resolution changes;
+   - expensive convergence tests may run on a scheduled workflow.
+
+6. **failure-mode tests**
+   - invalid units, negative masses/radii, unbracketed roots, unsupported
+     redshifts, missing optional dependencies, invalid backend state, and
+     out-of-domain interpolation.
+
+7. **serialization and compatibility tests**
+   - round-trip catalog serialization;
+   - schema-version handling;
+   - backward-compatibility adapters where promised.
+
+### 12.2 Required invariants
+
+Tests must cover, where applicable:
+
+- finite, nonnegative quadrature and catalog weights;
+- agreement between integrated weights and total expected abundance;
+- normalization of concentration, host-history, and spatial measures;
+- `m_bound <= m_acc` for monotonic stripping models;
+- consistency between profile parameters and enclosed mass;
+- invertibility of supported mass-definition transformations within tolerance;
+- scalar/array and broadcasting equivalence;
+- serial/chunked/parallel equivalence;
+- native/Colossus agreement for shared cosmological quantities;
+- native-float/Astropy-Quantity equivalence;
 - recovery of the global model after normalized spatial marginalization;
-- native cosmology versus Colossus comparisons;
-- native floats versus Astropy Quantity inputs and outputs;
-- dimensional-error tests;
-- minimal and optional-dependency installation tests.
+- deterministic results for fixed random seeds;
+- finite results or explicit flags rather than silent NaNs.
+
+### 12.3 Tests accompanying changes
+
+Every bug fix must include a regression test that fails before the fix and
+passes after it. Every new public function or behavioral branch must include
+unit tests. New numerical algorithms must include at least one comparison to an
+independent calculation, analytic limit, or trusted legacy output.
+
+Pull requests that intentionally omit tests must explain why the change is not
+testable or why existing tests are sufficient. Such exceptions should be rare.
+
+### 12.4 Coverage policy
+
+Coverage percentage is a diagnostic, not a substitute for scientific test
+quality. Nevertheless:
+
+- coverage must be reported in CI;
+- coverage must not decrease without an explicit explanation;
+- critical modules such as units, backend conversion, weight construction,
+  profile mass functions, and solver logic require branch coverage;
+- generated code and defensive import guards may be excluded only explicitly.
+
+An initial repository-wide threshold may start modestly during migration, then
+increase as legacy code is replaced. New modules should target high line and
+branch coverage from their first merge.
+
+## 13. GitHub Actions continuous integration
+
+Automated tests must be implemented in `.github/workflows/test.yml` and run on:
+
+```yaml
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+```
+
+A scheduled workflow may run slower convergence and full regression suites.
+
+### 13.1 Required CI jobs
+
+The test workflow should contain separate or matrix-based jobs for:
+
+- lint and formatting checks with Ruff;
+- static typing with mypy;
+- NumPy-style docstring validation;
+- unit and integration tests;
+- minimal dependency installation;
+- Astropy extra installation;
+- Colossus extra installation;
+- full extra installation;
+- supported Python-version matrix;
+- wheel and sdist build;
+- installation of the built wheel in a clean uv environment;
+- import and minimal numerical smoke test.
+
+Illustrative matrix:
+
+```text
+Python 3.11 / minimal
+Python 3.12 / minimal
+Python 3.13 / minimal, when dependencies support it
+Python 3.12 / astropy
+Python 3.12 / colossus
+Python 3.12 / full
+```
+
+Optional-backend jobs may be marked separately only when an upstream dependency
+is temporarily unavailable. Core tests must never be silently ignored.
+
+### 13.2 Workflow commands
+
+The primary commands should be reproducible locally:
+
+```bash
+uv sync --all-extras --dev
+uv run ruff check .
+uv run ruff format --check .
+uv run mypy src/itamae
+uv run pytest --cov=itamae --cov-branch --cov-report=term-missing
+uv build
+uv run twine check dist/*
+```
+
+CI-specific behavior should be minimal. A developer should be able to reproduce
+a failure with the same uv commands.
+
+### 13.3 Branch protection
+
+Once the initial workflow is stable, the main branch should require successful
+CI checks before merge. Recommended required checks are:
+
+```text
+lint
+typecheck
+tests-minimal
+tests-astropy
+tests-colossus
+build-and-smoke-test
+```
+
+Direct release publication must depend on successful completion of the full test
+workflow. A failing or skipped required check must prevent PyPI publication.
+
+### 13.4 Scheduled and release workflows
+
+A scheduled workflow should periodically run:
+
+- full golden regressions;
+- convergence tests;
+- latest-compatible dependency resolution;
+- optional lower-bound dependency tests;
+- documentation build;
+- cache and serialization compatibility checks.
+
+The release workflow should:
+
+1. verify that the tag matches the package version;
+2. run or require the complete CI suite;
+3. build wheel and sdist once;
+4. test those exact artifacts;
+5. publish the same artifacts through trusted publishing.
+
+## 14. Caching and reproducibility
 
 Cache keys include physical parameters, backend identifiers, cosmology,
 canonical-unit schema version, power-spectrum source, numerical resolution,
 package version, and serialization schema version.
 
-## 12. Phased roadmap
+Global backend state must not determine cached results. Randomized APIs must
+accept an explicit `numpy.random.Generator` or seed and record sufficient
+metadata for reproducibility.
 
-### Phase 0: packaging, baseline, and backend contracts
+## 15. Phased roadmap
 
-- add `pyproject.toml`, `src/itamae`, tests, and CI;
+### Phase 0: packaging, CI, documentation rules, and backend contracts
+
+- add `pyproject.toml`, `src/itamae`, `tests`, and `.github/workflows`;
 - configure uv and commit `uv.lock`;
 - define supported Python/NumPy/SciPy versions;
 - define `CosmologyBackend`, `UnitBackend`, and immutable `BackendConfig`;
+- configure Ruff, mypy, pytest, coverage, and numpydoc;
+- establish NumPy-style docstring and module-comment requirements;
+- add initial CI matrix and clean-wheel smoke test;
 - document canonical units and mass definitions;
 - add golden-output scripts to C, W, SI, and F;
-- configure wheel and source-distribution builds;
 - make no scientific changes.
 
 ### Phase 1: native and Astropy unit support
 
 - implement `NativeUnits` and `AstropyUnits`;
-- add dimensional-validation tests;
+- add dimensional-validation and failure-mode tests;
 - implement legacy-unit adapters for C/W/SI/F;
-- retain plain internal arrays by default.
+- retain plain internal arrays by default;
+- document every public unit conversion with NumPy-style docstrings.
 
 ### Phase 2: native and Colossus cosmology support
 
 - implement native flat-LCDM backend;
 - implement Colossus adapter without hidden global-state changes;
-- add backend-equivalence tests;
+- add backend-equivalence, convention, and global-state tests;
 - pass cosmology explicitly into host-history and halo utilities.
 
 ### Phase 3: types, numerics, and halo primitives
@@ -740,6 +924,7 @@ package version, and serialization schema version.
 - implement state/catalog dataclasses;
 - implement grids, quadrature, integration, and interpolation helpers;
 - implement robust NFW and mass-definition utilities;
+- add analytic-limit, inverse-consistency, broadcasting, and property tests;
 - provide unit-aware public wrappers.
 
 ### Phase 4: generic evolution solver
@@ -747,6 +932,7 @@ package version, and serialization schema version.
 - extract ODE and perturbative runners;
 - implement optional Shanks acceleration;
 - support history grids and chunked execution;
+- add comparisons against direct ODE integration and legacy results;
 - keep calibrated mass-loss laws in SASHIMI packages.
 
 ### Phase 5: initial measure and common catalog builder
@@ -754,6 +940,7 @@ package version, and serialization schema version.
 - construct accretion batches and independent weights;
 - implement concentration quadrature;
 - implement deterministic catalogs and stochastic realizations;
+- test normalization, shape semantics, serialization, and reproducibility;
 - migrate C first, then SI.
 
 ### Phase 6: power spectrum and variance protocols
@@ -761,6 +948,7 @@ package version, and serialization schema version.
 - implement tabulated spectra, transfer functions, top-hat and sharp-k windows;
 - implement variance integration, derivatives, interpolation, and safe caching;
 - integrate W and F through adapters;
+- test asymptotic behavior, cutoff behavior, derivatives, and legacy grids;
 - permit native or Colossus-backed implementations where appropriate.
 
 ### Phase 7: spatial Level A and Level B
@@ -768,6 +956,7 @@ package version, and serialization schema version.
 - implement radial measures and explicit spatial weights;
 - implement host-potential and local-environment interfaces;
 - implement normalized radial PDFs and radial observables;
+- add normalization and global-model recovery tests;
 - reimplement useful `r-dependent` functionality without embedding physical
   fitting laws in the catalog builder.
 
@@ -776,20 +965,22 @@ package version, and serialization schema version.
 - support multiple named state views;
 - support cored/SIDM and soliton/FDM profile schemas;
 - provide downstream dSph adapters;
-- prototype orbit-averaged transport after radial validation.
+- prototype orbit-averaged transport after radial validation;
+- add conservation, normalization, and limiting-case tests.
 
 ### Phase 9: first public release
 
 - freeze the initial public API;
-- complete documentation and examples;
+- complete NumPy-style API documentation and examples;
 - select and add the license;
 - add citation and changelog files;
+- require all branch-protection checks to pass;
 - test wheel/sdist installation across supported Python versions;
 - publish a release candidate to TestPyPI;
 - verify `uv add itamae` and optional extras in clean environments;
 - publish the first PyPI prerelease through trusted publishing.
 
-## 13. Initial public API target
+## 16. Initial public API target
 
 ```python
 from itamae.backends import BackendConfig
@@ -827,32 +1018,42 @@ catalog = model.generate_catalog(
 )
 ```
 
-## 14. Immediate next tasks
+## 17. Immediate next tasks
 
 The first implementation pull request should contain only:
 
-1. `pyproject.toml`, `src` layout, uv configuration, and CI;
-2. package metadata and dynamic version setup;
-3. backend protocols and immutable `BackendConfig`;
-4. canonical-unit documentation;
-5. `NativeUnits` and a minimal `AstropyUnits` adapter;
-6. native flat-LCDM and a minimal Colossus adapter;
-7. backend-equivalence tests;
-8. wheel/sdist build and clean-install smoke tests.
+1. `pyproject.toml`, `src` layout, uv configuration, and `uv.lock`;
+2. `.github/workflows/test.yml` with lint, typing, documentation, test, backend,
+   build, and clean-install jobs;
+3. pytest, coverage, Ruff, mypy, Hypothesis, and numpydoc configuration;
+4. package metadata and dynamic version setup;
+5. backend protocols and immutable `BackendConfig`;
+6. canonical-unit documentation;
+7. `NativeUnits` and a minimal `AstropyUnits` adapter;
+8. native flat-LCDM and a minimal Colossus adapter;
+9. unit, failure-mode, and backend-equivalence tests;
+10. NumPy-style module, class, and function docstrings;
+11. wheel/sdist build and clean-install smoke tests.
 
 It should not yet move EPS, concentration, stripping coefficients, or
 SIDM/WDM/FDM physics into ITAMAE.
 
-## 15. Definition of success
+## 18. Definition of success
 
 The initial refactor succeeds when:
 
 - each SASHIMI variant still owns its physical assumptions;
 - common numerical code is no longer copied among repositories;
 - all variants remain regression-equivalent;
+- every implemented feature has appropriate automated tests;
+- every bug fix includes a regression test;
+- required GitHub Actions checks run automatically on pull requests and `main`;
+- failing tests prevent merge and release publication;
+- public modules, classes, functions, and methods have detailed NumPy-style
+  documentation;
 - users can select native or Colossus cosmology explicitly;
 - users can use native floats or Astropy Quantity interfaces explicitly;
-- backend choices are reproducible and included in metadata/cache keys;
+- backend choices are reproducible and included in metadata and cache keys;
 - weighted catalogs share one schema;
 - WDM/FDM variance models are exchangeable without changing EPS integration;
 - a radial measure can be added without rewriting the non-spatial pipeline;
