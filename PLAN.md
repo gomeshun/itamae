@@ -8,7 +8,9 @@ FDM profile implementation in `dsph_fuzzy`, and the spatial development in the
 `r-dependent` branch of SASHIMI-C.
 
 The goal is to remove duplicated computational machinery without moving the
-scientific identity of each SASHIMI variant into ITAMAE.
+scientific identity of each SASHIMI variant into ITAMAE. ITAMAE is intended to
+be distributed as a normal Python package through PyPI and installed and
+developed with modern Python tooling, including `uv`.
 
 ## 1. Executive decision
 
@@ -18,9 +20,10 @@ ITAMAE owns the common **computational language** of the SASHIMI family:
 2. backend-independent cosmology and unit interfaces;
 3. spherical-halo and profile primitives;
 4. grids, quadrature, interpolation, integration, caching, and batch execution;
-5. generic evolution solvers that operate on model-supplied equations;
+5. generic evolution solvers operating on model-supplied equations;
 6. deterministic weighted measures and stochastic realizations;
-7. optional radial and phase-space infrastructure.
+7. optional radial and phase-space infrastructure;
+8. stable packaging, versioning, and distribution infrastructure.
 
 Each SASHIMI variant continues to own its physical prescriptions and default
 composition:
@@ -86,13 +89,12 @@ need to be rewritten when switching cosmology or unit backends.
 
 ## 4. Backend policy
 
-ITAMAE will support explicit, exchangeable backends. Backend choices must be
-stored in configuration metadata and included in cache keys and regression
-records.
+Backend choices must be explicit, immutable during a calculation, recorded in
+metadata, and included in cache keys and regression records.
 
 ### 4.1 Cosmology backends
 
-ITAMAE will support at least two cosmology backends:
+ITAMAE will support at least:
 
 1. **native backend**
    - NumPy/SciPy implementation;
@@ -102,11 +104,9 @@ ITAMAE will support at least two cosmology backends:
 
 2. **Colossus backend**
    - wraps `colossus.cosmology` and relevant halo utilities;
-   - allows established cosmologies and Colossus power-spectrum/growth tools;
-   - useful for independent validation and interoperability;
+   - exposes established cosmologies and Colossus growth/power-spectrum tools;
+   - supports independent validation and interoperability;
    - must not mutate global Colossus cosmology state invisibly.
-
-The public interface is backend-independent:
 
 ```python
 class CosmologyBackend(Protocol):
@@ -130,28 +130,13 @@ itamae.cosmology.NativeFlatLCDM
 itamae.cosmology.ColossusCosmology
 ```
 
-A backend adapter must define conventions explicitly, including:
-
-- physical versus comoving distances;
-- masses with or without factors of `h`;
-- critical-density versus mean-density definitions;
-- normalization of the growth factor;
-- scalar and array behavior;
-- supported redshift range.
-
-Colossus is an optional dependency, exposed through an installation extra such
-as:
-
-```bash
-pip install itamae[colossus]
-```
-
-The native and Colossus backends must be compared on a common test matrix. They
-need not be bitwise identical, but differences must be understood and bounded.
+Adapters must state conventions for physical/comoving quantities, factors of
+`h`, density definitions, growth normalization, scalar/array behavior, and
+supported redshift ranges.
 
 ### 4.2 Unit backends
 
-ITAMAE will support at least two unit modes:
+ITAMAE will support at least:
 
 1. **native unit backend**
    - plain floating-point NumPy arrays;
@@ -162,8 +147,6 @@ ITAMAE will support at least two unit modes:
    - accepts and returns `astropy.units.Quantity` where requested;
    - performs dimensional validation and explicit conversion;
    - supports user-facing, analysis-facing, and validation workflows.
-
-The backend contract is conceptually:
 
 ```python
 class UnitBackend(Protocol):
@@ -182,70 +165,49 @@ itamae.units.NativeUnits
 itamae.units.AstropyUnits
 ```
 
-The canonical internal units should be documented centrally. A likely initial
-choice is:
+Likely canonical internal units are:
 
 ```text
-mass       : Msun
-length     : Mpc
-velocity   : km / s
-time       : Gyr
-cross section per mass : cm^2 / g
+mass                    : Msun
+length                  : Mpc
+velocity                : km / s
+time                    : Gyr
+cross section per mass  : cm^2 / g
 ```
 
-The exact choice should be finalized only after regression tests against C, W,
-SI, and F are prepared.
+The exact schema must be finalized after regression fixtures exist for C, W,
+SI, and F.
 
-Astropy support must be a real public backend, not merely a test helper.
-Nevertheless, ITAMAE should not force `Quantity` objects through every large
-internal batch. The recommended execution path is:
+Astropy support is a real public backend. However, ITAMAE should not force
+`Quantity` objects through every large internal batch. The preferred path is:
 
 ```text
 Quantity input
   -> dimensional validation
-  -> conversion to canonical internal floating arrays
+  -> conversion to canonical floating arrays
   -> high-performance calculation
   -> optional Quantity output
 ```
 
-This gives users safe unit-aware interfaces without imposing Quantity overhead
-on every inner-loop operation.
-
-Astropy is an optional dependency, exposed through an installation extra such
-as:
-
-```bash
-pip install itamae[astropy]
-```
-
-An aggregate extra may also be provided:
-
-```bash
-pip install itamae[full]
-```
-
 ### 4.3 Backend configuration
-
-Backend selection must be explicit and immutable during a calculation:
 
 ```python
 config = BackendConfig(
-    cosmology="native",       # or "colossus"
-    units="native",           # or "astropy"
+    cosmology="native",  # or "colossus"
+    units="native",      # or "astropy"
     array="numpy",
 )
 ```
 
-Objects constructed under one backend configuration should retain the backend
-identifier in metadata. Changing a global Colossus cosmology or changing unit
-conventions must not silently alter an existing model or cached result.
+Objects retain backend identifiers in metadata. Existing objects and cached
+results must not change when external global state changes.
 
 ### 4.4 Array and numerical backends
 
-The initial array/numerical backend remains NumPy/SciPy. JAX or other
-accelerated/differentiable backends are future work. The first API should avoid
-unnecessary NumPy-only assumptions where a small abstraction is inexpensive,
-but backend generality must not delay regression-equivalent implementation.
+The initial numerical backend is NumPy/SciPy. JAX or other accelerated or
+differentiable backends are future work. The first API should avoid gratuitous
+NumPy-only assumptions, but backend generality must not delay a
+regression-equivalent implementation.
 
 ## 5. Core data model
 
@@ -264,11 +226,8 @@ class HostState:
     metadata: Mapping[str, Any]
 ```
 
-Metadata records the cosmology backend, unit backend, mass definitions, and
-physical model identifiers.
-
 Host density, enclosed mass, potential, circular velocity, and local dynamical
-time are provided through a `HostPotential` interface.
+time are exposed through a `HostPotential` interface.
 
 ### 5.2 `AccretionBatch`
 
@@ -285,7 +244,7 @@ class AccretionBatch:
 ```
 
 Optional fields include host-history and orbital-infall node identifiers. All
-arrays use a shared leading batch shape.
+arrays share one leading batch shape.
 
 ### 5.3 `SubhaloState`
 
@@ -340,89 +299,278 @@ stochastic realization, optional Quantity export, and model-specific columns.
 ## 6. Planned package structure
 
 ```text
-src/itamae/
-  __init__.py
-
-  backends/
-    config.py
-    registry.py
-
-  units/
-    base.py
-    native.py
-    astropy.py
-
-  cosmology/
-    base.py
-    native.py
-    colossus.py
-
-  types/
-    arrays.py
-    state.py
-    catalog.py
-    flags.py
-
-  numerics/
-    grids.py
-    quadrature.py
-    integration.py
-    interpolation.py
-    root_finding.py
-    batching.py
-    cache.py
-
-  halo/
-    mass_definitions.py
-    profiles.py
-    nfw.py
-    truncated_nfw.py
-    potential.py
-
-  protocols/
-    variance.py
-    host_history.py
-    accretion.py
-    concentration.py
-    mass_loss.py
-    profile_evolution.py
-    survival.py
-    infall.py
-    orbit.py
-    spatial.py
-
-  evolution/
-    ode.py
-    perturbative.py
-    operators.py
-    runner.py
-
-  measure/
-    builder.py
-    weights.py
-    sampling.py
-
-  spatial/
-    radial.py
-    phase_space.py
-    orbit_averaging.py
-    kernels.py
-
-  adapters/
-    legacy_c.py
-    legacy_w.py
-    legacy_si.py
-    legacy_f.py
-
-  testing/
-    regression.py
-    convergence.py
-    backend_equivalence.py
+itamae/
+  pyproject.toml
+  README.md
+  PLAN.md
+  LICENSE
+  CHANGELOG.md
+  CITATION.cff
+  uv.lock
+  src/
+    itamae/
+      __init__.py
+      py.typed
+      backends/
+        config.py
+        registry.py
+      units/
+        base.py
+        native.py
+        astropy.py
+      cosmology/
+        base.py
+        native.py
+        colossus.py
+      types/
+        arrays.py
+        state.py
+        catalog.py
+        flags.py
+      numerics/
+        grids.py
+        quadrature.py
+        integration.py
+        interpolation.py
+        root_finding.py
+        batching.py
+        cache.py
+      halo/
+        mass_definitions.py
+        profiles.py
+        nfw.py
+        truncated_nfw.py
+        potential.py
+      protocols/
+        variance.py
+        host_history.py
+        accretion.py
+        concentration.py
+        mass_loss.py
+        profile_evolution.py
+        survival.py
+        infall.py
+        orbit.py
+        spatial.py
+      evolution/
+        ode.py
+        perturbative.py
+        operators.py
+        runner.py
+      measure/
+        builder.py
+        weights.py
+        sampling.py
+      spatial/
+        radial.py
+        phase_space.py
+        orbit_averaging.py
+        kernels.py
+      adapters/
+        legacy_c.py
+        legacy_w.py
+        legacy_si.py
+        legacy_f.py
+      testing/
+        regression.py
+        convergence.py
+        backend_equivalence.py
+  tests/
+  docs/
 ```
 
 This is a target layout; empty modules should not be created prematurely.
 
-## 7. Physical interfaces
+## 7. Packaging, PyPI, and uv policy
+
+ITAMAE is intended for publication on PyPI under the distribution name
+`itamae`, subject to confirming name availability before the first release.
+The import package is also `itamae`.
+
+### 7.1 `pyproject.toml`
+
+The repository must use a standards-compliant `pyproject.toml` as the single
+source of packaging metadata and dependency declarations. A lightweight PEP 517
+backend such as Hatchling is preferred initially.
+
+Illustrative configuration:
+
+```toml
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "itamae"
+dynamic = ["version"]
+description = "Integrated Toolkit for Analytical Merger-tree And Evolution"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+authors = [
+  { name = "Shunichi Horigome" },
+]
+dependencies = [
+  "numpy>=1.26",
+  "scipy>=1.11",
+]
+
+[project.optional-dependencies]
+astropy = ["astropy>=6"]
+colossus = ["colossus>=1.3"]
+full = [
+  "astropy>=6",
+  "colossus>=1.3",
+]
+dev = [
+  "pytest>=8",
+  "pytest-cov>=5",
+  "ruff>=0.5",
+  "mypy>=1.10",
+  "build>=1.2",
+  "twine>=5",
+]
+docs = [
+  "sphinx>=7",
+  "myst-parser>=3",
+  "furo>=2024.5.6",
+]
+
+[project.urls]
+Repository = "https://github.com/gomeshun/itamae"
+Issues = "https://github.com/gomeshun/itamae/issues"
+
+[tool.hatch.version]
+path = "src/itamae/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/itamae"]
+```
+
+Exact minimum dependency versions should be finalized after testing the current
+SASHIMI repositories. Loose but bounded compatibility is preferred over
+unnecessarily strict pins in published package metadata.
+
+### 7.2 Versioning
+
+- Use semantic versioning where practical.
+- Begin with development releases such as `0.1.0a1` or `0.1.0.devN`.
+- Keep one authoritative version source.
+- Include the package version and schema version in serialized metadata and
+  cache keys.
+- Tag release commits as `vX.Y.Z`.
+
+### 7.3 Installation with uv
+
+End-user installation from PyPI:
+
+```bash
+uv add itamae
+```
+
+With optional backends:
+
+```bash
+uv add "itamae[astropy]"
+uv add "itamae[colossus]"
+uv add "itamae[full]"
+```
+
+One-off isolated execution may use:
+
+```bash
+uvx --from itamae python -c "import itamae; print(itamae.__version__)"
+```
+
+For local development:
+
+```bash
+git clone https://github.com/gomeshun/itamae.git
+cd itamae
+uv sync --all-extras --dev
+uv run pytest
+```
+
+The repository should commit `uv.lock` for reproducible development and CI.
+The lock file is not a substitute for sensible dependency ranges in
+`pyproject.toml`; PyPI users resolve from published metadata.
+
+### 7.4 Dependency groups
+
+Where supported by the selected uv/project configuration, development tools may
+be declared through dependency groups rather than exposing all tooling as a
+runtime-style optional extra. The intended groups are:
+
+```text
+dev     : pytest, coverage, ruff, mypy, build, twine
+docs    : Sphinx/MyST/Furo
+bench   : benchmark and profiling tools
+```
+
+Runtime optional extras remain user-facing:
+
+```text
+astropy
+colossus
+full
+```
+
+### 7.5 Build and release checks
+
+Before every release:
+
+```bash
+uv sync --all-extras --dev
+uv run pytest
+uv run ruff check .
+uv run mypy src/itamae
+uv build
+uv run twine check dist/*
+```
+
+CI should also install the built wheel into a clean environment and run a smoke
+test. Tests must cover the minimal installation and each supported optional
+backend combination.
+
+Recommended test matrix:
+
+```text
+minimal: NumPy/SciPy only
+astropy: minimal + Astropy
+colossus: minimal + Colossus
+full: all supported optional backends
+```
+
+### 7.6 PyPI publication
+
+- Publish initial candidates to TestPyPI first.
+- Use GitHub Actions with PyPI trusted publishing rather than storing a long-lived
+  API token where possible.
+- Build source distributions and wheels from tagged commits.
+- Do not publish directly from an unclean local working tree.
+- Verify installation of the uploaded artifact in a fresh environment.
+- Add release notes and update `CHANGELOG.md` for each public release.
+
+A future release workflow should be triggered by a GitHub release or version
+tag, run the full test matrix, build artifacts once, and publish those exact
+artifacts.
+
+### 7.7 Public package quality requirements
+
+Before the first PyPI release, ITAMAE should have:
+
+- a selected open-source license;
+- complete project metadata and classifiers;
+- `README.md` installation and minimal usage examples;
+- `CHANGELOG.md`;
+- `CITATION.cff` and citation guidance;
+- `py.typed` if public type annotations are supported;
+- no package import-time data-file lookup relative to the current directory;
+- packaged data declared explicitly;
+- clear optional-dependency error messages;
+- API documentation for all public objects.
+
+## 8. Physical interfaces
 
 Interfaces should use structural typing (`Protocol`) where practical.
 
@@ -459,7 +607,7 @@ Numerical solvers and physical right-hand sides remain separate. The current
 SASHIMI perturbative and Shanks methods belong to generic solver machinery;
 calibrated stripping coefficients remain in the relevant SASHIMI package.
 
-## 8. Spatial and orbital design
+## 9. Spatial and orbital design
 
 Spatial support is designed from the beginning, even though implementation
 follows the non-spatial core.
@@ -512,7 +660,7 @@ integral dV n(r) = total surviving weight
 A lone `radius` column is insufficient; its representation, epoch, and weight
 semantics must be recorded.
 
-## 9. Variant integration policy
+## 10. Variant integration policy
 
 ### SASHIMI-C
 
@@ -524,7 +672,7 @@ ITAMAE replaces only shared mechanisms.
 
 Adapter-first migration because of its cgs units, WMAP7 setup, global file
 loading, procedural initialization, sharp-k variance, and distinct
-concentration calculation. The native and Astropy unit backends are especially
+concentration calculation. Native and Astropy unit backends are especially
 important for reproducing and validating this migration.
 
 ### SASHIMI-SI
@@ -536,97 +684,62 @@ The catalog supports multiple named state views such as `cdm_reference` and
 ### SASHIMI-F
 
 Uses composable power-spectrum and variance components. FDM population
-suppression and FDM core-halo structure remain separate model components.
-Its existing Colossus usage provides an initial integration target for the
-Colossus cosmology backend.
+suppression and FDM core-halo structure remain separate model components. Its
+existing Colossus usage is an initial integration target for the Colossus
+backend.
 
-## 10. Testing policy
+## 11. Testing, caching, and reproducibility
 
-### Golden regression data
+Required regression and invariant coverage includes:
 
-Each SASHIMI repository should produce compact reference outputs spanning:
-
-- multiple host masses;
-- zero and nonzero target redshifts;
-- low and standard resolutions;
-- concentration scatter on/off;
-- evolved and unevolved profiles;
-- representative WDM, SIDM, and FDM parameters;
-- at least one radial configuration.
-
-### Invariant tests
-
-Required invariants include:
-
-- finite, nonnegative quadrature weights;
+- compact golden outputs for C, W, SI, F, and at least one radial case;
+- finite and nonnegative quadrature weights;
 - integrated-weight agreement with expected abundance;
 - normalized concentration and spatial measures;
 - profile mass consistency;
-- scalar/batch equivalence;
-- serial/parallel equivalence;
-- recovery of the global model after normalized spatial marginalization.
-
-### Backend-equivalence tests
-
-The test suite must compare:
-
-- native cosmology versus Colossus for shared cosmological quantities;
+- scalar/batch and serial/parallel equivalence;
+- recovery of the global model after normalized spatial marginalization;
+- native cosmology versus Colossus comparisons;
 - native floats versus Astropy Quantity inputs and outputs;
-- native and Astropy unit conversions for all public physical quantities;
-- catalog results across backend combinations within documented tolerances;
-- legacy C/W/SI/F outputs after conversion to one canonical unit system.
+- dimensional-error tests;
+- minimal and optional-dependency installation tests.
 
-Tests must include deliberate unit mistakes and verify that the Astropy backend
-raises clear dimensional errors.
-
-## 11. Caching and reproducibility
-
-Cache keys include:
-
-- physical parameters;
-- cosmology parameters and backend identifier;
-- unit backend and canonical-unit schema version;
-- power-spectrum source and version;
-- numerical bounds and resolution;
-- package/code version.
-
-Global backend state must not determine cached results. In particular, Colossus
-configuration should be isolated or explicitly restored, and existing objects
-must retain their construction-time cosmology definition.
+Cache keys include physical parameters, backend identifiers, cosmology,
+canonical-unit schema version, power-spectrum source, numerical resolution,
+package version, and serialization schema version.
 
 ## 12. Phased roadmap
 
-### Phase 0: baseline and backend contracts
+### Phase 0: packaging, baseline, and backend contracts
 
-- add packaging and CI;
+- add `pyproject.toml`, `src/itamae`, tests, and CI;
+- configure uv and commit `uv.lock`;
 - define supported Python/NumPy/SciPy versions;
 - define `CosmologyBackend`, `UnitBackend`, and immutable `BackendConfig`;
-- document canonical internal units and mass-definition conventions;
+- document canonical units and mass definitions;
 - add golden-output scripts to C, W, SI, and F;
+- configure wheel and source-distribution builds;
 - make no scientific changes.
 
 ### Phase 1: native and Astropy unit support
 
-- implement `NativeUnits`;
-- implement `AstropyUnits` with Quantity input/output conversion;
+- implement `NativeUnits` and `AstropyUnits`;
 - add dimensional-validation tests;
 - implement legacy-unit adapters for C/W/SI/F;
-- ensure internal batch arrays remain plain floating arrays by default.
+- retain plain internal arrays by default.
 
 ### Phase 2: native and Colossus cosmology support
 
-- implement native flat-LCDM backend reproducing current formulae;
-- implement the Colossus adapter without hidden global-state changes;
+- implement native flat-LCDM backend;
+- implement Colossus adapter without hidden global-state changes;
 - add backend-equivalence tests;
 - pass cosmology explicitly into host-history and halo utilities.
 
 ### Phase 3: types, numerics, and halo primitives
 
 - implement state/catalog dataclasses;
-- implement grids and Gauss-Hermite utilities;
-- implement integration/interpolation wrappers;
-- implement robust NFW mass and inverse-mass functions;
-- implement mass-definition conversions;
+- implement grids, quadrature, integration, and interpolation helpers;
+- implement robust NFW and mass-definition utilities;
 - provide unit-aware public wrappers.
 
 ### Phase 4: generic evolution solver
@@ -638,8 +751,7 @@ must retain their construction-time cosmology definition.
 
 ### Phase 5: initial measure and common catalog builder
 
-- implement accretion-batch construction;
-- retain independent weight factors;
+- construct accretion batches and independent weights;
 - implement concentration quadrature;
 - implement deterministic catalogs and stochastic realizations;
 - migrate C first, then SI.
@@ -649,22 +761,33 @@ must retain their construction-time cosmology definition.
 - implement tabulated spectra, transfer functions, top-hat and sharp-k windows;
 - implement variance integration, derivatives, interpolation, and safe caching;
 - integrate W and F through adapters;
-- allow native or Colossus-backed variance implementations where appropriate.
+- permit native or Colossus-backed implementations where appropriate.
 
 ### Phase 7: spatial Level A and Level B
 
 - implement radial measures and explicit spatial weights;
 - implement host-potential and local-environment interfaces;
 - implement normalized radial PDFs and radial observables;
-- reimplement useful `r-dependent` functionality without embedding its fitting
-  laws in the catalog builder.
+- reimplement useful `r-dependent` functionality without embedding physical
+  fitting laws in the catalog builder.
 
 ### Phase 8: SIDM/FDM structures and Level C research backend
 
 - support multiple named state views;
 - support cored/SIDM and soliton/FDM profile schemas;
 - provide downstream dSph adapters;
-- prototype orbit-averaged phase-space transport after radial validation.
+- prototype orbit-averaged transport after radial validation.
+
+### Phase 9: first public release
+
+- freeze the initial public API;
+- complete documentation and examples;
+- select and add the license;
+- add citation and changelog files;
+- test wheel/sdist installation across supported Python versions;
+- publish a release candidate to TestPyPI;
+- verify `uv add itamae` and optional extras in clean environments;
+- publish the first PyPI prerelease through trusted publishing.
 
 ## 13. Initial public API target
 
@@ -676,8 +799,6 @@ from itamae.types import AccretionBatch, WeightedSubhaloCatalog
 from itamae.halo import NFWProfile, convert_mass_definition
 from itamae.evolution import PerturbativeEvolutionSolver
 ```
-
-Example backend selection:
 
 ```python
 backend = BackendConfig(
@@ -692,10 +813,7 @@ A SASHIMI package assembles the physical model:
 from sashimi_c import SashimiCDM
 
 model = SashimiCDM(backend=backend)
-catalog = model.generate_catalog(
-    host_mass=1.0e12,  # floats use documented canonical units
-    redshift=0.0,
-)
+catalog = model.generate_catalog(host_mass=1.0e12, redshift=0.0)
 ```
 
 or with Quantity input:
@@ -713,13 +831,14 @@ catalog = model.generate_catalog(
 
 The first implementation pull request should contain only:
 
-1. repository packaging and CI;
-2. backend protocols and immutable `BackendConfig`;
-3. canonical-unit documentation;
-4. `NativeUnits` and a minimal `AstropyUnits` adapter;
-5. native flat-LCDM and a minimal Colossus adapter;
-6. backend-equivalence tests for `H(z)`, `rho_crit(z)`, time, and basic unit
-   conversions.
+1. `pyproject.toml`, `src` layout, uv configuration, and CI;
+2. package metadata and dynamic version setup;
+3. backend protocols and immutable `BackendConfig`;
+4. canonical-unit documentation;
+5. `NativeUnits` and a minimal `AstropyUnits` adapter;
+6. native flat-LCDM and a minimal Colossus adapter;
+7. backend-equivalence tests;
+8. wheel/sdist build and clean-install smoke tests.
 
 It should not yet move EPS, concentration, stripping coefficients, or
 SIDM/WDM/FDM physics into ITAMAE.
@@ -737,5 +856,7 @@ The initial refactor succeeds when:
 - weighted catalogs share one schema;
 - WDM/FDM variance models are exchangeable without changing EPS integration;
 - a radial measure can be added without rewriting the non-spatial pipeline;
-- future orbit-averaged work reuses the same host, state, measure, backend, and
-  catalog abstractions.
+- future orbit-averaged work reuses the same abstractions;
+- PyPI artifacts can be installed with `uv add itamae`;
+- minimal, Astropy, Colossus, and full installations pass clean-environment
+  tests.
