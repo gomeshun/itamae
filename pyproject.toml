@@ -4,12 +4,16 @@ build-backend = "hatchling.build"
 
 [project]
 name = "itamae"
-version = "0.1.0a1"
+version = "0.1.0a2"
 description = "Integrated Toolkit for Analytical Merger-tree And Evolution"
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [{name = "Shunichi Horigome"}]
 dependencies = ["numpy>=1.26", "scipy>=1.11"]
+
+[project.urls]
+Repository = "https://github.com/gomeshun/itamae"
+Issues = "https://github.com/gomeshun/itamae/issues"
 
 [project.optional-dependencies]
 astropy = ["astropy>=6"]

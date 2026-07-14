@@ -11,8 +11,9 @@ prepares and assembles the ingredients. In the same way, ITAMAE provides the
 common numerical machinery and data structures used to construct SASHIMI
 subhalo catalogs.
 
-> **Project status:** early development.
-> The public API and repository structure described below are provisional.
+> **Project status:** early alpha development.
+> The package foundation is implemented, but the public API remains
+> provisional while SASHIMI variants are migrated through regression tests.
 
 ## Motivation
 
@@ -188,18 +189,20 @@ than rapid API expansion.
 
 ## Installation
 
-ITAMAE is not yet released as an installable package.
-
-Once the package structure is available, a development installation will use:
+ITAMAE is not yet released on PyPI. The public repository can be installed for
+development with `uv`:
 
 ```bash
-git clone https://github.com/<OWNER>/itamae.git
+git clone https://github.com/gomeshun/itamae.git
 cd itamae
-python -m pip install -e .
+uv sync --all-extras --group dev
+uv run pytest
 ```
 
-Replace `<OWNER>` with the GitHub organization or user that hosts the
-repository.
+The canonical internal units and required reproducibility metadata are
+documented in [`docs/canonical-units.md`](docs/canonical-units.md). Foundation
+branch-consolidation decisions are recorded in
+[`docs/foundation-integration.md`](docs/foundation-integration.md).
 
 ## Contributing
 

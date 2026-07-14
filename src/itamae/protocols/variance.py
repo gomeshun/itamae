@@ -13,7 +13,7 @@ from typing import Any, Protocol, runtime_checkable
 
 @runtime_checkable
 class VarianceModel(Protocol):
-    """Describe a mass-variance implementation consumed by ITAMAE pipelines.
+    r"""Describe a mass-variance implementation consumed by ITAMAE pipelines.
 
     Attributes
     ----------
@@ -36,13 +36,13 @@ class VarianceModel(Protocol):
         ...
 
     def sigma(self, mass: Any, z: Any = 0.0) -> Any:
-        """Return the linear rms fluctuation :math:`\sigma(M,z)`."""
+        r"""Return the linear rms fluctuation :math:`\sigma(M,z)`."""
         ...
 
     def variance(self, mass: Any, z: Any = 0.0) -> Any:
-        """Return the linear variance :math:`S(M,z)=\sigma(M,z)^2`."""
+        r"""Return the linear variance :math:`S(M,z)=\sigma(M,z)^2`."""
         ...
 
     def dvariance_dmass(self, mass: Any, z: Any = 0.0) -> Any:
-        """Return :math:`\mathrm{d}S/\mathrm{d}M`."""
+        r"""Return :math:`\mathrm{d}S/\mathrm{d}M`."""
         ...

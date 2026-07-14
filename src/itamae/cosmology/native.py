@@ -78,6 +78,7 @@ class NativeFlatLCDM:
         The integral is evaluated independently for scalar inputs. Array inputs
         are vectorized to preserve a simple public API.
         """
+
         def one(zi: float) -> float:
             def integrand(zp: float) -> float:
                 return 1.0 / ((1.0 + zp) * self.H(zp) * _KMS_MPC_TO_GYR_INV)

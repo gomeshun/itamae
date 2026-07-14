@@ -1,6 +1,11 @@
 """Typed state and catalog containers."""
 
-from .catalog import WeightedSubhaloCatalog
+from .catalog import (
+    CANONICAL_WEIGHT_FACTORS,
+    CATALOG_SCHEMA_VERSION,
+    CatalogMetadata,
+    WeightedSubhaloCatalog,
+)
 from .state import AccretionBatch, HostState, OrbitalState, ProfileParameters, SubhaloState
 
 __all__ = [
@@ -9,5 +14,8 @@ __all__ = [
     "ProfileParameters",
     "SubhaloState",
     "OrbitalState",
+    "CANONICAL_WEIGHT_FACTORS",
+    "CATALOG_SCHEMA_VERSION",
+    "CatalogMetadata",
     "WeightedSubhaloCatalog",
 ]

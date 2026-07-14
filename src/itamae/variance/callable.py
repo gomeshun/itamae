@@ -11,7 +11,7 @@ import numpy as np
 
 @dataclass(frozen=True, slots=True)
 class CallableVarianceModel:
-    """Wrap model-supplied variance functions behind a stable interface.
+    r"""Wrap model-supplied variance functions behind a stable interface.
 
     Parameters
     ----------

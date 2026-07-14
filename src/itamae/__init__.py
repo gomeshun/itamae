@@ -3,4 +3,4 @@
 from .backends import BackendConfig
 
 __all__ = ["BackendConfig"]
-__version__ = "0.1.0a1"
+__version__ = "0.1.0a2"
