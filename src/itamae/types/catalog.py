@@ -8,6 +8,10 @@ ITAMAE owns shape validation, weight semantics, and reproducibility metadata.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import json
+import os
+from pathlib import Path
+import tempfile
 from types import MappingProxyType
 from typing import Any, ClassVar, Mapping, Sequence
 
@@ -235,6 +239,105 @@ class WeightedSubhaloCatalog:
         multiplicity = rng.poisson(self.weight_final)
         indices = np.repeat(np.arange(len(self)), multiplicity)
         return MappingProxyType({name: value[indices] for name, value in self.columns.items()})
+
+    def to_npz(self, path: str | os.PathLike[str]) -> None:
+        """Atomically serialize the catalog without Python pickle objects.
+
+        Parameters
+        ----------
+        path
+            Destination ``.npz`` path. Metadata must be finite
+            JSON-compatible data.
+
+        Notes
+        -----
+        Physical arrays retain their NumPy dtypes. Weight arrays are already
+        canonical floating-point values. A manifest maps names to numbered
+        archive fields so model-specific names never become executable object
+        payloads.
+        """
+        metadata = (
+            self.metadata.as_mapping()
+            if isinstance(self.metadata, CatalogMetadata)
+            else self.metadata
+        )
+        manifest = {
+            "archive_schema": "itamae-weighted-catalog-npz:1.0",
+            "catalog_metadata": dict(metadata),
+            "columns": list(self.columns),
+            "weights": list(self.weights),
+        }
+        try:
+            manifest_json = json.dumps(
+                manifest,
+                sort_keys=True,
+                separators=(",", ":"),
+                allow_nan=False,
+            )
+        except (TypeError, ValueError) as exc:
+            raise ValueError("Catalog metadata must be finite JSON-compatible data.") from exc
+
+        payload = {"manifest_json": np.asarray(manifest_json)}
+        payload.update(
+            {f"column_{index}": value for index, value in enumerate(self.columns.values())}
+        )
+        payload.update(
+            {f"weight_{index}": value for index, value in enumerate(self.weights.values())}
+        )
+        destination = Path(path)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        temporary_name: str | None = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                dir=destination.parent,
+                prefix=f".{destination.name}.",
+                suffix=".npz",
+                delete=False,
+            ) as temporary:
+                temporary_name = temporary.name
+                np.savez_compressed(temporary, **payload)  # type: ignore[arg-type]
+            os.replace(temporary_name, destination)
+        finally:
+            if temporary_name is not None and os.path.exists(temporary_name):
+                os.unlink(temporary_name)
+
+    @classmethod
+    def from_npz(cls, path: str | os.PathLike[str]) -> WeightedSubhaloCatalog:
+        """Load and validate a catalog produced by :meth:`to_npz`."""
+        with np.load(Path(path), allow_pickle=False) as archive:
+            try:
+                manifest = json.loads(str(archive["manifest_json"]))
+            except (KeyError, json.JSONDecodeError, TypeError) as exc:
+                raise ValueError("Catalog archive has an invalid manifest.") from exc
+            if manifest.get("archive_schema") != "itamae-weighted-catalog-npz:1.0":
+                raise ValueError("Catalog archive schema is unsupported.")
+            column_names = manifest.get("columns")
+            weight_names = manifest.get("weights")
+            metadata = manifest.get("catalog_metadata")
+            if (
+                not isinstance(column_names, list)
+                or not all(isinstance(name, str) for name in column_names)
+                or not isinstance(weight_names, list)
+                or not all(isinstance(name, str) for name in weight_names)
+                or not isinstance(metadata, dict)
+            ):
+                raise ValueError("Catalog archive manifest fields are invalid.")
+            expected_fields = {
+                "manifest_json",
+                *(f"column_{index}" for index in range(len(column_names))),
+                *(f"weight_{index}" for index in range(len(weight_names))),
+            }
+            if set(archive.files) != expected_fields:
+                raise ValueError("Catalog archive field set does not match its manifest.")
+            columns = {
+                name: np.asarray(archive[f"column_{index}"])
+                for index, name in enumerate(column_names)
+            }
+            weights = {
+                name: np.asarray(archive[f"weight_{index}"], dtype=float)
+                for index, name in enumerate(weight_names)
+            }
+        return cls(columns=columns, weights=weights, metadata=metadata)
 
     @classmethod
     def concatenate(cls, catalogs: Sequence[WeightedSubhaloCatalog]) -> WeightedSubhaloCatalog:

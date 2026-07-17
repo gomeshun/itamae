@@ -11,9 +11,10 @@ prepares and assembles the ingredients. In the same way, ITAMAE provides the
 common numerical machinery and data structures used to construct SASHIMI
 subhalo catalogs.
 
-> **Project status:** early alpha development.
-> The package foundation is implemented, but the public API remains
-> provisional while SASHIMI variants are migrated through regression tests.
+> **Project status:** early alpha migration.
+> The package foundation, generic evolution, weighted-catalog, power/variance,
+> and spherical-orbit mechanisms are implemented. The public API remains
+> provisional until all SASHIMI variants complete their golden regressions.
 
 ## Motivation
 
@@ -203,6 +204,32 @@ The canonical internal units and required reproducibility metadata are
 documented in [`docs/canonical-units.md`](docs/canonical-units.md). Foundation
 branch-consolidation decisions are recorded in
 [`docs/foundation-integration.md`](docs/foundation-integration.md).
+
+WDM and FDM packages retain their physical transfer functions and compose them
+with ITAMAE explicitly:
+
+```python
+from itamae.power import SharpKWindow, TabulatedPowerSpectrum
+from itamae.variance import IntegratedVarianceModel
+
+power = TabulatedPowerSpectrum(
+    k,
+    p_modified,
+    identifier="sashimi-variant:documented-transfer:v1",
+)
+variance = IntegratedVarianceModel(
+    power=power,
+    window=SharpKWindow(),
+    rho_mean=rho_mean,
+    k_min=k.min(),
+    k_max=k.max(),
+    filter_scale=calibrated_c,
+)
+```
+
+The identifier, backend, mass grid, and numerical settings can be combined
+with `variance_cache_key`; cache loading rejects a mismatched key rather than
+silently reusing data from another physical model.
 
 ## Contributing
 

@@ -6,6 +6,13 @@ CDM, WDM, SIDM, or FDM prescription.
 """
 
 from .backends import CosmologyBackend, UnitBackend
+from .power import PowerSpectrum, WindowFunction
 from .variance import VarianceModel
 
-__all__ = ["CosmologyBackend", "UnitBackend", "VarianceModel"]
+__all__ = [
+    "CosmologyBackend",
+    "PowerSpectrum",
+    "UnitBackend",
+    "VarianceModel",
+    "WindowFunction",
+]
