@@ -49,11 +49,71 @@ def test_integrated_sharp_k_variance_matches_analytic_power_law():
     )
 
     expected = (1.0 - 1.0e-9) / (6.0 * np.pi**2)
-    assert model.variance(1.0, 0.0) == pytest.approx(expected, rel=4.0e-3)
-    assert model.variance(1.0, 1.0) == pytest.approx(expected / 4.0, rel=4.0e-3)
-    assert model.dvariance_dmass(1.0, 0.0) < 0.0
+    expected_derivative = -1.0 / (6.0 * np.pi**2)
+    assert model.variance(1.0, 0.0) == pytest.approx(expected, rel=2.0e-11)
+    assert model.variance(1.0, 1.0) == pytest.approx(expected / 4.0, rel=2.0e-11)
+    assert model.dvariance_dmass(1.0, 0.0) == pytest.approx(
+        expected_derivative,
+        rel=2.0e-14,
+    )
+    assert model.dvariance_dmass(1.0, 1.0) == pytest.approx(
+        expected_derivative / 4.0,
+        rel=2.0e-14,
+    )
     assert isinstance(model, VarianceModel)
+    assert "integrated-variance:v2" in model.identifier
     assert "constant-power" in model.identifier
+
+
+def test_sharp_k_variance_and_derivative_are_continuous_between_grid_nodes():
+    """A moving cutoff must not create zero derivatives or grid-boundary spikes."""
+    k = np.geomspace(1.0e-6, 1.0e6, 301)
+    power = TabulatedPowerSpectrum(k, k**-2, identifier="inverse-square-power")
+    model = IntegratedVarianceModel(
+        power=power,
+        window=SharpKWindow(),
+        rho_mean=3.0 / (4.0 * np.pi),
+        k_min=k[0],
+        k_max=k[-1],
+        n_k=1001,
+    )
+    mass = np.geomspace(1.0e-12, 1.0e12, 49)
+    cutoff = mass ** (-1.0 / 3.0)
+    expected_variance = (cutoff - k[0]) / (2.0 * np.pi**2)
+    expected_derivative = -cutoff / (6.0 * np.pi**2 * mass)
+
+    np.testing.assert_allclose(
+        model.variance(mass),
+        expected_variance,
+        rtol=2.0e-9,
+        atol=1.0e-15,
+    )
+    np.testing.assert_allclose(
+        model.dvariance_dmass(mass),
+        expected_derivative,
+        rtol=2.0e-14,
+        atol=0.0,
+    )
+    assert np.all(model.dvariance_dmass(mass) < 0.0)
+
+
+def test_sharp_k_truncated_domain_has_zero_boundary_derivative():
+    """The configured finite power domain should define constant end regimes."""
+    k = np.geomspace(1.0e-2, 1.0e2, 101)
+    power = TabulatedPowerSpectrum(k, np.ones_like(k))
+    model = IntegratedVarianceModel(
+        power=power,
+        window=SharpKWindow(),
+        rho_mean=3.0 / (4.0 * np.pi),
+        k_min=k[0],
+        k_max=k[-1],
+        n_k=501,
+    )
+
+    assert model.variance(1.0e-9) > 0.0
+    assert model.dvariance_dmass(1.0e-9) == 0.0
+    assert model.variance(1.0e9) == 0.0
+    assert model.dvariance_dmass(1.0e9) == 0.0
 
 
 def test_integrator_preserves_strict_tabulated_endpoints():

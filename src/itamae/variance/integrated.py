@@ -9,6 +9,7 @@ from typing import Any
 import numpy as np
 from scipy.integrate import simpson
 
+from itamae.power.windows import SharpKWindow
 from itamae.protocols import PowerSpectrum, WindowFunction
 
 
@@ -39,7 +40,8 @@ class IntegratedVarianceModel:
     growth_identifier
         Required stable identifier when ``growth_function`` is supplied.
     derivative_step
-        Symmetric logarithmic step used for ``dvariance_dmass``.
+        Symmetric logarithmic step used for ``dvariance_dmass`` with smooth
+        windows. Sharp-k windows use their exact moving-boundary derivative.
     chunk_size
         Maximum number of masses integrated in one vectorized allocation.
 
@@ -99,17 +101,71 @@ class IntegratedVarianceModel:
         """Return a complete numerical and physical-component identifier."""
         growth = self.growth_identifier or "growth:redshift-independent"
         return (
-            "integrated-variance:v1;"
+            "integrated-variance:v2;"
             f"power=({self.power.identifier});window=({self.window.identifier});"
             f"rho_mean={self.rho_mean:.17g};k=[{self.k_min:.17g},{self.k_max:.17g}];"
             f"n_k={self.n_k};filter_scale={self.filter_scale:.17g};{growth}"
         )
 
-    def _variance_z0(self, mass: Any) -> np.ndarray:
-        """Integrate the redshift-zero variance in bounded memory chunks."""
+    def _validated_mass(self, mass: Any) -> np.ndarray:
+        """Return finite positive mass values as a floating-point array."""
         values = np.asarray(mass, dtype=float)
         if not np.all(np.isfinite(values)) or np.any(values <= 0.0):
             raise ValueError("Masses must be finite and positive.")
+        return values
+
+    def _sharp_k_cutoff(self, mass: np.ndarray) -> np.ndarray:
+        """Return the mass-dependent sharp-k integration boundary."""
+        radius = (3.0 * mass / (4.0 * np.pi * self.rho_mean)) ** (1.0 / 3.0)
+        return self.filter_scale / radius
+
+    def _sharp_k_variance_z0(self, mass: Any) -> np.ndarray:
+        """Integrate a sharp-k spectrum with the cutoff as an exact endpoint.
+
+        A discontinuous window sampled on one fixed wavenumber grid makes the
+        numerical variance piecewise constant as mass changes. Integrating each
+        mass to its physical cutoff instead keeps the result continuous and
+        makes the moving-boundary derivative well defined.
+        """
+        values = self._validated_mass(mass)
+        shape = values.shape
+        flattened = values.reshape(-1)
+        cutoff = np.minimum(self._sharp_k_cutoff(flattened), self.k_max)
+        result = np.zeros(flattened.shape, dtype=float)
+        active = cutoff > self.k_min
+        fractions = np.linspace(0.0, 1.0, self.n_k)
+        log_k_min = np.log(self.k_min)
+
+        active_indices = np.flatnonzero(active)
+        for start in range(0, active_indices.size, self.chunk_size):
+            indices = active_indices[start : start + self.chunk_size]
+            upper = cutoff[indices]
+            log_upper = np.log(upper)
+            log_k = log_k_min + (log_upper[:, None] - log_k_min) * fractions
+            k = np.exp(log_k)
+            # Assigning the exact endpoints avoids one-ulp excursions beyond a
+            # strict tabulated-spectrum domain.
+            k[:, 0] = self.k_min
+            k[:, -1] = upper
+            dimensionless_power = k**3 * np.asarray(self.power(k), dtype=float) / (2.0 * np.pi**2)
+            if (
+                dimensionless_power.shape != k.shape
+                or not np.all(np.isfinite(dimensionless_power))
+                or np.any(dimensionless_power < 0.0)
+            ):
+                raise ValueError("Power spectrum must return aligned finite nonnegative values.")
+            result[indices] = simpson(dimensionless_power, x=log_k, axis=1)
+
+        if not np.all(np.isfinite(result)) or np.any(result < 0.0):
+            raise ValueError("Variance integration produced invalid values.")
+        return result.reshape(shape)
+
+    def _variance_z0(self, mass: Any) -> np.ndarray:
+        """Integrate the redshift-zero variance in bounded memory chunks."""
+        if isinstance(self.window, SharpKWindow):
+            return self._sharp_k_variance_z0(mass)
+
+        values = self._validated_mass(mass)
         shape = values.shape
         flattened = values.reshape(-1)
         result = np.empty(flattened.shape, dtype=float)
@@ -161,12 +217,47 @@ class IntegratedVarianceModel:
         return np.sqrt(self.variance(mass, z))
 
     def dvariance_dmass(self, mass: Any, z: Any = 0.0) -> np.ndarray:
-        r"""Return :math:`dS/dM` using a symmetric logarithmic difference."""
+        r"""Return :math:`dS/dM` under the configured window convention.
+
+        Smooth windows use a symmetric logarithmic difference. For a sharp-k
+        window, ITAMAE evaluates the exact moving-boundary term
+
+        .. math::
+
+           \frac{dS}{dM}
+           = -\frac{k_c^3 P(k_c)}{6\pi^2 M}D(z)^2,
+
+        when the physical cutoff lies inside the configured power-spectrum
+        interval. Outside that interval the truncated integral is constant.
+        """
         mass_array, redshift = np.broadcast_arrays(
             np.asarray(mass, dtype=float), np.asarray(z, dtype=float)
         )
-        if not np.all(np.isfinite(mass_array)) or np.any(mass_array <= 0.0):
-            raise ValueError("Masses must be finite and positive.")
+        self._validated_mass(mass_array)
+        if isinstance(self.window, SharpKWindow):
+            cutoff = self._sharp_k_cutoff(mass_array)
+            growth = np.broadcast_to(self._growth(redshift), mass_array.shape)
+            result = np.zeros(mass_array.shape, dtype=float)
+            active = (cutoff > self.k_min) & (cutoff < self.k_max)
+            if np.any(active):
+                active_cutoff = cutoff[active]
+                boundary_power = np.asarray(self.power(active_cutoff), dtype=float)
+                if (
+                    boundary_power.shape != active_cutoff.shape
+                    or not np.all(np.isfinite(boundary_power))
+                    or np.any(boundary_power < 0.0)
+                ):
+                    raise ValueError(
+                        "Power spectrum must return aligned finite nonnegative values."
+                    )
+                result[active] = (
+                    -(active_cutoff**3)
+                    * boundary_power
+                    * growth[active] ** 2
+                    / (6.0 * np.pi**2 * mass_array[active])
+                )
+            return result
+
         upper_mass = mass_array * np.exp(self.derivative_step)
         lower_mass = mass_array * np.exp(-self.derivative_step)
         upper = self.variance(upper_mass, redshift)

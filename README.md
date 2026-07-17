@@ -227,6 +227,13 @@ variance = IntegratedVarianceModel(
 )
 ```
 
+For `SharpKWindow`, the mass-dependent cutoff is used as an exact integration
+endpoint. Its `dS/dM` is evaluated from the analytic moving-boundary term
+rather than by finite-differencing a discontinuous window on a fixed
+wavenumber grid. This avoids artificial zero derivatives and grid-boundary
+spikes in subhalo-abundance calculations. The finite `k_min`/`k_max` interval
+still defines constant truncated regimes outside the tabulated domain.
+
 The identifier, backend, mass grid, and numerical settings can be combined
 with `variance_cache_key`; cache loading rejects a mismatched key rather than
 silently reusing data from another physical model.
