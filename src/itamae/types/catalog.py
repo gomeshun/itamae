@@ -45,6 +45,13 @@ class CatalogMetadata:
         ITAMAE catalog-schema version.
     extra
         Additional JSON-compatible provenance fields.
+        Migrated SASHIMI catalogs should use the standard keys
+        ``sashimi_variant``, ``physics_mode``, ``itamae_version``,
+        ``itamae_source_revision``, ``sashimi_version``,
+        ``sashimi_source_revision``, ``canonical_unit_schema``,
+        ``variance_identifier``, ``power_identifier``, ``solver_identifier``,
+        and ``catalog_schema_version``. Variant-specific fields belong here
+        without replacing those stable keys.
     """
 
     model_identifier: str
