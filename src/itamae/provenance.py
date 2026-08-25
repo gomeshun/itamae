@@ -68,7 +68,7 @@ def _direct_url_revision(package_name: str) -> str | None:
     """Return a VCS commit recorded in a distribution's direct-url metadata."""
     try:
         direct_url = importlib_metadata.distribution(package_name).read_text("direct_url.json")
-    except importlib_metadata.PackageNotFoundError:
+    except (OSError, importlib_metadata.PackageNotFoundError):
         return None
     if not direct_url:
         return None
@@ -87,12 +87,15 @@ def _git_revision(module_file: str | None) -> str | None:
     """Return the current Git revision for a module in a source checkout."""
     if module_file is None:
         return None
-    result = subprocess.run(
-        ["git", "-C", str(Path(module_file).resolve().parent), "rev-parse", "HEAD"],
-        check=False,
-        capture_output=True,
-        text=True,
-    )
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(Path(module_file).resolve().parent), "rev-parse", "HEAD"],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except OSError:
+        return None
     if result.returncode != 0:
         return None
     revision = result.stdout.strip()

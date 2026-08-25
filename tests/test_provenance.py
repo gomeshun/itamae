@@ -4,9 +4,11 @@ from pathlib import Path
 
 import pytest
 
+import itamae.provenance as provenance
 from itamae.provenance import (
     MIGRATION_METADATA_KEYS,
     build_migration_metadata,
+    source_revision,
 )
 
 
@@ -53,3 +55,13 @@ def test_build_migration_metadata_rejects_standard_field_override() -> None:
             solver_identifier="test-model:solver:v1",
             extra={"physics_mode": "legacy"},
         )
+
+
+def test_source_revision_falls_back_without_git(monkeypatch) -> None:
+    """Installed wheels remain usable when Git is not available."""
+
+    def missing_git(*args, **kwargs):
+        raise FileNotFoundError("git")
+
+    monkeypatch.setattr(provenance.subprocess, "run", missing_git)
+    assert source_revision("missing-distribution", module_file=str(Path(__file__))) == "unknown"
