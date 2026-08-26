@@ -178,7 +178,14 @@ def source_revision(
     if revision is not None:
         return revision
     revision = _direct_url_revision(package_name)
-    return revision or UNKNOWN_SOURCE_REVISION
+    if revision is not None:
+        return revision
+    if package_name in _EMBEDDED_SOURCE_MODULES:
+        raise RuntimeError(
+            f"No durable source revision is embedded for {package_name!r}; "
+            "rebuild the distribution with its provenance module."
+        )
+    return UNKNOWN_SOURCE_REVISION
 
 
 def _required_source_revision(package_name: str, *, module_file: str) -> str:

@@ -67,6 +67,15 @@ def test_embedded_revision_takes_precedence_over_ambient_environment(monkeypatch
     assert source_revision("itamae", module_file="/outside/site-packages/provenance.py") == expected
 
 
+def test_recognized_distribution_cannot_finish_with_unknown_revision(monkeypatch) -> None:
+    """Durable provenance is mandatory for recognized family distributions."""
+    monkeypatch.setattr(provenance, "_source_checkout_root", lambda module_file: None)
+    monkeypatch.setattr(provenance, "_embedded_source_revision", lambda package_name: None)
+    monkeypatch.setattr(provenance, "_direct_url_revision", lambda package_name: None)
+    with pytest.raises(RuntimeError, match="No durable source revision"):
+        source_revision("itamae")
+
+
 def test_source_revision_does_not_walk_into_an_outer_repository_from_venv(
     tmp_path: Path, monkeypatch
 ) -> None:
