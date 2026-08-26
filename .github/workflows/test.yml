@@ -17,7 +17,7 @@ jobs:
       - run: uv run ruff format --check .
       - run: uv run mypy src/itamae --ignore-missing-imports
       - run: uv run pytest --cov=itamae --cov-branch --cov-report=term-missing
-      - run: uv build
+      - run: ITAMAE_SOURCE_REVISION="$(git rev-parse HEAD)" uv build
 
   tests:
     strategy:
@@ -45,3 +45,17 @@ jobs:
       - run: uv venv .venv-smoke
       - run: uv pip install --python .venv-smoke/bin/python dist/*.whl
       - run: .venv-smoke/bin/python -c "import itamae; print(itamae.__version__)"
+      - name: Verify durable embedded source revision
+        run: |
+          expected="$(git rev-parse HEAD)"
+          mkdir -p "${RUNNER_TEMP}/itamae-provenance-repository"
+          cd "${RUNNER_TEMP}/itamae-provenance-repository"
+          ITAMAE_SOURCE_REVISION=0000000000000000000000000000000000000000 \
+            EXPECTED_ITAMAE_REVISION="$expected" \
+            "${GITHUB_WORKSPACE}/.venv-smoke/bin/python" - <<'PY'
+          import os
+
+          from itamae.provenance import source_revision
+
+          assert source_revision("itamae") == os.environ["EXPECTED_ITAMAE_REVISION"]
+          PY

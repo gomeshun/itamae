@@ -14,13 +14,12 @@ from itamae.provenance import (
 
 def test_build_migration_metadata_includes_standard_keys(monkeypatch) -> None:
     """The builder records every shared field and preserves variant extras."""
-    monkeypatch.setenv("ITAMAE_SOURCE_REVISION", "i" * 40)
-    monkeypatch.setenv("TEST_MODEL_SOURCE_REVISION", "s" * 40)
+    monkeypatch.delenv("ITAMAE_SOURCE_REVISION", raising=False)
 
     metadata = build_migration_metadata(
         variant="test-model",
-        distribution_name="test-model",
-        module_file=str(Path(__file__)),
+        distribution_name="itamae",
+        module_file=str(provenance.__file__),
         model_identifier="test-model:legacy:v1",
         backend_identifier="array=numpy",
         source_identifier="test-model:adapter:v1",
@@ -33,8 +32,10 @@ def test_build_migration_metadata_includes_standard_keys(monkeypatch) -> None:
 
     values = metadata.as_mapping()
     assert set(MIGRATION_METADATA_KEYS) <= set(values)
-    assert values["itamae_source_revision"] == "i" * 40
-    assert values["sashimi_source_revision"] == "s" * 40
+    expected_revision = source_revision("itamae", module_file=str(provenance.__file__))
+    assert len(expected_revision) == 40
+    assert values["itamae_source_revision"] == expected_revision
+    assert values["sashimi_source_revision"] == expected_revision
     assert values["variant_parameter"] == 3
     assert values["catalog_schema_version"] == metadata.schema_version
 
@@ -44,8 +45,8 @@ def test_build_migration_metadata_rejects_standard_field_override() -> None:
     with pytest.raises(ValueError, match="conflicting standard fields"):
         build_migration_metadata(
             variant="test-model",
-            distribution_name="test-model",
-            module_file=str(Path(__file__)),
+            distribution_name="itamae",
+            module_file=str(provenance.__file__),
             model_identifier="test-model:consistent:v1",
             backend_identifier="array=numpy",
             source_identifier="test-model:adapter:v1",
@@ -57,11 +58,30 @@ def test_build_migration_metadata_rejects_standard_field_override() -> None:
         )
 
 
-def test_source_revision_falls_back_without_git(monkeypatch) -> None:
-    """Installed wheels remain usable when Git is not available."""
+def test_embedded_revision_takes_precedence_over_ambient_environment(monkeypatch) -> None:
+    """Installed-wheel metadata cannot be changed by an environment variable."""
+    expected = "a" * 40
+    monkeypatch.setenv("ITAMAE_SOURCE_REVISION", "b" * 40)
+    monkeypatch.setattr(provenance, "_source_checkout_root", lambda module_file: None)
+    monkeypatch.setattr(provenance, "_embedded_source_revision", lambda package_name: expected)
+    assert source_revision("itamae", module_file="/outside/site-packages/provenance.py") == expected
 
-    def missing_git(*args, **kwargs):
-        raise FileNotFoundError("git")
 
-    monkeypatch.setattr(provenance.subprocess, "run", missing_git)
-    assert source_revision("missing-distribution", module_file=str(Path(__file__))) == "unknown"
+def test_source_revision_does_not_walk_into_an_outer_repository_from_venv(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """A package under another repo's .venv must not inherit that repo's HEAD."""
+    outer = tmp_path / "other-repository"
+    module_file = outer / ".venv/lib/python3.11/site-packages/fake.py"
+    module_file.parent.mkdir(parents=True)
+    module_file.touch()
+    (outer / ".git").mkdir()
+    (outer / "pyproject.toml").write_text("[project]\nversion = '0.0.0'\n")
+
+    def unexpected_git(*args, **kwargs):
+        raise AssertionError("ambient repository Git lookup")
+
+    monkeypatch.setattr(provenance.subprocess, "run", unexpected_git)
+    monkeypatch.setattr(provenance, "_embedded_source_revision", lambda package_name: None)
+    monkeypatch.setattr(provenance, "_direct_url_revision", lambda package_name: None)
+    assert source_revision("missing-distribution", module_file=str(module_file)) == "unknown"
