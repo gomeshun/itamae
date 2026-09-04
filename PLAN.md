@@ -12,6 +12,35 @@ modern Python tooling, including `uv`. Scientific reproducibility, automated
 verification, and clear documentation are first-class requirements rather than
 post-release additions.
 
+## Status and active work (2026-09-04 UTC)
+
+This plan includes architectural targets and historical foundation tasks. At
+`1c5b1ad67725671fd4dc1a2306d2731ba337e563`, packaging, backend/unit contracts,
+native/Colossus cosmology, typed catalogs, generic evolution, power/variance,
+provenance, and `PopulationPipeline` are implemented. C/SI already call the
+pipeline; W/F still need execution integration. Generic radial/orbit helpers
+exist, but do not constitute an end-to-end spatial population model.
+
+The current remaining work is tracked by
+[the family migration epic](https://github.com/gomeshun/sashimi-family/issues/1):
+
+- [GOV-02 / #3](https://github.com/gomeshun/itamae/issues/3): distribution naming and safe dependency resolution;
+- [CORE-01 / #4](https://github.com/gomeshun/itamae/issues/4): pipeline validation, metadata and failure paths;
+- [CORE-02 / #5](https://github.com/gomeshun/itamae/issues/5): model composition and thin variant adapters;
+- family GOV-01/03/07: candidate CI, authoritative compatibility, child-PR checks;
+- family PHY and REL gates: scientific interpretation of existing migration differences and exact release artifacts.
+
+Do not reimplement the initial foundation or merge the old alternate roadmap
+branch wholesale; see [foundation-integration.md](docs/foundation-integration.md).
+The authoritative compatible set is the family `compatibility.toml`, not the
+latest tip of an arbitrary branch. An ITAMAE migration umbrella targeting main
+is still needed before final integration; the merged foundation PR #2 is not it.
+
+Contracts needed to preserve existing models are migration work. New soliton,
+spatial/phase-space/orbit, scatter and baryonic models belong to the separate
+[scientific epic](https://github.com/gomeshun/sashimi-family/issues/18) and do
+not block the first release of the migrated existing models.
+
 ## 1. Executive decision
 
 ITAMAE owns the common **computational language** of the SASHIMI family:
@@ -165,7 +194,8 @@ itamae.units.NativeUnits
 itamae.units.AstropyUnits
 ```
 
-Likely canonical internal units are:
+The implemented canonical schema is documented in
+[docs/canonical-units.md](docs/canonical-units.md):
 
 ```text
 mass                    : Msun
@@ -175,8 +205,9 @@ time                    : Gyr
 cross section per mass  : cm^2 / g
 ```
 
-The exact schema must be finalized after regression fixtures exist for C, W,
-SI, and F.
+Changes to that schema require an explicit compatibility/version decision.
+Variant boundaries may retain documented legacy floating-unit columns; their
+per-column unit metadata must not be confused with canonical ITAMAE values.
 
 Astropy support is a real public backend. However, ITAMAE should not force
 `Quantity` objects through every large internal batch. The preferred path is:
@@ -340,9 +371,17 @@ clear purpose, tests where applicable, and module-level documentation.
 
 ## 7. Packaging, PyPI, and uv policy
 
-ITAMAE is intended for publication on PyPI under the distribution name
-`itamae`, subject to confirming name availability before the first release.
-The import package is also `itamae`.
+ITAMAE is intended for publication under a collision-free distribution name
+selected in [GOV-02 / #3](https://github.com/gomeshun/itamae/issues/3). The current
+metadata still says `itamae`, but that PyPI name belongs to an unrelated
+project. The Python import namespace can remain `itamae`. No new distribution
+identity is selected by this document.
+
+The rename must include downstream requirements (including C's extras), uv
+source/lock keys, metadata/provenance lookups, artifact filename-prefix checks,
+and clean installation tests. `[tool.uv.sources]` does not become wheel
+`Requires-Dist` metadata. Exact VCS sources or explicitly supplied core wheels
+remain the development installation path until safe publication is validated.
 
 ### 7.1 `pyproject.toml`
 
@@ -351,7 +390,7 @@ source of packaging metadata, dependencies, development tooling, test settings,
 lint settings, and build configuration. A lightweight PEP 517 backend such as
 Hatchling is preferred initially.
 
-Illustrative configuration:
+Historical illustrative configuration (not a release-ready identity):
 
 ```toml
 [build-system]
@@ -406,19 +445,17 @@ pinning the complete development lock file.
 
 ### 7.2 Installation with uv
 
-End-user installation:
+Install the reviewed development source explicitly until the naming issue is
+resolved. Do not use `uv add itamae` to obtain the SASHIMI core from PyPI.
 
 ```bash
-uv add itamae
-uv add "itamae[astropy]"
-uv add "itamae[colossus]"
-uv add "itamae[full]"
+uv pip install "itamae[full] @ git+https://github.com/gomeshun/itamae.git@1c5b1ad67725671fd4dc1a2306d2731ba337e563"
 ```
 
 Local development:
 
 ```bash
-git clone https://github.com/gomeshun/itamae.git
+git clone --branch itamae-migration https://github.com/gomeshun/itamae.git
 cd itamae
 uv sync --all-extras --dev
 uv run pytest
@@ -443,6 +480,10 @@ uv run twine check dist/*
 
 CI must install the built wheel into a clean environment and run a smoke test.
 Tests must cover the minimal installation and supported optional backends.
+Also rebuild a wheel from the unpacked sdist outside Git with revision
+environment variables unset. Its build hook, packaged files, and embedded
+source provenance must survive that round trip. Record hashes and validate
+the same artifacts that will be published.
 
 ### 7.4 PyPI publication
 
@@ -617,8 +658,11 @@ calibrated stripping coefficients remain in the relevant SASHIMI package.
 
 ## 10. Spatial and orbital design
 
-Spatial support is designed from the beginning, even though implementation
-follows the non-spatial core.
+Spatial support is designed from the beginning but is not a prerequisite for
+releasing the migrated non-spatial models. The scientific roadmap now uses
+Level A for radial measures, Level B for conditional phase space, Level B+ for
+reduced orbit-conditioned evolution, and Level C for optional explicit orbit
+integration. The local-environment interface below supports these levels.
 
 ### Level A: conditional radial measure
 
@@ -629,7 +673,7 @@ class RadialMeasureModel(Protocol):
 
 This supports `P(q | z_acc, ...)` without tracking individual orbits.
 
-### Level B: local-environment evolution
+### Local-environment support for Levels A/B/B+
 
 A `LocalEnvironment` evaluates:
 
@@ -645,13 +689,15 @@ tidal-radius or tidal-tensor inputs
 Mass-loss and survival models may consume this context. Radius-dependent fitting
 laws remain physical prescriptions in SASHIMI-C or a future spatial package.
 
-### Level C: orbit-averaged transport
+### Levels B/B+ and optional Level C
 
-The research backend may represent the ensemble in `(E, L)` or action space.
+Conditional/reduced models may represent the ensemble in `(E, L)` or action space.
 ITAMAE provides turning points, radial periods, radial kernels, infall-variable
 transformations, cached phase tables, and conservative transport machinery.
 Infall distributions, dynamical-friction laws, Coulomb logarithms, and
-disruption models remain model-supplied.
+disruption models remain model-supplied. Validate their joint population
+statistics before requiring an explicit Level C integrator; existing orbit
+kernels alone do not complete that integration.
 
 Every spatial implementation must satisfy normalization tests:
 
@@ -891,6 +937,12 @@ metadata for reproducibility.
 
 ## 15. Phased roadmap
 
+Phases 0–6 describe foundations that are substantially implemented, with
+hardening and W/F execution adoption still open. Use the active issue list
+above for completion status. Phases 7–8's new scientific models are follow-on
+work; Phase 9 release is gated on current-model compatibility, safe packaging,
+and validation, not completion of every future spatial/profile feature.
+
 ### Phase 0: packaging, CI, documentation rules, and backend contracts
 
 - add `pyproject.toml`, `src/itamae`, `tests`, and `.github/workflows`;
@@ -977,18 +1029,21 @@ metadata for reproducibility.
 - require all branch-protection checks to pass;
 - test wheel/sdist installation across supported Python versions;
 - publish a release candidate to TestPyPI;
-- verify `uv add itamae` and optional extras in clean environments;
+- verify installation of the approved distribution identity and optional extras in clean environments;
 - publish the first PyPI prerelease through trusted publishing.
 
-## 16. Initial public API target
+## 16. Implemented imports and provisional model API
+
+These core imports exist on the migration branch; they remain provisional:
 
 ```python
 from itamae.backends import BackendConfig
 from itamae.cosmology import NativeFlatLCDM, ColossusCosmology
 from itamae.units import NativeUnits, AstropyUnits
 from itamae.types import AccretionBatch, WeightedSubhaloCatalog
-from itamae.halo import NFWProfile, convert_mass_definition
+from itamae.halo import NFWProfile
 from itamae.evolution import PerturbativeEvolutionSolver
+from itamae.execution import PopulationPipeline
 ```
 
 ```python
@@ -998,45 +1053,40 @@ backend = BackendConfig(
 )
 ```
 
-A SASHIMI package assembles the physical model:
+A SASHIMI package assembles the physical model. For example, with the compatible
+C migration package installed, the current opt-in API is:
 
 ```python
-from sashimi_c import SashimiCDM
+from sashimi_c_itamae import subhalo_properties
 
-model = SashimiCDM(backend=backend)
-catalog = model.generate_catalog(host_mass=1.0e12, redshift=0.0)
-```
-
-or with Quantity input:
-
-```python
-import astropy.units as u
-
-catalog = model.generate_catalog(
-    host_mass=1.0e12 * u.Msun,
-    redshift=0.0,
+model = subhalo_properties(physics_mode="legacy")
+catalog = model.subhalo_catalog_calc(
+    1.0e12 * model.Msun, method="pert2_shanks",
+    dz=0.25, zmax=2.0, N_ma=32, N_herm=5, N_hermNa=16,
+    logmamin=5.0, logmamax=10.0,
 )
 ```
 
+Do not assume that ITAMAE's Quantity backends make every legacy SASHIMI facade
+accept Quantity arguments or arbitrary cosmologies. C currently validates its
+canonical cosmology. A future unified `generate_catalog` API needs a separate
+reviewed contract; it is not the interface shown by current code.
+
 ## 17. Immediate next tasks
 
-The first implementation pull request should contain only:
-
-1. `pyproject.toml`, `src` layout, uv configuration, and `uv.lock`;
-2. `.github/workflows/test.yml` with lint, typing, documentation, test, backend,
-   build, and clean-install jobs;
-3. pytest, coverage, Ruff, mypy, Hypothesis, and numpydoc configuration;
-4. package metadata and dynamic version setup;
-5. backend protocols and immutable `BackendConfig`;
-6. canonical-unit documentation;
-7. `NativeUnits` and a minimal `AstropyUnits` adapter;
-8. native flat-LCDM and a minimal Colossus adapter;
-9. unit, failure-mode, and backend-equivalence tests;
-10. NumPy-style module, class, and function docstrings;
-11. wheel/sdist build and clean-install smoke tests.
-
-It should not yet move EPS, concentration, stripping coefficients, or
-SIDM/WDM/FDM physics into ITAMAE.
+1. Resolve distribution identity (#3), coordinating consumers, locks, provenance
+   and artifact checks; keep exact source inputs until that gate is complete.
+2. Harden the existing pipeline (#4), including conflicting batch metadata,
+   invalid stages/masks, optional factors, contexts and serial/chunk equivalence.
+3. Stabilize component contracts (#5) using actual C/SI callbacks and W/F needs;
+   do not move their calibrated equations into generic default models.
+4. Validate integration candidates against an explicitly recorded family base
+   plus candidate overrides before changing canonical pins. Public CI does not
+   substitute for the authorized private F check.
+5. Coordinate C's main/Picard reconciliation and historical solver references
+   under family #26; reusable numerical extraction follows equivalence evidence.
+6. Complete public API/support/docs and clean-artifact gates for current models.
+   Revalidate final merge SHAs before parent manifest/gitlink promotion.
 
 ## 18. Definition of success
 
@@ -1058,6 +1108,6 @@ The initial refactor succeeds when:
 - WDM/FDM variance models are exchangeable without changing EPS integration;
 - a radial measure can be added without rewriting the non-spatial pipeline;
 - future orbit-averaged work reuses the same abstractions;
-- PyPI artifacts can be installed with `uv add itamae`;
+- artifacts can be installed using the collision-free distribution identity;
 - minimal, Astropy, Colossus, and full installations pass clean-environment
   tests.
