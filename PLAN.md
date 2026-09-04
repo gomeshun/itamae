@@ -457,7 +457,7 @@ Local development:
 ```bash
 git clone --branch itamae-migration https://github.com/gomeshun/itamae.git
 cd itamae
-uv sync --all-extras --dev
+uv sync --locked --all-extras --group dev
 uv run pytest
 ```
 
@@ -469,7 +469,7 @@ file does not replace appropriate dependency ranges in `pyproject.toml`.
 Before every release:
 
 ```bash
-uv sync --all-extras --dev
+uv sync --locked --all-extras --group dev
 uv run ruff check .
 uv run mypy src/itamae
 uv run pytest --cov=itamae --cov-report=term-missing
@@ -877,7 +877,7 @@ is temporarily unavailable. Core tests must never be silently ignored.
 The primary commands should be reproducible locally:
 
 ```bash
-uv sync --all-extras --dev
+uv sync --locked --all-extras --group dev
 uv run ruff check .
 uv run ruff format --check .
 uv run mypy src/itamae

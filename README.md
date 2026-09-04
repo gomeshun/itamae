@@ -212,7 +212,7 @@ For development on the migration branch:
 ```bash
 git clone --branch itamae-migration https://github.com/gomeshun/itamae.git
 cd itamae
-uv sync --all-extras --group dev
+uv sync --locked --all-extras --group dev
 uv run pytest
 ```
 
