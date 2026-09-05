@@ -16,6 +16,13 @@ subhalo catalogs.
 > and spherical-orbit mechanisms are implemented. The public API remains
 > provisional until all SASHIMI variants complete their golden regressions.
 
+At the 2026-09-04 review, C/SI already use `PopulationPipeline`; W/F execution
+integration and model-composition hardening remain open. See the current
+[PLAN.md](PLAN.md) and [family migration epic](https://github.com/gomeshun/sashimi-family/issues/1).
+The PyPI distribution rename is a release blocker tracked in
+[#3](https://github.com/gomeshun/itamae/issues/3); the Python import namespace
+remains `itamae` during development.
+
 ## Motivation
 
 Several SASHIMI variants share substantial computational infrastructure,
@@ -152,24 +159,26 @@ Downstream projects, including dwarf-spheroidal analyses, should normally
 depend on the relevant SASHIMI variant rather than reconstructing the complete
 physical pipeline directly from low-level ITAMAE components.
 
-## Illustrative API
+## Current migration API
 
-The API has not yet been finalized. The following example only illustrates the
-intended separation between reusable infrastructure and model-specific
-physics.
+These imports exist on the migration branch. The API remains provisional.
+The model example also requires the compatible C migration package.
 
 ```python
-from itamae.catalog import WeightedSubhaloCatalog
-from itamae.integration import GaussHermiteQuadrature
+from itamae.types import WeightedSubhaloCatalog
+from itamae.numerics import gauss_hermite_lognormal
 from itamae.evolution import PerturbativeEvolutionSolver
+from itamae.execution import PopulationPipeline
 
 # Model-specific prescriptions are supplied by a SASHIMI package.
-from sashimi_c import SashimiCDM
+from sashimi_c_itamae import subhalo_properties
 
-model = SashimiCDM()
-catalog: WeightedSubhaloCatalog = model.generate_catalog(
-    host_mass=1.0e12,
-    redshift=0.0,
+model = subhalo_properties(physics_mode="legacy")
+catalog: WeightedSubhaloCatalog = model.subhalo_catalog_calc(
+    1.0e12 * model.Msun,
+    method="pert2_shanks",
+    dz=0.25, zmax=2.0, N_ma=32, N_herm=5, N_hermNa=16,
+    logmamin=5.0, logmamax=10.0,
 )
 ```
 
@@ -190,13 +199,20 @@ than rapid API expansion.
 
 ## Installation
 
-ITAMAE is not yet released on PyPI. The public repository can be installed for
-development with `uv`:
+The SASHIMI ITAMAE core is not released on PyPI. That distribution name is
+occupied by an unrelated project, so do not install it by an unqualified index
+name. Use the reviewed source revision for reproducible development:
 
 ```bash
-git clone https://github.com/gomeshun/itamae.git
+uv pip install "itamae[full] @ git+https://github.com/gomeshun/itamae.git@1c5b1ad67725671fd4dc1a2306d2731ba337e563"
+```
+
+For development on the migration branch:
+
+```bash
+git clone --branch itamae-migration https://github.com/gomeshun/itamae.git
 cd itamae
-uv sync --all-extras --group dev
+uv sync --locked --all-extras --group dev
 uv run pytest
 ```
 
@@ -240,8 +256,8 @@ silently reusing data from another physical model.
 
 ## Contributing
 
-Issues and pull requests are welcome once the initial package structure has
-been established.
+Small implementation PRs should target `itamae-migration`; the final migration
+umbrella targets `main`. The initial package structure is already implemented.
 
 Contributions should, where applicable, include:
 
