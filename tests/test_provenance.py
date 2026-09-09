@@ -1,6 +1,7 @@
 """Tests for standardized migration provenance metadata."""
 
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -73,12 +74,50 @@ def test_logical_itamae_name_resolves_renamed_distribution(monkeypatch) -> None:
     assert seen == [ITAMAE_DISTRIBUTION_NAME]
 
 
+@pytest.mark.parametrize(
+    "package_name",
+    ["SASHIMI-ITAMAE", "sashimi_itamae", "sashimi.itamae"],
+)
+def test_distribution_alias_normalization_for_version_lookup(monkeypatch, package_name: str) -> None:
+    """Equivalent normalized distribution spellings resolve the public distribution."""
+    seen = []
+
+    def fake_version(name: str) -> str:
+        seen.append(name)
+        return "9.9.9"
+
+    monkeypatch.setattr(provenance.importlib_metadata, "version", fake_version)
+    assert package_version(package_name) == "9.9.9"
+    assert seen == [ITAMAE_DISTRIBUTION_NAME]
+
+
 def test_distribution_name_alias_uses_itamae_embedded_provenance(monkeypatch) -> None:
     """Both public distribution and logical component names share one provenance source."""
     expected = "a" * 40
     monkeypatch.setattr(provenance, "_source_checkout_root", lambda module_file: None)
     monkeypatch.setattr(provenance, "_embedded_source_revision", lambda package_name: expected)
     assert source_revision(ITAMAE_DISTRIBUTION_NAME) == expected
+
+
+@pytest.mark.parametrize(
+    "package_name",
+    ["SASHIMI-ITAMAE", "sashimi_itamae", "sashimi.itamae"],
+)
+def test_distribution_alias_normalization_for_embedded_provenance(
+    monkeypatch, package_name: str
+) -> None:
+    """Equivalent distribution spellings use the ITAMAE embedded provenance module."""
+    expected = "a" * 40
+    imported = []
+
+    def fake_import_module(module_name: str):
+        imported.append(module_name)
+        return SimpleNamespace(SOURCE_REVISION=expected)
+
+    monkeypatch.setattr(provenance, "_source_checkout_root", lambda module_file: None)
+    monkeypatch.setattr(provenance.importlib, "import_module", fake_import_module)
+    assert source_revision(package_name) == expected
+    assert imported == ["itamae._build_provenance"]
 
 
 def test_embedded_revision_takes_precedence_over_ambient_environment(monkeypatch) -> None:
@@ -99,6 +138,8 @@ def test_recognized_distribution_cannot_finish_with_unknown_revision(monkeypatch
         source_revision("itamae")
     with pytest.raises(RuntimeError, match="No durable source revision"):
         source_revision(ITAMAE_DISTRIBUTION_NAME)
+    with pytest.raises(RuntimeError, match="No durable source revision"):
+        source_revision("SASHIMI_ITAMAE")
 
 
 def test_source_revision_does_not_walk_into_an_outer_repository_from_venv(
