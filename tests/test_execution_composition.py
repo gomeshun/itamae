@@ -111,7 +111,8 @@ def test_population_components_match_callback_execution_and_catalogs():
         )
     for name in callback_execution.weight_factors:
         np.testing.assert_array_equal(
-            component_execution.weight_factors[name], callback_execution.weight_factors[name]
+            component_execution.weight_factors[name],
+            callback_execution.weight_factors[name],
         )
 
     metadata = CatalogMetadata(model_identifier="toy", backend_identifier="numpy")
