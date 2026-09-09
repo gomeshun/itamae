@@ -3,9 +3,14 @@
 from collections.abc import Mapping
 from typing import Any, Protocol
 
+import numpy as np
+
 from itamae.types import AccretionBatch
 
 from .variance import VarianceModel
+
+PopulationState = Mapping[str, np.ndarray]
+SurvivalSelection = np.ndarray | Mapping[str, np.ndarray]
 
 
 class HostHistoryModel(Protocol):
@@ -78,20 +83,20 @@ class PopulationInitializer(Protocol):
     """
 
     def initialize(self, batch: AccretionBatch, context: Any) -> Mapping[str, Any]:
-        """Return named arrays aligned with ``batch``."""
+        """Return named array-like values aligned with ``batch``."""
         ...
 
 
 class PopulationEvolver(Protocol):
-    """Evolve initialized population state for one accretion batch."""
+    """Evolve validated initial population state for one accretion batch."""
 
     def evolve(
         self,
         batch: AccretionBatch,
-        initial: Mapping[str, Any],
+        initial: PopulationState,
         context: Any,
     ) -> Mapping[str, Any]:
-        """Return named evolved arrays aligned with ``batch``."""
+        """Return named array-like evolved values aligned with ``batch``."""
         ...
 
 
@@ -101,26 +106,26 @@ class PopulationSurvivalSelector(Protocol):
     def select(
         self,
         batch: AccretionBatch,
-        initial: Mapping[str, Any],
-        evolved: Mapping[str, Any],
+        initial: PopulationState,
+        evolved: PopulationState,
         context: Any,
-    ) -> Any:
-        """Return a boolean mask or mapping of named boolean masks."""
+    ) -> SurvivalSelection:
+        """Return one mask or a mapping of named masks aligned with ``batch``."""
         ...
 
 
 class CatalogColumnBuilder(Protocol):
-    """Build final aligned catalog columns from pipeline stage state."""
+    """Build final aligned catalog columns from validated pipeline stage state."""
 
     def build(
         self,
         batch: AccretionBatch,
-        initial: Mapping[str, Any],
-        evolved: Mapping[str, Any],
-        survival: Mapping[str, Any],
+        initial: PopulationState,
+        evolved: PopulationState,
+        survival: PopulationState,
         context: Any,
     ) -> Mapping[str, Any]:
-        """Return named final catalog columns aligned with ``batch``."""
+        """Return named array-like final columns aligned with ``batch``."""
         ...
 
 
@@ -133,7 +138,9 @@ __all__ = [
     "MassLossLaw",
     "PopulationEvolver",
     "PopulationInitializer",
+    "PopulationState",
     "PopulationSurvivalSelector",
     "ProfileEvolutionModel",
     "SurvivalModel",
+    "SurvivalSelection",
 ]
