@@ -371,11 +371,10 @@ clear purpose, tests where applicable, and module-level documentation.
 
 ## 7. Packaging, PyPI, and uv policy
 
-ITAMAE is intended for publication under a collision-free distribution name
-selected in [GOV-02 / #3](https://github.com/gomeshun/itamae/issues/3). The current
-metadata still says `itamae`, but that PyPI name belongs to an unrelated
-project. The Python import namespace can remain `itamae`. No new distribution
-identity is selected by this document.
+ITAMAE uses the collision-free public distribution name `sashimi-itamae`,
+selected in [GOV-02 / #3](https://github.com/gomeshun/itamae/issues/3). The
+Python import namespace remains `itamae`. The unrelated PyPI distribution named
+`itamae` must never be used as the SASHIMI core dependency.
 
 The rename must include downstream requirements (including C's extras), uv
 source/lock keys, metadata/provenance lookups, artifact filename-prefix checks,
@@ -398,7 +397,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "itamae"
+name = "sashimi-itamae"
 dynamic = ["version"]
 description = "Integrated Toolkit for Analytical Merger-tree And Evolution"
 readme = "README.md"
@@ -445,11 +444,13 @@ pinning the complete development lock file.
 
 ### 7.2 Installation with uv
 
-Install the reviewed development source explicitly until the naming issue is
-resolved. Do not use `uv add itamae` to obtain the SASHIMI core from PyPI.
+Install the reviewed development source explicitly until `sashimi-itamae` is
+published. Do not use `uv add itamae`; the import name and distribution name are
+deliberately different. Downstream requirements use `sashimi-itamae`, while
+Python code continues to import `itamae`.
 
 ```bash
-uv pip install "itamae[full] @ git+https://github.com/gomeshun/itamae.git@1c5b1ad67725671fd4dc1a2306d2731ba337e563"
+uv pip install "sashimi-itamae[full] @ git+https://github.com/gomeshun/itamae.git@b682ceaab0b70a20ff43310e77bba76a1def6952"
 ```
 
 Local development:
