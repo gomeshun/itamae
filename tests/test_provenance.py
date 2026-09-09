@@ -6,8 +6,10 @@ import pytest
 
 import itamae.provenance as provenance
 from itamae.provenance import (
+    ITAMAE_DISTRIBUTION_NAME,
     MIGRATION_METADATA_KEYS,
     build_migration_metadata,
+    package_version,
     source_revision,
 )
 
@@ -58,6 +60,27 @@ def test_build_migration_metadata_rejects_standard_field_override() -> None:
         )
 
 
+def test_logical_itamae_name_resolves_renamed_distribution(monkeypatch) -> None:
+    """The stable logical component name resolves the collision-free distribution."""
+    seen = []
+
+    def fake_version(name: str) -> str:
+        seen.append(name)
+        return "9.9.9"
+
+    monkeypatch.setattr(provenance.importlib_metadata, "version", fake_version)
+    assert package_version("itamae") == "9.9.9"
+    assert seen == [ITAMAE_DISTRIBUTION_NAME]
+
+
+def test_distribution_name_alias_uses_itamae_embedded_provenance(monkeypatch) -> None:
+    """Both public distribution and logical component names share one provenance source."""
+    expected = "a" * 40
+    monkeypatch.setattr(provenance, "_source_checkout_root", lambda module_file: None)
+    monkeypatch.setattr(provenance, "_embedded_source_revision", lambda package_name: expected)
+    assert source_revision(ITAMAE_DISTRIBUTION_NAME) == expected
+
+
 def test_embedded_revision_takes_precedence_over_ambient_environment(monkeypatch) -> None:
     """Installed-wheel metadata cannot be changed by an environment variable."""
     expected = "a" * 40
@@ -74,6 +97,8 @@ def test_recognized_distribution_cannot_finish_with_unknown_revision(monkeypatch
     monkeypatch.setattr(provenance, "_direct_url_revision", lambda package_name: None)
     with pytest.raises(RuntimeError, match="No durable source revision"):
         source_revision("itamae")
+    with pytest.raises(RuntimeError, match="No durable source revision"):
+        source_revision(ITAMAE_DISTRIBUTION_NAME)
 
 
 def test_source_revision_does_not_walk_into_an_outer_repository_from_venv(
