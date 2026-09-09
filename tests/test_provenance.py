@@ -78,7 +78,9 @@ def test_logical_itamae_name_resolves_renamed_distribution(monkeypatch) -> None:
     "package_name",
     ["SASHIMI-ITAMAE", "sashimi_itamae", "sashimi.itamae"],
 )
-def test_distribution_alias_normalization_for_version_lookup(monkeypatch, package_name: str) -> None:
+def test_distribution_alias_normalization_for_version_lookup(
+    monkeypatch, package_name: str
+) -> None:
     """Equivalent normalized distribution spellings resolve the public distribution."""
     seen = []
 
