@@ -1,0 +1,29 @@
+name: Apply rename docs
+on:
+  push:
+    branches:
+      - packaging/sashimi-itamae-20260909
+permissions:
+  contents: write
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: packaging/sashimi-itamae-20260909
+      - name: Apply documentation updates
+        env:
+          PINNED_RENAME_SHA: b682ceaab0b70a20ff43310e77bba76a1def6952
+        run: python scripts/apply_rename_docs_temp.py
+      - name: Commit updates
+        run: |
+          if git diff --quiet -- README.md PLAN.md notebooks/usage_walkthrough.ipynb; then
+            echo "No documentation changes"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md PLAN.md notebooks/usage_walkthrough.ipynb
+          git commit -m "docs: document sashimi-itamae distribution identity"
+          git push origin HEAD:packaging/sashimi-itamae-20260909
