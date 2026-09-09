@@ -23,9 +23,10 @@ subhalo catalogs.
 At the 2026-09-04 review, C/SI already use `PopulationPipeline`; W/F execution
 integration and model-composition hardening remain open. See the current
 [PLAN.md](PLAN.md) and [family migration epic](https://github.com/gomeshun/sashimi-family/issues/1).
-The PyPI distribution rename is a release blocker tracked in
-[#3](https://github.com/gomeshun/itamae/issues/3); the Python import namespace
-remains `itamae` during development.
+The public Python **distribution** is named `sashimi-itamae` to avoid the
+unrelated PyPI project named `itamae`. The Python **import namespace** remains
+`itamae`. This packaging decision is tracked in
+[#3](https://github.com/gomeshun/itamae/issues/3).
 
 ## Motivation
 
@@ -203,13 +204,18 @@ than rapid API expansion.
 
 ## Installation
 
-The SASHIMI ITAMAE core is not released on PyPI. That distribution name is
-occupied by an unrelated project, so do not install it by an unqualified index
-name. Use the reviewed source revision for reproducible development:
+The SASHIMI ITAMAE core is not yet released on PyPI. Its collision-free
+distribution name is `sashimi-itamae`, while code continues to use
+`import itamae`. Until publication, install an exact reviewed VCS revision:
 
 ```bash
-uv pip install "itamae[full] @ git+https://github.com/gomeshun/itamae.git@1c5b1ad67725671fd4dc1a2306d2731ba337e563"
+uv pip install "sashimi-itamae[full] @ git+https://github.com/gomeshun/itamae.git@b682ceaab0b70a20ff43310e77bba76a1def6952"
+python -c "import itamae; print(itamae.__version__)"
 ```
+
+Do **not** install bare `itamae` from PyPI; that name belongs to an unrelated
+project. Downstream SASHIMI package metadata should depend on `sashimi-itamae`,
+but Python imports do not change.
 
 For development on the migration branch:
 
