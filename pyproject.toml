@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "itamae"
+name = "sashimi-itamae"
 version = "0.1.0a4"
 description = "Integrated Toolkit for Analytical Merger-tree And Evolution"
 readme = "README.md"
