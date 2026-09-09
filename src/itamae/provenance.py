@@ -15,6 +15,7 @@ from . import __version__
 from .types import CATALOG_SCHEMA_VERSION, CatalogMetadata
 from .units import CANONICAL_UNIT_SCHEMA_VERSION
 
+ITAMAE_DISTRIBUTION_NAME = "sashimi-itamae"
 MIGRATION_METADATA_KEYS = (
     "sashimi_variant",
     "physics_mode",
@@ -37,6 +38,19 @@ _EMBEDDED_SOURCE_MODULES = {
     "sashimi-w": "_sashimi_w_build_provenance",
     "sashimi-f": "_sashimi_f_build_provenance",
 }
+_COMPONENT_ALIASES = {ITAMAE_DISTRIBUTION_NAME: "itamae"}
+_COMPONENT_DISTRIBUTIONS = {"itamae": ITAMAE_DISTRIBUTION_NAME}
+
+
+def _component_name(package_name: str) -> str:
+    """Return the canonical logical component name for a package/distribution name."""
+    return _COMPONENT_ALIASES.get(package_name, package_name)
+
+
+def _distribution_name(package_name: str) -> str:
+    """Return the installed distribution name for a logical component or alias."""
+    component_name = _component_name(package_name)
+    return _COMPONENT_DISTRIBUTIONS.get(component_name, package_name)
 
 
 def _valid_source_revision(value: Any) -> str | None:
@@ -103,7 +117,7 @@ def _project_version(module_file: str | None) -> str | None:
 def package_version(package_name: str, *, module_file: str | None = None) -> str:
     """Resolve a distribution version from installed or source-project metadata."""
     try:
-        return importlib_metadata.version(package_name)
+        return importlib_metadata.version(_distribution_name(package_name))
     except importlib_metadata.PackageNotFoundError:
         return _project_version(module_file) or UNKNOWN_SOURCE_REVISION
 
@@ -111,7 +125,9 @@ def package_version(package_name: str, *, module_file: str | None = None) -> str
 def _direct_url_revision(package_name: str) -> str | None:
     """Return a VCS commit recorded in a distribution's direct-url metadata."""
     try:
-        direct_url = importlib_metadata.distribution(package_name).read_text("direct_url.json")
+        direct_url = importlib_metadata.distribution(_distribution_name(package_name)).read_text(
+            "direct_url.json"
+        )
     except (OSError, importlib_metadata.PackageNotFoundError):
         return None
     if not direct_url:
@@ -128,7 +144,7 @@ def _direct_url_revision(package_name: str) -> str | None:
 
 def _embedded_source_revision(package_name: str) -> str | None:
     """Read a source revision embedded in an installed distribution."""
-    module_name = _EMBEDDED_SOURCE_MODULES.get(package_name)
+    module_name = _EMBEDDED_SOURCE_MODULES.get(_component_name(package_name))
     if module_name is None:
         return None
     try:
@@ -180,7 +196,8 @@ def source_revision(
     revision = _direct_url_revision(package_name)
     if revision is not None:
         return revision
-    if package_name in _EMBEDDED_SOURCE_MODULES:
+    component_name = _component_name(package_name)
+    if component_name in _EMBEDDED_SOURCE_MODULES:
         raise RuntimeError(
             f"No durable source revision is embedded for {package_name!r}; "
             "rebuild the distribution with its provenance module."
@@ -250,6 +267,7 @@ def build_migration_metadata(
 
 
 __all__ = [
+    "ITAMAE_DISTRIBUTION_NAME",
     "MIGRATION_METADATA_KEYS",
     "UNKNOWN_SOURCE_REVISION",
     "build_migration_metadata",
