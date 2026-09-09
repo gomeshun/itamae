@@ -31,6 +31,7 @@ MIGRATION_METADATA_KEYS = (
 )
 UNKNOWN_SOURCE_REVISION = "unknown"
 SOURCE_REVISION_PATTERN = re.compile(r"[0-9a-f]{40}")
+_DISTRIBUTION_SEPARATOR_PATTERN = re.compile(r"[-_.]+")
 _EMBEDDED_SOURCE_MODULES = {
     "itamae": "itamae._build_provenance",
     "sashimi-c": "_sashimi_c_build_provenance",
@@ -42,15 +43,21 @@ _COMPONENT_ALIASES = {ITAMAE_DISTRIBUTION_NAME: "itamae"}
 _COMPONENT_DISTRIBUTIONS = {"itamae": ITAMAE_DISTRIBUTION_NAME}
 
 
+def _normalize_distribution_name(package_name: str) -> str:
+    """Return the normalized Python distribution name used for identity matching."""
+    return _DISTRIBUTION_SEPARATOR_PATTERN.sub("-", package_name).lower()
+
+
 def _component_name(package_name: str) -> str:
     """Return the canonical logical component name for a package/distribution name."""
-    return _COMPONENT_ALIASES.get(package_name, package_name)
+    normalized_name = _normalize_distribution_name(package_name)
+    return _COMPONENT_ALIASES.get(normalized_name, normalized_name)
 
 
 def _distribution_name(package_name: str) -> str:
     """Return the installed distribution name for a logical component or alias."""
     component_name = _component_name(package_name)
-    return _COMPONENT_DISTRIBUTIONS.get(component_name, package_name)
+    return _COMPONENT_DISTRIBUTIONS.get(component_name, _normalize_distribution_name(package_name))
 
 
 def _valid_source_revision(value: Any) -> str | None:
