@@ -54,12 +54,8 @@ class ToyColumns:
 
 def _callback_pipeline():
     return PopulationPipeline(
-        initialize=lambda batch, context: {
-            "initial": batch.mvir_acc + context["offset"]
-        },
-        evolve=lambda batch, initial, context: {
-            "m_bound": initial["initial"] * context["scale"]
-        },
+        initialize=lambda batch, context: {"initial": batch.mvir_acc + context["offset"]},
+        evolve=lambda batch, initial, context: {"m_bound": initial["initial"] * context["scale"]},
         survival=lambda batch, initial, evolved, context: {
             "default": evolved["m_bound"] > 2.0,
             "strict": evolved["m_bound"] > 3.0,
@@ -118,9 +114,7 @@ def test_population_components_match_callback_execution_and_catalogs():
     metadata = CatalogMetadata(model_identifier="toy", backend_identifier="numpy")
     callback_catalog = callback_execution.to_catalog(metadata, view="strict")
     component_catalog = component_execution.to_catalog(metadata, view="strict")
-    np.testing.assert_array_equal(
-        component_catalog.weight_final, callback_catalog.weight_final
-    )
+    np.testing.assert_array_equal(component_catalog.weight_final, callback_catalog.weight_final)
     for name in callback_catalog.columns:
         np.testing.assert_array_equal(
             component_catalog.columns[name], callback_catalog.columns[name]
