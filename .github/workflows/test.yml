@@ -41,10 +41,33 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
-      - run: uv build
+      - run: ITAMAE_SOURCE_REVISION="$(git rev-parse HEAD)" uv build
+      - name: Verify collision-free artifact names
+        run: |
+          compgen -G "dist/sashimi_itamae-*.whl" >/dev/null
+          compgen -G "dist/sashimi_itamae-*.tar.gz" >/dev/null
+          if compgen -G "dist/itamae-*" >/dev/null; then
+            echo "legacy/colliding itamae distribution artifact was produced" >&2
+            exit 1
+          fi
       - run: uv venv .venv-smoke
       - run: uv pip install --python .venv-smoke/bin/python dist/*.whl
-      - run: .venv-smoke/bin/python -c "import itamae; print(itamae.__version__)"
+      - name: Verify distribution/import identity
+        run: |
+          .venv-smoke/bin/python - <<'PY'
+          from importlib import metadata
+
+          import itamae
+
+          assert metadata.version("sashimi-itamae") == itamae.__version__
+          try:
+              metadata.version("itamae")
+          except metadata.PackageNotFoundError:
+              pass
+          else:
+              raise RuntimeError("colliding 'itamae' distribution is installed")
+          print("distribution=sashimi-itamae import=itamae", itamae.__version__)
+          PY
       - name: Verify durable embedded source revision
         run: |
           expected="$(git rev-parse HEAD)"
@@ -57,5 +80,29 @@ jobs:
 
           from itamae.provenance import source_revision
 
+          expected = os.environ["EXPECTED_ITAMAE_REVISION"]
+          assert source_revision("itamae") == expected
+          assert source_revision("sashimi-itamae") == expected
+          PY
+      - name: Rebuild wheel from exported sdist
+        run: |
+          mkdir -p "${RUNNER_TEMP}/itamae-sdist"
+          tar -xzf dist/sashimi_itamae-*.tar.gz -C "${RUNNER_TEMP}/itamae-sdist"
+          source_dir="$(find "${RUNNER_TEMP}/itamae-sdist" -mindepth 1 -maxdepth 1 -type d -print -quit)"
+          test -n "$source_dir"
+          uv build --wheel --out-dir "${RUNNER_TEMP}/itamae-rebuilt" "$source_dir"
+          compgen -G "${RUNNER_TEMP}/itamae-rebuilt/sashimi_itamae-*.whl" >/dev/null
+          uv venv "${RUNNER_TEMP}/itamae-sdist-venv"
+          uv pip install --python "${RUNNER_TEMP}/itamae-sdist-venv/bin/python" \
+            "${RUNNER_TEMP}"/itamae-rebuilt/sashimi_itamae-*.whl
+          EXPECTED_ITAMAE_REVISION="$(git rev-parse HEAD)" \
+            "${RUNNER_TEMP}/itamae-sdist-venv/bin/python" - <<'PY'
+          import os
+          from importlib import metadata
+
+          import itamae
+          from itamae.provenance import source_revision
+
+          assert metadata.version("sashimi-itamae") == itamae.__version__
           assert source_revision("itamae") == os.environ["EXPECTED_ITAMAE_REVISION"]
           PY
