@@ -1,6 +1,7 @@
 """Execute every walkthrough cell in a fresh kernel and reject incomplete results."""
-from pathlib import Path
+
 import tempfile
+from pathlib import Path
 
 import nbformat
 from nbclient import NotebookClient
@@ -22,12 +23,18 @@ with tempfile.TemporaryDirectory(prefix="walkthrough-execution-") as directory:
         resources={"metadata": {"path": directory}},
     ).execute()
 
-cells = [cell for cell in notebook.cells if cell.cell_type == "code" and cell.source.strip()]
+cells = [
+    cell
+    for cell in notebook.cells
+    if cell.cell_type == "code" and cell.source.strip()
+]
 if not cells:
     raise RuntimeError("No runnable examples")
 if any(cell.execution_count is None for cell in cells):
     raise RuntimeError("Walkthrough contains an unexecuted code cell")
-if any(output.output_type == "error" for cell in cells for output in cell.outputs):
+if any(
+    output.output_type == "error" for cell in cells for output in cell.outputs
+):
     raise RuntimeError("Walkthrough contains an error output")
 
 output = source.parents[1] / "artifacts/usage_walkthrough.executed.ipynb"
