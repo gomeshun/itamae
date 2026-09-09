@@ -1,6 +1,9 @@
 """Protocols for physical components used by the population executor."""
 
+from collections.abc import Mapping
 from typing import Any, Protocol
+
+from itamae.types import AccretionBatch
 
 from .variance import VarianceModel
 
@@ -67,12 +70,70 @@ class SurvivalModel(Protocol):
         ...
 
 
+class PopulationInitializer(Protocol):
+    """Initialize aligned per-node state for one accretion batch.
+
+    This is an execution-stage protocol. Scientific choices used to construct
+    the initial state remain owned by the variant implementation.
+    """
+
+    def initialize(self, batch: AccretionBatch, context: Any) -> Mapping[str, Any]:
+        """Return named arrays aligned with ``batch``."""
+        ...
+
+
+class PopulationEvolver(Protocol):
+    """Evolve initialized population state for one accretion batch."""
+
+    def evolve(
+        self,
+        batch: AccretionBatch,
+        initial: Mapping[str, Any],
+        context: Any,
+    ) -> Mapping[str, Any]:
+        """Return named evolved arrays aligned with ``batch``."""
+        ...
+
+
+class PopulationSurvivalSelector(Protocol):
+    """Select one or more named survival views from evolved population state."""
+
+    def select(
+        self,
+        batch: AccretionBatch,
+        initial: Mapping[str, Any],
+        evolved: Mapping[str, Any],
+        context: Any,
+    ) -> Any:
+        """Return a boolean mask or mapping of named boolean masks."""
+        ...
+
+
+class CatalogColumnBuilder(Protocol):
+    """Build final aligned catalog columns from pipeline stage state."""
+
+    def build(
+        self,
+        batch: AccretionBatch,
+        initial: Mapping[str, Any],
+        evolved: Mapping[str, Any],
+        survival: Mapping[str, Any],
+        context: Any,
+    ) -> Mapping[str, Any]:
+        """Return named final catalog columns aligned with ``batch``."""
+        ...
+
+
 __all__ = [
     "AccretionRateModel",
+    "CatalogColumnBuilder",
     "ConcentrationModel",
     "HostHistoryModel",
     "InitialStructureModel",
     "MassLossLaw",
+    "PopulationEvolver",
+    "PopulationInitializer",
+    "PopulationSurvivalSelector",
     "ProfileEvolutionModel",
     "SurvivalModel",
 ]
