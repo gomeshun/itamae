@@ -54,7 +54,12 @@ def invert_nfw_mass_function(y):
 
         def residual(log_radius):
             radius = max_radius if log_radius == max_log_radius else np.exp(log_radius)
-            return float(nfw_mass_function(radius) / value - 1.0)
+            enclosed = float(nfw_mass_function(radius))
+            # The upper bracket can be far above a subnormal target. Preserve
+            # its sign without overflowing a ratio that is used only to bracket.
+            if value < 1.0 and enclosed > max_radius * value:
+                return max_radius
+            return enclosed / value - 1.0
 
         root = brentq(residual, lower, upper, xtol=5.0e-14, rtol=4.0 * np.finfo(float).eps)
         return float(np.exp(root))

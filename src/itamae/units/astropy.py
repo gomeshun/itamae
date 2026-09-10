@@ -3,8 +3,8 @@
 from dataclasses import dataclass
 
 import astropy.units as u
-import numpy as np
 
+from .native import _finite_real_array
 from .schema import CANONICAL_UNITS, CANONICAL_UNIT_SCHEMA_VERSION, canonical_unit
 
 
@@ -23,17 +23,12 @@ class AstropyUnits:
     def to_internal(self, value, physical_type: str):
         """Convert a Quantity to a plain floating array in canonical units."""
         quantity = u.Quantity(value)
-        array = np.asarray(quantity.to_value(_astropy_unit(physical_type)), dtype=float)
-        if not np.all(np.isfinite(array)):
-            raise ValueError("Unit input contains non-finite values.")
-        return array
+        return _finite_real_array(quantity.to_value(_astropy_unit(physical_type)))
 
     def from_internal(self, value, unit):
         """Convert a canonical floating value to an equivalent Astropy unit."""
         target = u.Unit(unit)
-        array = np.asarray(value, dtype=float)
-        if not np.all(np.isfinite(array)):
-            raise ValueError("Unit output contains non-finite values.")
+        array = _finite_real_array(value)
         for physical_type in CANONICAL_UNITS:
             source = _astropy_unit(physical_type)
             if source.is_equivalent(target):
