@@ -29,6 +29,10 @@ MIGRATION_METADATA_KEYS = (
     "solver_identifier",
     "catalog_schema_version",
 )
+CALCULATION_METADATA_KEYS = tuple(
+    key for key in MIGRATION_METADATA_KEYS if key != "physics_mode"
+) + ("calculation_specification", "provenance_schema")
+CALCULATION_PROVENANCE_SCHEMA = "itamae:calculation:v2"
 UNKNOWN_SOURCE_REVISION = "unknown"
 SOURCE_REVISION_PATTERN = re.compile(r"[0-9a-f]{40}")
 _DISTRIBUTION_SEPARATOR_PATTERN = re.compile(r"[-_.]+")
@@ -223,7 +227,7 @@ def _required_source_revision(package_name: str, *, module_file: str) -> str:
     return revision
 
 
-def build_migration_metadata(
+def _build_metadata(
     *,
     variant: str,
     distribution_name: str,
@@ -231,17 +235,17 @@ def build_migration_metadata(
     model_identifier: str,
     backend_identifier: str,
     source_identifier: str,
-    physics_mode: str,
+    selection_fields: Mapping[str, str],
     variance_identifier: str,
     power_identifier: str,
     solver_identifier: str,
     canonical_unit_schema: str = CANONICAL_UNIT_SCHEMA_VERSION,
     extra: Mapping[str, Any] | None = None,
 ) -> CatalogMetadata:
-    """Build a catalog metadata object with the shared migration vocabulary."""
+    """Build common source/backend metadata with explicit selection fields."""
     standard = {
         "sashimi_variant": variant,
-        "physics_mode": physics_mode,
+        **selection_fields,
         "itamae_version": __version__,
         "itamae_source_revision": _required_source_revision("itamae", module_file=__file__),
         "sashimi_version": package_version(distribution_name, module_file=module_file),
@@ -273,7 +277,89 @@ def build_migration_metadata(
     )
 
 
+def build_migration_metadata(
+    *,
+    variant: str,
+    distribution_name: str,
+    module_file: str,
+    model_identifier: str,
+    backend_identifier: str,
+    source_identifier: str,
+    physics_mode: str,
+    variance_identifier: str,
+    power_identifier: str,
+    solver_identifier: str,
+    canonical_unit_schema: str = CANONICAL_UNIT_SCHEMA_VERSION,
+    extra: Mapping[str, Any] | None = None,
+) -> CatalogMetadata:
+    """Preserve the historical migration schema without relabeling old output."""
+    return _build_metadata(
+        variant=variant,
+        distribution_name=distribution_name,
+        module_file=module_file,
+        model_identifier=model_identifier,
+        backend_identifier=backend_identifier,
+        source_identifier=source_identifier,
+        selection_fields={"physics_mode": physics_mode},
+        variance_identifier=variance_identifier,
+        power_identifier=power_identifier,
+        solver_identifier=solver_identifier,
+        canonical_unit_schema=canonical_unit_schema,
+        extra=extra,
+    )
+
+
+def build_calculation_metadata(
+    *,
+    variant: str,
+    distribution_name: str,
+    module_file: str,
+    model_identifier: str,
+    backend_identifier: str,
+    source_identifier: str,
+    calculation_specification: str,
+    variance_identifier: str,
+    power_identifier: str,
+    solver_identifier: str,
+    canonical_unit_schema: str = CANONICAL_UNIT_SCHEMA_VERSION,
+    extra: Mapping[str, Any] | None = None,
+) -> CatalogMetadata:
+    """Record a versioned calculation specification for a standard product API.
+
+    Scientific choices (such as transfer prescription or solver) are supplied
+    by the variant. The removed product reproduction flag cannot be injected
+    through extra metadata. Historical catalogs retain their own schema and
+    are read unchanged; this builder performs no migration or reinterpretation.
+    """
+    if not isinstance(calculation_specification, str) or not calculation_specification.strip():
+        raise ValueError("calculation_specification must be a non-empty versioned identifier.")
+    if extra is not None and "physics_mode" in extra:
+        raise ValueError(
+            "physics_mode belongs to historical migration provenance, not the standard API."
+        )
+    return _build_metadata(
+        variant=variant,
+        distribution_name=distribution_name,
+        module_file=module_file,
+        model_identifier=model_identifier,
+        backend_identifier=backend_identifier,
+        source_identifier=source_identifier,
+        selection_fields={
+            "calculation_specification": calculation_specification,
+            "provenance_schema": CALCULATION_PROVENANCE_SCHEMA,
+        },
+        variance_identifier=variance_identifier,
+        power_identifier=power_identifier,
+        solver_identifier=solver_identifier,
+        canonical_unit_schema=canonical_unit_schema,
+        extra=extra,
+    )
+
+
 __all__ = [
+    "CALCULATION_METADATA_KEYS",
+    "CALCULATION_PROVENANCE_SCHEMA",
+    "build_calculation_metadata",
     "ITAMAE_DISTRIBUTION_NAME",
     "MIGRATION_METADATA_KEYS",
     "UNKNOWN_SOURCE_REVISION",
