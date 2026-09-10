@@ -13,6 +13,8 @@ from scipy.integrate import simpson
 from itamae.power.windows import SharpKWindow
 from itamae.protocols import PowerSpectrum, WindowFunction
 
+from ._validation import aligned, coordinates, numerical_errors, real_array
+
 
 @dataclass(frozen=True, slots=True)
 class IntegratedVarianceModel:
@@ -81,8 +83,8 @@ class IntegratedVarianceModel:
         if not isinstance(self.window, WindowFunction):
             raise TypeError("window must implement the ITAMAE window protocol.")
         for name in ("rho_mean", "k_min", "k_max", "filter_scale", "derivative_step"):
-            value = float(getattr(self, name))
-            if not np.isfinite(value) or value <= 0.0:
+            value = real_array(getattr(self, name), name)
+            if value.ndim != 0 or value <= 0.0:
                 raise ValueError(f"{name} must be finite and positive.")
         if self.k_min >= self.k_max:
             raise ValueError("k_min must be smaller than k_max.")
@@ -120,7 +122,7 @@ class IntegratedVarianceModel:
 
     def _validated_mass(self, mass: Any) -> np.ndarray:
         """Return finite positive mass values as a floating-point array."""
-        values = np.asarray(mass, dtype=float)
+        values = real_array(mass, "Mass")
         if not np.all(np.isfinite(values)) or np.any(values <= 0.0):
             raise ValueError("Masses must be finite and positive.")
         return values
@@ -132,7 +134,9 @@ class IntegratedVarianceModel:
 
     def _integration_breakpoints(self) -> np.ndarray:
         """Validate optional spectrum knots; smooth powers need not expose them."""
-        knots = np.asarray(getattr(self.power, "integration_breakpoints", []), dtype=float)
+        knots = real_array(
+            getattr(self.power, "integration_breakpoints", []), "Power integration breakpoints"
+        )
         if (
             knots.ndim != 1
             or not np.all(np.isfinite(knots))
@@ -151,7 +155,11 @@ class IntegratedVarianceModel:
         # Only correct possible one-ulp endpoint excursions of exp(log(k));
         # no spectrum, variance, derivative or statistical weight is projected.
         k = np.clip(np.exp(log_k), self.k_min, self.k_max)
-        integrand = k**3 * np.asarray(self.power(k), dtype=float) / (2.0 * np.pi**2)
+        integrand = (
+            k**3
+            * aligned(self.power(k), k.shape, "Power spectrum", nonnegative=True)
+            / (2.0 * np.pi**2)
+        )
         if (
             integrand.shape != k.shape
             or not np.all(np.isfinite(integrand))
@@ -223,7 +231,11 @@ class IntegratedVarianceModel:
         # by one floating-point ulp.
         k = np.geomspace(self.k_min, self.k_max, self.n_k)
         log_k = np.log(k)
-        dimensionless_power = k**3 * np.asarray(self.power(k), dtype=float) / (2.0 * np.pi**2)
+        dimensionless_power = (
+            k**3
+            * aligned(self.power(k), k.shape, "Power spectrum", nonnegative=True)
+            / (2.0 * np.pi**2)
+        )
         if (
             dimensionless_power.shape != k.shape
             or not np.all(np.isfinite(dimensionless_power))
@@ -235,7 +247,7 @@ class IntegratedVarianceModel:
             stop = min(start + self.chunk_size, flattened.size)
             radius = (3.0 * flattened[start:stop] / (4.0 * np.pi * self.rho_mean)) ** (1.0 / 3.0)
             argument = radius[:, None] * k[None, :] / self.filter_scale
-            window = np.asarray(self.window(argument), dtype=float)
+            window = aligned(self.window(argument), argument.shape, "Window")
             integrand = dimensionless_power[None, :] * window * window
             result[start:stop] = simpson(integrand, x=log_k, axis=1)
         if not np.all(np.isfinite(result)) or np.any(result < 0.0):
@@ -244,22 +256,22 @@ class IntegratedVarianceModel:
 
     def _growth(self, redshift: Any) -> np.ndarray:
         """Evaluate and validate the optional growth factor."""
+        redshift_array = real_array(redshift, "Redshift")
         if self.growth_function is None:
-            redshift_array = np.asarray(redshift, dtype=float)
-            if not np.all(np.isfinite(redshift_array)):
-                raise ValueError("Redshift must be finite.")
             return np.ones(redshift_array.shape, dtype=float)
-        growth = np.asarray(self.growth_function(redshift), dtype=float)
-        if not np.all(np.isfinite(growth)) or np.any(growth < 0.0):
-            raise ValueError("Growth function must return finite nonnegative values.")
-        return growth
+        return aligned(
+            self.growth_function(redshift),
+            redshift_array.shape,
+            "Growth function",
+            nonnegative=True,
+            scalar_ok=True,
+        )
 
     def variance(self, mass: Any, z: Any = 0.0) -> np.ndarray:
         r"""Return :math:`S(M,z)` with mass/redshift broadcasting."""
-        mass_array, redshift = np.broadcast_arrays(
-            np.asarray(mass, dtype=float), np.asarray(z, dtype=float)
-        )
-        return self._variance_z0(mass_array) * self._growth(redshift) ** 2
+        mass_array, redshift = coordinates(mass, z)
+        with numerical_errors("Variance integration"):
+            return self._variance_z0(mass_array) * self._growth(redshift) ** 2
 
     def sigma(self, mass: Any, z: Any = 0.0) -> np.ndarray:
         r"""Return :math:`\sigma(M,z)=\sqrt{S(M,z)}`."""
@@ -279,9 +291,12 @@ class IntegratedVarianceModel:
         when the physical cutoff lies inside the configured power-spectrum
         interval. Outside that interval the truncated integral is constant.
         """
-        mass_array, redshift = np.broadcast_arrays(
-            np.asarray(mass, dtype=float), np.asarray(z, dtype=float)
-        )
+        mass_array, redshift = coordinates(mass, z)
+        with numerical_errors("Variance derivative"):
+            return self._dvariance_dmass(mass_array, redshift)
+
+    def _dvariance_dmass(self, mass_array, redshift):
+        """Evaluate the derivative after validating public coordinates."""
         self._validated_mass(mass_array)
         if isinstance(self.window, SharpKWindow):
             cutoff = self._sharp_k_cutoff(mass_array)
@@ -290,7 +305,12 @@ class IntegratedVarianceModel:
             active = (cutoff > self.k_min) & (cutoff < self.k_max)
             if np.any(active):
                 active_cutoff = cutoff[active]
-                boundary_power = np.asarray(self.power(active_cutoff), dtype=float)
+                boundary_power = aligned(
+                    self.power(active_cutoff),
+                    active_cutoff.shape,
+                    "Power spectrum",
+                    nonnegative=True,
+                )
                 if (
                     boundary_power.shape != active_cutoff.shape
                     or not np.all(np.isfinite(boundary_power))
