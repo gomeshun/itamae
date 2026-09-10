@@ -38,6 +38,7 @@ def test_variance_identity_includes_derivative_resolution_but_not_batching():
     )
     assert model.identifier != replace(model, derivative_step=2.0e-4).identifier
     assert model.identifier == replace(model, chunk_size=3).identifier
+    assert model.identifier != replace(model, sharp_k_order=4).identifier
 
 
 @pytest.mark.parametrize("field", ["mass", "variance"])
