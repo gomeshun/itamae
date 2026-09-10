@@ -99,6 +99,7 @@ def solve_evolution(
     rtol=None,
     atol=None,
     odeint_options=None,
+    allow_repeated_times=False,
 ):
     """Integrate a real evolution equation on a strictly monotonic output grid.
 
@@ -117,16 +118,35 @@ def solve_evolution(
     controller owns ``args``, ``tfirst``, ``full_output`` and tolerances;
     duplicate/unknown options fail before the physical callback. Options for
     this backend cannot be silently passed to another solver.
+
+    Explicit ``allow_repeated_times=True`` preserves odeint's repeated output
+    coordinates, including a constant grid with no evolution. Integration
+    runs only on distinct coordinates and results retain requested order.
     """
     grid = _real_finite(t_eval, "t_eval")
     initial = np.atleast_1d(_real_finite(y0, "y0"))
     if initial.ndim != 1 or initial.size == 0:
         raise ValueError("y0 must be a nonempty one-dimensional state vector.")
-    if grid.ndim != 1 or grid.size < 2:
-        raise ValueError("t_eval must be a one-dimensional grid with at least two points.")
+    if not isinstance(allow_repeated_times, (bool, np.bool_)):
+        raise ValueError("allow_repeated_times must be boolean.")
+    if allow_repeated_times and method != "odeint":
+        raise ValueError("allow_repeated_times requires method='odeint'.")
+    minimum_points = 1 if allow_repeated_times else 2
+    if grid.ndim != 1 or grid.size < minimum_points:
+        raise ValueError(f"t_eval must be one-dimensional with at least {minimum_points} points.")
     delta = np.diff(grid)
-    if not (np.all(delta > 0.0) or np.all(delta < 0.0)):
+    monotonic = (
+        (np.all(delta >= 0) or np.all(delta <= 0))
+        if allow_repeated_times
+        else (np.all(delta > 0) or np.all(delta < 0))
+    )
+    if not monotonic:
         raise ValueError("t_eval must be strictly monotonic.")
+    restore = None
+    if allow_repeated_times:
+        distinct = np.concatenate(([True], delta != 0))
+        restore = np.cumsum(distinct) - 1
+        grid = grid[distinct]
     for name, value in (("rtol", rtol), ("atol", atol)):
         if value is not None:
             tolerance = _real_finite(value, name)
@@ -141,6 +161,9 @@ def solve_evolution(
 
     if method == "odeint":
         options = _validated_odeint_options(odeint_options, initial, args)
+        if grid.size == 1:
+            assert restore is not None
+            return np.broadcast_to(initial, (restore.size, initial.size)).copy()
         with warnings.catch_warnings(record=True) as observed:
             warnings.simplefilter("always", ODEintWarning)
             values, diagnostics = odeint(
@@ -181,4 +204,4 @@ def solve_evolution(
     values = _real_finite(values, "evolution output")
     if values.shape != (grid.size, initial.size):
         raise RuntimeError("ODE solver returned an incomplete output grid.")
-    return values
+    return values if restore is None else values[restore]

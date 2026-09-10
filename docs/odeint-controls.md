@@ -18,3 +18,10 @@ SciPy comparisons in both time directions, dense and banded stiff Jacobians,
 invalid Jacobians and explicit failure limits now pass. The direct odeint
 comparisons are bitwise equal in the same environment. Default solver choices,
 ODE tolerances and physical equations are unchanged.
+
+`allow_repeated_times=True` explicitly retains odeint's repeated output times
+and constant grids. The shared controller integrates distinct times and restores
+the requested output rows; a constant grid returns the initial state after
+validating inputs and options. The default remains a strictly monotonic grid.
+This explicit option preserves SI's existing multi-output and zero-evolution
+contracts without duplicating grid handling in the variants.

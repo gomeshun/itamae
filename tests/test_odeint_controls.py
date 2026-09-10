@@ -137,3 +137,24 @@ def test_invalid_jacobian_is_not_returned_as_a_solution(bad_jacobian):
             method="odeint",
             odeint_options={"Dfun": lambda t, y: bad_jacobian},
         )
+
+
+@pytest.mark.parametrize("time", [[1.0, 1.0, 0.5, 0.5, 0.0], [1.0, 1.0, 1.0], [1.0]])
+def test_explicit_repeated_outputs_preserve_scipy_shape_and_values(time):
+    expected = odeint(lambda y, t: -0.2 * y, [1.0, 3.0], time)
+    actual = solve_evolution(
+        lambda t, y: -0.2 * y, [1.0, 3.0], time, method="odeint", allow_repeated_times=True
+    )
+    np.testing.assert_array_equal(actual, expected)
+
+
+def test_constant_grid_still_validates_solver_options():
+    with pytest.raises(ValueError, match="hmax"):
+        solve_evolution(
+            lambda t, y: -y,
+            [1.0],
+            [0.0, 0.0],
+            method="odeint",
+            allow_repeated_times=True,
+            odeint_options={"hmax": -1.0},
+        )
