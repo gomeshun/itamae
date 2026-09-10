@@ -15,7 +15,7 @@ def _batch(offset: float):
         np.array([0.2, 0.3]),
         np.array([0.7, 0.8]),
         mvir_acc=np.array([1.1, 2.2]) + offset,
-        metadata={"batch": offset},
+        metadata={"model": "toy"},
     )
 
 

@@ -40,12 +40,57 @@ def _concatenate(values: Iterable[np.ndarray], name: str) -> np.ndarray:
     return np.concatenate(arrays, axis=0)
 
 
+def _metadata_difference(left: Any, right: Any, path: str = "metadata") -> str | None:
+    """Find the first exact mismatch, including nested mappings and array values."""
+    if isinstance(left, Mapping) and isinstance(right, Mapping):
+        for key in sorted(left.keys() | right.keys(), key=str):
+            field = f"{path}.{key}"
+            if key not in left or key not in right:
+                return field
+            mismatch = _metadata_difference(left[key], right[key], field)
+            if mismatch is not None:
+                return mismatch
+        return None
+    if isinstance(left, (list, tuple)) and isinstance(right, (list, tuple)):
+        if len(left) != len(right):
+            return path
+        for index, (a, b) in enumerate(zip(left, right, strict=True)):
+            mismatch = _metadata_difference(a, b, f"{path}[{index}]")
+            if mismatch is not None:
+                return mismatch
+        return None
+    if isinstance(left, np.ndarray) or isinstance(right, np.ndarray):
+        return None if np.array_equal(left, right) else path
+    return None if type(left) is type(right) and left == right else path
+
+
+def _validate_batches(values: tuple[AccretionBatch, ...]) -> None:
+    """Reject incompatible contracts before invoking any physical component."""
+    if not values:
+        raise ValueError("At least one accretion batch is required.")
+    for index, batch in enumerate(values):
+        if not isinstance(batch, AccretionBatch):
+            raise TypeError(f"batch {index} must be an AccretionBatch.")
+        if batch.m200_acc.ndim != 1:
+            raise ValueError(f"batch {index} requires one flat population axis.")
+        mismatch = _metadata_difference(values[0].metadata, batch.metadata)
+        if mismatch is not None:
+            raise ValueError(f"batch {index} has incompatible {mismatch}.")
+        for name in ("weight_host_history", "weight_orbit"):
+            if (getattr(batch, name) is None) != (getattr(values[0], name) is None):
+                raise ValueError(
+                    f"batch {index}: optional factor {name!r} must exist in every batch."
+                )
+
+
 def _validate_stage(
     values: Mapping[str, Any], shape: tuple[int, ...], stage: str
 ) -> Mapping[str, np.ndarray]:
     """Validate one callback's aligned finite arrays."""
     if not isinstance(values, Mapping):
         raise TypeError(f"{stage} stage must return a mapping of named arrays.")
+    if stage == "columns" and not values:
+        raise ValueError("The columns stage must return at least one physical column.")
     arrays = {}
     for name, value in values.items():
         if not isinstance(name, str) or not name.strip():
@@ -53,6 +98,8 @@ def _validate_stage(
         array = np.asarray(value)
         if array.shape != shape:
             raise ValueError(f"{stage} field {name!r} has shape {array.shape}; expected {shape}.")
+        if array.dtype.kind not in "buif":
+            raise TypeError(f"{stage} field {name!r} must contain real numeric or boolean values.")
         if not np.all(np.isfinite(array)):
             raise ValueError(f"{stage} field {name!r} contains non-finite values.")
         arrays[name] = array
@@ -71,8 +118,10 @@ def _validate_survival(value: Any, shape: tuple[int, ...]) -> Mapping[str, np.nd
         raw = np.asarray(mask)
         if raw.shape != shape:
             raise ValueError(f"Survival mask {name!r} has shape {raw.shape}; expected {shape}.")
-        if raw.dtype.kind != "b" and not np.all(np.isfinite(raw)):
-            raise ValueError(f"Survival mask {name!r} contains non-finite values.")
+        if raw.dtype.kind not in "buif" or not np.all((raw == 0) | (raw == 1)):
+            raise ValueError(
+                f"survival mask {name!r} must contain only boolean or binary 0/1 values."
+            )
         masks[name] = raw.astype(bool, copy=False)
     return MappingProxyType(masks)
 
@@ -82,15 +131,12 @@ def concatenate_accretion_batches(
 ) -> AccretionBatch:
     """Concatenate aligned accretion batches while preserving optional factors."""
     values = tuple(batches)
-    if not values:
-        raise ValueError("At least one accretion batch is required.")
+    _validate_batches(values)
 
     def optional_factor(name: str) -> np.ndarray | None:
         factors = tuple(getattr(batch, name) for batch in values)
         if all(factor is None for factor in factors):
             return None
-        if any(factor is None for factor in factors):
-            raise ValueError(f"Optional factor {name!r} must exist in every batch.")
         return _concatenate(factors, name)  # type: ignore[arg-type]
 
     return AccretionBatch(
@@ -166,7 +212,10 @@ class PopulationPipeline:
 
     The executor owns ordering, shape validation, concatenation, and weight
     transport. Callbacks own all physical prescriptions and may return several
-    named survival views for models such as SIDM.
+    named survival views for models such as SIDM. All batch metadata must match
+    exactly; batch-local coordinates or labels belong in arrays or ``contexts``.
+    Nodes and output fields use a flat population axis. An empty iterable is an
+    error; a zero-length batch runs the stages and retains their output schema.
     """
 
     initialize: StageInitializer
@@ -183,8 +232,7 @@ class PopulationPipeline:
     ) -> PopulationExecution:
         """Run all stages in batch order and return a transport result."""
         batch_values = tuple(batches)
-        if not batch_values:
-            raise ValueError("At least one accretion batch is required.")
+        _validate_batches(batch_values)
         if contexts is None:
             context_values = (None,) * len(batch_values)
         else:
@@ -194,25 +242,34 @@ class PopulationPipeline:
 
         column_values: list[Mapping[str, np.ndarray]] = []
         survival_values: list[Mapping[str, np.ndarray]] = []
-        for batch, context in zip(batch_values, context_values, strict=True):
+        for index, (batch, context) in enumerate(zip(batch_values, context_values, strict=True)):
             shape = batch.m200_acc.shape
-            initial = _validate_stage(self.initialize(batch, context), shape, "initial")
-            evolved = _validate_stage(self.evolve(batch, initial, context), shape, "evolved")
-            survival = _validate_survival(self.survival(batch, initial, evolved, context), shape)
-            columns = _validate_stage(
-                self.columns(batch, initial, evolved, survival, context),
-                shape,
-                "columns",
-            )
+
+            def run(
+                stage: str, callback: Callable[..., Any], *args: Any
+            ) -> Mapping[str, np.ndarray]:
+                try:
+                    output = callback(*args)
+                    if stage == "survival":
+                        return _validate_survival(output, shape)
+                    return _validate_stage(output, shape, stage)
+                except Exception as exc:
+                    name = getattr(callback, "__qualname__", type(callback).__name__)
+                    raise ValueError(f"batch {index}, {stage} stage ({name}): {exc}") from exc
+
+            initial = run("initial", self.initialize, batch, context)
+            evolved = run("evolved", self.evolve, batch, initial, context)
+            survival = run("survival", self.survival, batch, initial, evolved, context)
+            columns = run("columns", self.columns, batch, initial, evolved, survival, context)
+            if column_values and set(columns) != set(column_values[0]):
+                raise ValueError(f"batch {index}: columns stage fields differ from batch 0.")
+            if survival_values and set(survival) != set(survival_values[0]):
+                raise ValueError(f"batch {index}: survival stage views differ from batch 0.")
             column_values.append(columns)
             survival_values.append(survival)
 
         column_names = tuple(column_values[0])
-        if any(tuple(values) != column_names for values in column_values[1:]):
-            raise ValueError("The columns stage must return the same fields for every batch.")
         survival_names = tuple(survival_values[0])
-        if any(tuple(values) != survival_names for values in survival_values[1:]):
-            raise ValueError("The survival stage must return the same views for every batch.")
 
         return PopulationExecution(
             batch=concatenate_accretion_batches(batch_values),
