@@ -7,6 +7,16 @@ import numpy as np
 from .schema import CANONICAL_UNIT_SCHEMA_VERSION, canonical_unit
 
 
+def _finite_real_array(value):
+    array = np.asarray(value)
+    if array.dtype.kind not in "biuf":
+        raise ValueError("Unit input/output must contain real numeric values.")
+    array = np.asarray(array, dtype=float)
+    if not np.all(np.isfinite(array)):
+        raise ValueError("Unit input/output contains non-finite values.")
+    return array
+
+
 @dataclass(frozen=True, slots=True)
 class NativeUnits:
     """Interpret numeric inputs in the canonical ITAMAE unit system."""
@@ -29,10 +39,7 @@ class NativeUnits:
             Floating representation of ``value``.
         """
         canonical_unit(physical_type)
-        array = np.asarray(value, dtype=float)
-        if not np.all(np.isfinite(array)):
-            raise ValueError("Unit input contains non-finite values.")
-        return array
+        return _finite_real_array(value)
 
     def from_internal(self, value, unit=None):
         """Return a finite internal value without attaching units.
@@ -44,10 +51,7 @@ class NativeUnits:
         """
         if unit not in (None, ""):
             raise ValueError("NativeUnits cannot attach or convert explicit output units.")
-        array = np.asarray(value, dtype=float)
-        if not np.all(np.isfinite(array)):
-            raise ValueError("Unit output contains non-finite values.")
-        return array
+        return _finite_real_array(value)
 
     def validate(self, value, physical_type: str) -> None:
         """Validate that a value can be represented numerically."""

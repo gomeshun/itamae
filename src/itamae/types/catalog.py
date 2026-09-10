@@ -29,6 +29,29 @@ _REQUIRED_METADATA = ("schema_version", "model_identifier", "backend_identifier"
 _RESERVED_METADATA = {*_REQUIRED_METADATA, "source_identifier"}
 
 
+def _real_finite_array(value, description):
+    array = np.asarray(value)
+    if array.dtype.kind not in "biuf":
+        raise ValueError(f"{description} must contain real numeric values.")
+    if not np.all(np.isfinite(array)):
+        raise ValueError(f"{description} contains non-finite values.")
+    return array
+
+
+def _weight_product(weights, shape):
+    result = np.ones(shape, dtype=float)
+    try:
+        with np.errstate(over="raise", invalid="raise"):
+            for name, value in weights.items():
+                value = _real_finite_array(value, f"Weight factor {name!r}")
+                if np.any(value < 0):
+                    raise ValueError(f"Weight factor {name!r} contains negative values.")
+                result *= value
+    except FloatingPointError as error:
+        raise ValueError("Weight product must be finite; numerical overflow occurred.") from error
+    return result
+
+
 @dataclass(frozen=True, slots=True)
 class CatalogMetadata:
     """Describe the model and computational backend that produced a catalog.
@@ -138,8 +161,14 @@ class WeightedSubhaloCatalog:
                 f"got {invalid_names}."
             )
 
-        columns = {name: np.asarray(value) for name, value in self.columns.items()}
-        weights = {name: np.asarray(value, dtype=float) for name, value in self.weights.items()}
+        columns = {
+            name: _real_finite_array(value, f"Catalog column {name!r}")
+            for name, value in self.columns.items()
+        }
+        weights = {
+            name: np.asarray(_real_finite_array(value, f"Weight factor {name!r}"), dtype=float)
+            for name, value in self.weights.items()
+        }
         shapes = {value.shape for value in [*columns.values(), *weights.values()]}
         if len(shapes) != 1:
             raise ValueError(f"All catalog arrays must have the same shape; got {shapes}.")
@@ -148,6 +177,7 @@ class WeightedSubhaloCatalog:
                 raise ValueError(f"Weight factor {name!r} contains non-finite values.")
             if np.any(value < 0.0):
                 raise ValueError(f"Weight factor {name!r} contains negative values.")
+        _weight_product(weights, next(iter(columns.values())).shape)
 
         metadata = (
             self.metadata.as_mapping()
@@ -187,11 +217,8 @@ class WeightedSubhaloCatalog:
 
     @property
     def weight_final(self) -> np.ndarray:
-        """Multiply every independent weight factor."""
-        result = np.ones(self.shape, dtype=float)
-        for value in self.weights.values():
-            result *= value
-        return result
+        """Multiply independent factors, rejecting non-finite products."""
+        return _weight_product(self.weights, self.shape)
 
     def select(self, mask: Any) -> WeightedSubhaloCatalog:
         """Return a catalog subset while preserving metadata."""
@@ -203,10 +230,17 @@ class WeightedSubhaloCatalog:
 
     def weighted_sum(self, values: Any) -> float:
         """Return the weighted sum of an array aligned with the catalog."""
-        array = np.asarray(values, dtype=float)
+        array = np.asarray(_real_finite_array(values, "Values"), dtype=float)
         if array.shape != self.shape:
             raise ValueError("Values must have the catalog shape.")
-        return float(np.sum(array * self.weight_final))
+        try:
+            with np.errstate(over="raise", invalid="raise"):
+                result = float(np.sum(array * self.weight_final))
+        except FloatingPointError as error:
+            raise ValueError("Weighted sum must be finite; numerical overflow occurred.") from error
+        if not np.isfinite(result):
+            raise ValueError("Weighted sum must be finite.")
+        return result
 
     def weighted_histogram(
         self, column: str, bins: Any, **kwargs: Any
@@ -224,7 +258,17 @@ class WeightedSubhaloCatalog:
         """
         if "weights" in kwargs:
             raise TypeError("weighted_histogram determines weights from the catalog.")
-        return np.histogram(self.columns[column], bins=bins, weights=self.weight_final, **kwargs)
+        values = _real_finite_array(self.columns[column], f"Catalog column {column!r}")
+        try:
+            with np.errstate(over="raise", invalid="raise", divide="raise"):
+                counts, edges = np.histogram(values, bins=bins, weights=self.weight_final, **kwargs)
+        except FloatingPointError as error:
+            raise ValueError(
+                "Weighted histogram is non-finite or its density is undefined."
+            ) from error
+        if not np.all(np.isfinite(counts)):
+            raise ValueError("Weighted histogram must be finite.")
+        return counts, edges
 
     def poisson_realization(self, rng: np.random.Generator) -> Mapping[str, np.ndarray]:
         """Draw a Poisson realization of the weighted catalog.
@@ -265,6 +309,9 @@ class WeightedSubhaloCatalog:
         archive fields so model-specific names never become executable object
         payloads.
         """
+        for name, value in self.columns.items():
+            _real_finite_array(value, f"Catalog column {name!r}")
+        self.weight_final
         metadata = (
             self.metadata.as_mapping()
             if isinstance(self.metadata, CatalogMetadata)
@@ -318,6 +365,8 @@ class WeightedSubhaloCatalog:
                 manifest = json.loads(str(archive["manifest_json"]))
             except (KeyError, json.JSONDecodeError, TypeError) as exc:
                 raise ValueError("Catalog archive has an invalid manifest.") from exc
+            if not isinstance(manifest, dict):
+                raise ValueError("Catalog archive has an invalid manifest.")
             if manifest.get("archive_schema") != "itamae-weighted-catalog-npz:1.0":
                 raise ValueError("Catalog archive schema is unsupported.")
             column_names = manifest.get("columns")
@@ -331,6 +380,10 @@ class WeightedSubhaloCatalog:
                 or not isinstance(metadata, dict)
             ):
                 raise ValueError("Catalog archive manifest fields are invalid.")
+            if len(set(column_names)) != len(column_names) or len(set(weight_names)) != len(
+                weight_names
+            ):
+                raise ValueError("Catalog archive names must be unique; duplicate names found.")
             expected_fields = {
                 "manifest_json",
                 *(f"column_{index}" for index in range(len(column_names))),
@@ -343,7 +396,7 @@ class WeightedSubhaloCatalog:
                 for index, name in enumerate(column_names)
             }
             weights = {
-                name: np.asarray(archive[f"weight_{index}"], dtype=float)
+                name: np.asarray(archive[f"weight_{index}"])
                 for index, name in enumerate(weight_names)
             }
         return cls(columns=columns, weights=weights, metadata=metadata)
