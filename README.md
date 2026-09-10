@@ -279,8 +279,8 @@ Contributions should, where applicable, include:
 
 ## Citation
 
-A dedicated ITAMAE citation will be added when the package and its scientific
-scope are stabilized.
+Use the software metadata in [CITATION.cff](CITATION.cff), and record the exact
+version and embedded source revision used in the calculation.
 
 When using a SASHIMI model, please cite the publications associated with the
 specific SASHIMI variant and with the physical prescriptions used in the
@@ -288,4 +288,6 @@ calculation.
 
 ## License
 
-The license has not yet been selected.
+ITAMAE is distributed under the [MIT license](LICENSE), with copyright attributed
+to Shunichi Horigome. The release candidate license was selected by the
+maintainer on 2026-09-10.
