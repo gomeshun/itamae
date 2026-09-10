@@ -102,6 +102,15 @@ class TabulatedPowerSpectrum:
         """Return the inclusive tabulated wavenumber interval."""
         return float(self._wavenumber[0]), float(self._wavenumber[-1])
 
+    @property
+    def integration_breakpoints(self) -> np.ndarray:
+        """Return copied knot locations where the interpolant's slope changes.
+
+        Numerical integrators may split intervals at these points. The table
+        digest in ``identifier`` already covers their exact content.
+        """
+        return self._wavenumber.copy()
+
     def __call__(self, wavenumber: Any) -> np.ndarray:
         """Evaluate the configured interpolant."""
         k = np.asarray(wavenumber, dtype=float)
@@ -152,6 +161,11 @@ class TransferModifiedPowerSpectrum:
     def identifier(self) -> str:
         """Return the composed base-spectrum and power-ratio identifier."""
         return self._identifier
+
+    @property
+    def integration_breakpoints(self) -> np.ndarray:
+        """Forward known base-spectrum knots; smooth ratios add none."""
+        return np.asarray(getattr(self._base, "integration_breakpoints", []), dtype=float).copy()
 
     def __call__(self, wavenumber: Any) -> np.ndarray:
         """Return the base spectrum multiplied by the supplied power ratio."""

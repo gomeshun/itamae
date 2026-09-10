@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from hashlib import sha256
 from typing import Any
 
 import numpy as np
@@ -104,12 +105,16 @@ class IntegratedVarianceModel:
     def identifier(self) -> str:
         """Return a complete numerical and physical-component identifier."""
         growth = self.growth_identifier or "growth:redshift-independent"
+        knots_digest = sha256(
+            np.asarray(self._integration_breakpoints(), dtype="<f8").tobytes()
+        ).hexdigest()
         return (
             "integrated-variance:v3;"
             f"power=({self.power.identifier});window=({self.window.identifier});"
             f"rho_mean={self.rho_mean:.17g};k=[{self.k_min:.17g},{self.k_max:.17g}];"
             f"n_k={self.n_k};filter_scale={self.filter_scale:.17g};"
-            f"sharp-k=fixed-log-cells-gauss{self.sharp_k_order};"
+            f"sharp-k=fixed-log-cells-and-spectrum-knots-gauss{self.sharp_k_order};"
+            f"breakpoints-sha256={knots_digest};"
             f"derivative_step={self.derivative_step:.17g};{growth}"
         )
 
@@ -124,6 +129,20 @@ class IntegratedVarianceModel:
         """Return the mass-dependent sharp-k integration boundary."""
         radius = (3.0 * mass / (4.0 * np.pi * self.rho_mean)) ** (1.0 / 3.0)
         return self.filter_scale / radius
+
+    def _integration_breakpoints(self) -> np.ndarray:
+        """Validate optional spectrum knots; smooth powers need not expose them."""
+        knots = np.asarray(getattr(self.power, "integration_breakpoints", []), dtype=float)
+        if (
+            knots.ndim != 1
+            or not np.all(np.isfinite(knots))
+            or np.any(knots <= 0.0)
+            or np.any(np.diff(knots) <= 0.0)
+        ):
+            raise ValueError(
+                "Power integration breakpoints must be finite, positive and increasing."
+            )
+        return knots
 
     def _sharp_k_cell_integrals(self, lower, upper, fractions, weights):
         """Integrate fixed log-k cells with positive Gauss-Legendre weights."""
@@ -155,10 +174,14 @@ class IntegratedVarianceModel:
         if not flattened.size:
             return result.reshape(values.shape)
         edges = np.linspace(np.log(self.k_min), np.log(self.k_max), self.n_k)
+        knots = self._integration_breakpoints()
+        interior = knots[(knots > self.k_min) & (knots < self.k_max)]
+        if interior.size:
+            edges = np.unique(np.concatenate((edges, np.log(interior))))
         nodes, quadrature_weights = np.polynomial.legendre.leggauss(self.sharp_k_order)
         fractions = (nodes + 1.0) / 2.0
         weights = quadrature_weights / 2.0
-        complete = np.empty(self.n_k - 1)
+        complete = np.empty(edges.size - 1)
         for start in range(0, complete.size, self.chunk_size):
             stop = min(start + self.chunk_size, complete.size)
             complete[start:stop] = self._sharp_k_cell_integrals(
@@ -173,7 +196,7 @@ class IntegratedVarianceModel:
         for start in range(0, active.size, self.chunk_size):
             indices = active[start : start + self.chunk_size]
             upper = np.log(cutoff[indices])
-            cells = np.minimum(np.searchsorted(edges, upper, side="right") - 1, self.n_k - 2)
+            cells = np.minimum(np.searchsorted(edges, upper, side="right") - 1, edges.size - 2)
             result[indices] = cumulative[cells] + self._sharp_k_cell_integrals(
                 edges[cells],
                 upper,
