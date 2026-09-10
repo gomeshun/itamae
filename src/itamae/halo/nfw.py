@@ -8,13 +8,21 @@ from scipy.optimize import brentq
 _G_MPC_KMS2_MSUN = 4.30091e-9
 
 
+def _real_numeric(value, name):
+    """Reject non-real coordinates before any float cast can discard data."""
+    array = np.asarray(value)
+    if array.dtype.kind not in "iuf":
+        raise ValueError(f"{name} must contain real numeric values.")
+    return np.asarray(array, dtype=float)
+
+
 def nfw_mass_function(x):
     """Return ``ln(1+x)-x/(1+x)`` for finite nonnegative ``x``.
 
     A small-radius series avoids subtracting two nearly equal terms. Values
     smaller than the floating-point subnormal range can still underflow.
     """
-    x = np.asarray(x, dtype=float)
+    x = _real_numeric(x, "NFW radius ratio")
     if not np.all(np.isfinite(x)) or np.any(x < 0.0):
         raise ValueError("NFW radius ratio must be finite and nonnegative.")
     result = np.empty_like(x)
@@ -32,7 +40,7 @@ def invert_nfw_mass_function(y):
     Solve in log-radius so an absolute tolerance in radius cannot erase a
     small, positive solution. The output retains the input shape.
     """
-    y = np.asarray(y, dtype=float)
+    y = _real_numeric(y, "Enclosed-mass function")
     if not np.all(np.isfinite(y)) or np.any(y < 0.0):
         raise ValueError("Enclosed-mass function values must be finite and nonnegative.")
     max_radius = np.finfo(float).max
@@ -78,20 +86,20 @@ class NFWProfile:
     def __post_init__(self):
         """Require a physical finite positive scale radius and density."""
         for name in ("r_s", "rho_s"):
-            value = getattr(self, name)
+            value = _real_numeric(getattr(self, name), name)
             if np.ndim(value) != 0 or not np.isfinite(value) or value <= 0.0:
                 raise ValueError(f"{name} must be finite and positive.")
 
     def enclosed_mass(self, r):
         """Return enclosed mass in the profile's mass unit."""
-        r = np.asarray(r, dtype=float)
+        r = _real_numeric(r, "Radius")
         if not np.all(np.isfinite(r)) or np.any(r < 0.0):
             raise ValueError("Radius must be finite and nonnegative.")
         return 4.0 * np.pi * self.rho_s * self.r_s**3 * nfw_mass_function(r / self.r_s)
 
     def density(self, r):
         """Return density at positive radius."""
-        r = np.asarray(r, dtype=float)
+        r = _real_numeric(r, "Radius")
         if not np.all(np.isfinite(r)) or np.any(r <= 0.0):
             raise ValueError("Density requires finite positive radii; it is singular at zero.")
         x = r / self.r_s
@@ -99,7 +107,7 @@ class NFWProfile:
 
     def potential(self, r):
         """Return gravitational potential with zero at infinity."""
-        r = np.asarray(r, dtype=float)
+        r = _real_numeric(r, "Radius")
         if not np.all(np.isfinite(r)) or np.any(r < 0.0):
             raise ValueError("Radius must be finite and nonnegative.")
         x = r / self.r_s
