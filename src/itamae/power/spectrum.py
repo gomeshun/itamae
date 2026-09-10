@@ -12,6 +12,17 @@ from scipy.interpolate import interp1d
 from itamae.protocols import PowerSpectrum
 
 
+def _real_array(value: Any, name: str) -> np.ndarray:
+    """Validate real numeric values before any conversion can discard content."""
+    array = np.asarray(value)
+    if array.dtype.kind not in "iuf":
+        raise ValueError(f"{name} must contain real numeric values.")
+    array = np.asarray(array, dtype=float)
+    if not np.all(np.isfinite(array)):
+        raise ValueError(f"{name} must contain finite values.")
+    return array
+
+
 def _array_digest(*arrays: np.ndarray) -> str:
     """Return a platform-independent digest for floating-point table data."""
     digest = sha256()
@@ -57,8 +68,8 @@ class TabulatedPowerSpectrum:
         interpolation: str = "log-log",
         extrapolate: bool = False,
     ) -> None:
-        k = np.asarray(wavenumber, dtype=float)
-        values = np.asarray(power, dtype=float)
+        k = _real_array(wavenumber, "Wavenumbers")
+        values = _real_array(power, "Power-spectrum values")
         if k.ndim != 1 or values.ndim != 1 or k.shape != values.shape or k.size < 2:
             raise ValueError("Power-spectrum arrays must be aligned one-dimensional tables.")
         if not np.all(np.isfinite(k)) or np.any(k <= 0.0) or np.any(np.diff(k) <= 0.0):
@@ -113,7 +124,7 @@ class TabulatedPowerSpectrum:
 
     def __call__(self, wavenumber: Any) -> np.ndarray:
         """Evaluate the configured interpolant."""
-        k = np.asarray(wavenumber, dtype=float)
+        k = _real_array(wavenumber, "Evaluation wavenumbers")
         if not np.all(np.isfinite(k)) or np.any(k <= 0.0):
             raise ValueError("Evaluation wavenumbers must be finite and positive.")
         if not self._extrapolate and (
@@ -169,10 +180,25 @@ class TransferModifiedPowerSpectrum:
 
     def __call__(self, wavenumber: Any) -> np.ndarray:
         """Return the base spectrum multiplied by the supplied power ratio."""
-        ratio = np.asarray(self._power_ratio(wavenumber), dtype=float)
+        k = _real_array(wavenumber, "Evaluation wavenumbers")
+        if np.any(k <= 0):
+            raise ValueError("Evaluation wavenumbers must be positive.")
+        ratio = _real_array(self._power_ratio(k), "The model-supplied power ratio")
         if not np.all(np.isfinite(ratio)) or np.any(ratio < 0.0):
             raise ValueError("The model-supplied power ratio must be finite and nonnegative.")
-        return np.asarray(self._base(wavenumber), dtype=float) * ratio
+        if ratio.ndim != 0 and ratio.shape != k.shape:
+            raise ValueError(f"Power ratio must be scalar or return query shape {k.shape}.")
+        base = _real_array(self._base(k), "Base spectrum")
+        if base.shape != k.shape or np.any(base < 0):
+            raise ValueError("Base spectrum must return nonnegative values with the query shape.")
+        try:
+            with np.errstate(over="raise", invalid="raise"):
+                result = base * ratio
+        except FloatingPointError as exc:
+            raise ValueError(
+                "Modified power spectrum exceeded the finite numerical domain."
+            ) from exc
+        return result
 
 
 __all__ = ["TabulatedPowerSpectrum", "TransferModifiedPowerSpectrum"]
