@@ -204,18 +204,18 @@ than rapid API expansion.
 
 ## Installation
 
-The SASHIMI ITAMAE core is not yet released on PyPI. Its collision-free
-distribution name is `sashimi-itamae`, while code continues to use
-`import itamae`. Until publication, install an exact reviewed VCS revision:
+The `0.2.0rc1` candidate is prepared for peer review and has not been uploaded
+to PyPI. Install the reviewed artifacts from the family wheelhouse:
 
 ```bash
-uv pip install "sashimi-itamae[full] @ git+https://github.com/gomeshun/itamae.git@b682ceaab0b70a20ff43310e77bba76a1def6952"
+python -m pip install --find-links /path/to/reviewed-wheelhouse "sashimi-itamae[full]==0.2.0rc1"
 python -c "import itamae; print(itamae.__version__)"
 ```
 
-Do **not** install bare `itamae` from PyPI; that name belongs to an unrelated
-project. Downstream SASHIMI package metadata should depend on `sashimi-itamae`,
-but Python imports do not change.
+The distribution is `sashimi-itamae`; the import remains `itamae`. The unrelated
+PyPI distribution `itamae` is not this library. Normal distribution metadata
+uses versioned dependencies. See [release preparation](docs/release-preparation.md)
+for artifact verification and the separate, approval-gated publication procedure.
 
 For development on the migration branch:
 

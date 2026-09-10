@@ -7,3 +7,4 @@ authors:
     given-names: Shunichi
 repository-code: "https://github.com/gomeshun/itamae"
 license: MIT
+version: "0.2.0rc1"
