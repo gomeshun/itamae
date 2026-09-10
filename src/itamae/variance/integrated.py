@@ -104,7 +104,8 @@ class IntegratedVarianceModel:
             "integrated-variance:v2;"
             f"power=({self.power.identifier});window=({self.window.identifier});"
             f"rho_mean={self.rho_mean:.17g};k=[{self.k_min:.17g},{self.k_max:.17g}];"
-            f"n_k={self.n_k};filter_scale={self.filter_scale:.17g};{growth}"
+            f"n_k={self.n_k};filter_scale={self.filter_scale:.17g};"
+            f"derivative_step={self.derivative_step:.17g};{growth}"
         )
 
     def _validated_mass(self, mass: Any) -> np.ndarray:
