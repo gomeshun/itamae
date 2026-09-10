@@ -61,7 +61,7 @@ def test_integrated_sharp_k_variance_matches_analytic_power_law():
         rel=2.0e-14,
     )
     assert isinstance(model, VarianceModel)
-    assert "integrated-variance:v2" in model.identifier
+    assert "integrated-variance:v3" in model.identifier
     assert "constant-power" in model.identifier
 
 

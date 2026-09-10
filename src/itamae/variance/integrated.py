@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from hashlib import sha256
 from typing import Any
 
 import numpy as np
@@ -43,7 +44,10 @@ class IntegratedVarianceModel:
         Symmetric logarithmic step used for ``dvariance_dmass`` with smooth
         windows. Sharp-k windows use their exact moving-boundary derivative.
     chunk_size
-        Maximum number of masses integrated in one vectorized allocation.
+        Maximum number of masses or sharp-k cells in one vectorized allocation.
+    sharp_k_order
+        Gauss-Legendre order in each fixed log-wavenumber cell, including
+        the final partial cell. Only applies to the sharp-k window.
 
     Notes
     -----
@@ -68,6 +72,7 @@ class IntegratedVarianceModel:
     growth_identifier: str | None = None
     derivative_step: float = 1.0e-4
     chunk_size: int = 256
+    sharp_k_order: int = 8
 
     def __post_init__(self) -> None:
         """Validate physical and numerical configuration."""
@@ -81,11 +86,11 @@ class IntegratedVarianceModel:
                 raise ValueError(f"{name} must be finite and positive.")
         if self.k_min >= self.k_max:
             raise ValueError("k_min must be smaller than k_max.")
-        for name in ("n_k", "chunk_size"):
+        for name in ("n_k", "chunk_size", "sharp_k_order"):
             value = getattr(self, name)
             if isinstance(value, bool) or not isinstance(value, (int, np.integer)):
                 raise TypeError(f"{name} must be an integer.")
-            if int(value) < (3 if name == "n_k" else 1):
+            if int(value) < {"n_k": 3, "chunk_size": 1, "sharp_k_order": 2}[name]:
                 raise ValueError(f"{name} is too small.")
         if self.growth_function is None and self.growth_identifier is not None:
             raise ValueError("growth_identifier requires growth_function.")
@@ -100,11 +105,16 @@ class IntegratedVarianceModel:
     def identifier(self) -> str:
         """Return a complete numerical and physical-component identifier."""
         growth = self.growth_identifier or "growth:redshift-independent"
+        knots_digest = sha256(
+            np.asarray(self._integration_breakpoints(), dtype="<f8").tobytes()
+        ).hexdigest()
         return (
-            "integrated-variance:v2;"
+            "integrated-variance:v3;"
             f"power=({self.power.identifier});window=({self.window.identifier});"
             f"rho_mean={self.rho_mean:.17g};k=[{self.k_min:.17g},{self.k_max:.17g}];"
             f"n_k={self.n_k};filter_scale={self.filter_scale:.17g};"
+            f"sharp-k=fixed-log-cells-and-spectrum-knots-gauss{self.sharp_k_order};"
+            f"breakpoints-sha256={knots_digest};"
             f"derivative_step={self.derivative_step:.17g};{growth}"
         )
 
@@ -120,46 +130,84 @@ class IntegratedVarianceModel:
         radius = (3.0 * mass / (4.0 * np.pi * self.rho_mean)) ** (1.0 / 3.0)
         return self.filter_scale / radius
 
-    def _sharp_k_variance_z0(self, mass: Any) -> np.ndarray:
-        """Integrate a sharp-k spectrum with the cutoff as an exact endpoint.
+    def _integration_breakpoints(self) -> np.ndarray:
+        """Validate optional spectrum knots; smooth powers need not expose them."""
+        knots = np.asarray(getattr(self.power, "integration_breakpoints", []), dtype=float)
+        if (
+            knots.ndim != 1
+            or not np.all(np.isfinite(knots))
+            or np.any(knots <= 0.0)
+            or np.any(np.diff(knots) <= 0.0)
+        ):
+            raise ValueError(
+                "Power integration breakpoints must be finite, positive and increasing."
+            )
+        return knots
 
-        A discontinuous window sampled on one fixed wavenumber grid makes the
-        numerical variance piecewise constant as mass changes. Integrating each
-        mass to its physical cutoff instead keeps the result continuous and
-        makes the moving-boundary derivative well defined.
+    def _sharp_k_cell_integrals(self, lower, upper, fractions, weights):
+        """Integrate fixed log-k cells with positive Gauss-Legendre weights."""
+        width = upper - lower
+        log_k = lower[:, None] + width[:, None] * fractions[None, :]
+        # Only correct possible one-ulp endpoint excursions of exp(log(k));
+        # no spectrum, variance, derivative or statistical weight is projected.
+        k = np.clip(np.exp(log_k), self.k_min, self.k_max)
+        integrand = k**3 * np.asarray(self.power(k), dtype=float) / (2.0 * np.pi**2)
+        if (
+            integrand.shape != k.shape
+            or not np.all(np.isfinite(integrand))
+            or np.any(integrand < 0.0)
+        ):
+            raise ValueError("Power spectrum must return aligned finite nonnegative values.")
+        return width * np.sum(integrand * weights[None, :], axis=1)
+
+    def _sharp_k_variance_z0(self, mass: Any) -> np.ndarray:
+        """Integrate fixed complete cells and the exact final partial cell.
+
+        Changing a cutoff never moves quadrature nodes in the already included
+        complete cells. This avoids moving the entire integration grid across
+        spectral features and creating numerical fluctuations on cutoff plateaus.
+        The final partial interval still ends at the physical moving boundary.
         """
         values = self._validated_mass(mass)
-        shape = values.shape
         flattened = values.reshape(-1)
-        cutoff = np.minimum(self._sharp_k_cutoff(flattened), self.k_max)
         result = np.zeros(flattened.shape, dtype=float)
-        active = cutoff > self.k_min
-        fractions = np.linspace(0.0, 1.0, self.n_k)
-        log_k_min = np.log(self.k_min)
-
-        active_indices = np.flatnonzero(active)
-        for start in range(0, active_indices.size, self.chunk_size):
-            indices = active_indices[start : start + self.chunk_size]
-            upper = cutoff[indices]
-            log_upper = np.log(upper)
-            log_k = log_k_min + (log_upper[:, None] - log_k_min) * fractions
-            k = np.exp(log_k)
-            # Assigning the exact endpoints avoids one-ulp excursions beyond a
-            # strict tabulated-spectrum domain.
-            k[:, 0] = self.k_min
-            k[:, -1] = upper
-            dimensionless_power = k**3 * np.asarray(self.power(k), dtype=float) / (2.0 * np.pi**2)
-            if (
-                dimensionless_power.shape != k.shape
-                or not np.all(np.isfinite(dimensionless_power))
-                or np.any(dimensionless_power < 0.0)
-            ):
-                raise ValueError("Power spectrum must return aligned finite nonnegative values.")
-            result[indices] = simpson(dimensionless_power, x=log_k, axis=1)
-
+        if not flattened.size:
+            return result.reshape(values.shape)
+        edges = np.linspace(np.log(self.k_min), np.log(self.k_max), self.n_k)
+        knots = self._integration_breakpoints()
+        interior = knots[(knots > self.k_min) & (knots < self.k_max)]
+        if interior.size:
+            edges = np.unique(np.concatenate((edges, np.log(interior))))
+        nodes, quadrature_weights = np.polynomial.legendre.leggauss(self.sharp_k_order)
+        fractions = (nodes + 1.0) / 2.0
+        weights = quadrature_weights / 2.0
+        complete = np.empty(edges.size - 1)
+        for start in range(0, complete.size, self.chunk_size):
+            stop = min(start + self.chunk_size, complete.size)
+            complete[start:stop] = self._sharp_k_cell_integrals(
+                edges[start:stop],
+                edges[start + 1 : stop + 1],
+                fractions,
+                weights,
+            )
+        cumulative = np.concatenate(([0.0], np.cumsum(complete)))
+        cutoff = np.minimum(self._sharp_k_cutoff(flattened), self.k_max)
+        active = np.flatnonzero(cutoff > self.k_min)
+        for start in range(0, active.size, self.chunk_size):
+            indices = active[start : start + self.chunk_size]
+            upper = np.log(cutoff[indices])
+            cells = np.minimum(np.searchsorted(edges, upper, side="right") - 1, edges.size - 2)
+            result[indices] = cumulative[cells] + self._sharp_k_cell_integrals(
+                edges[cells],
+                upper,
+                fractions,
+                weights,
+            )
+        # The full domain uses exactly the same accumulated complete-cell sum.
+        result[cutoff == self.k_max] = cumulative[-1]
         if not np.all(np.isfinite(result)) or np.any(result < 0.0):
             raise ValueError("Variance integration produced invalid values.")
-        return result.reshape(shape)
+        return result.reshape(values.shape)
 
     def _variance_z0(self, mass: Any) -> np.ndarray:
         """Integrate the redshift-zero variance in bounded memory chunks."""
