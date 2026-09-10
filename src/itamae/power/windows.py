@@ -8,7 +8,10 @@ import numpy as np
 
 def _validated_argument(argument: Any) -> np.ndarray:
     """Return a finite nonnegative dimensionless window argument."""
-    value = np.asarray(argument, dtype=float)
+    value = np.asarray(argument)
+    if value.dtype.kind not in "iuf":
+        raise ValueError("Window arguments must contain real numeric values.")
+    value = np.asarray(value, dtype=float)
     if not np.all(np.isfinite(value)) or np.any(value < 0.0):
         raise ValueError("Window arguments must be finite and nonnegative.")
     return value

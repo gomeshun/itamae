@@ -28,3 +28,10 @@ core suite has 103 passes, with 80% branch coverage; Ruff and mypy pass.
 This fixes evaluation of the existing NFW formula; it introduces no profile or
 survival prescription. C's independent 50-digit Lambert-W reference separately
 tests the physical inverse. Cross-package golden tests remain unchanged.
+
+Profile parameters, radii and enclosed-mass coordinates require real numeric
+inputs. Complex values (including zero imaginary parts), strings and booleans
+are rejected before float conversion; no imaginary component is discarded.
+Smoothing-window arguments follow the same contract. All 34 new non-real input
+cases failed before the guard and pass afterward. Physical float arithmetic is
+unchanged; existing high-precision inverse and small-radius checks remain.
