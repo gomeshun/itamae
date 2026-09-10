@@ -31,8 +31,8 @@ class TabulatedPowerSpectrum:
         Aligned one-dimensional arrays. Wavenumbers must be finite, positive,
         and strictly increasing. Power values must be finite and nonnegative.
     identifier
-        Optional provenance identifier. When omitted, a SHA-256 digest of the
-        canonicalized table is used.
+        Optional human-readable provenance label. The canonicalized table's
+        SHA-256 digest is always included, even when a label is supplied.
     interpolation
         ``"log-log"`` for a strictly positive smooth spectrum or ``"linear"``
         for a nonnegative spectrum that may contain physical zeros, such as an
@@ -74,9 +74,10 @@ class TabulatedPowerSpectrum:
 
         self._wavenumber = k.copy()
         self._power = values.copy()
-        source_identifier = identifier or f"sha256={_array_digest(k, values)}"
         self._identifier = (
-            f"tabulated-power:interpolation={interpolation};source=({source_identifier})"
+            f"tabulated-power:v2;interpolation={interpolation};"
+            f"extrapolate={bool(extrapolate)};sha256={_array_digest(k, values)};"
+            f"source=({identifier or 'unlabeled'})"
         )
         self._interpolation = interpolation
         self._extrapolate = bool(extrapolate)
@@ -93,7 +94,7 @@ class TabulatedPowerSpectrum:
 
     @property
     def identifier(self) -> str:
-        """Return the user-supplied provenance or content-derived identifier."""
+        """Return the content digest, evaluation policy, and provenance label."""
         return self._identifier
 
     @property

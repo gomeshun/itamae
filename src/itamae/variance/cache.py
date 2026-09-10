@@ -11,7 +11,17 @@ from typing import Any, Mapping
 
 import numpy as np
 
-VARIANCE_CACHE_SCHEMA_VERSION = "1.0"
+VARIANCE_CACHE_SCHEMA_VERSION = "2.0"
+
+
+def _payload_digest(key: str, mass: np.ndarray, variance: np.ndarray) -> str:
+    """Bind the request key to both payload arrays in a portable representation."""
+    digest = sha256(f"{VARIANCE_CACHE_SCHEMA_VERSION}:{key}".encode("ascii"))
+    for name, value in (("mass", mass), ("variance", variance)):
+        digest.update(name.encode("ascii"))
+        digest.update(np.asarray(value.shape, dtype="<i8").tobytes())
+        digest.update(np.ascontiguousarray(value, dtype="<f8").tobytes())
+    return digest.hexdigest()
 
 
 def variance_cache_key(
@@ -59,7 +69,11 @@ def save_variance_cache(
     mass: Any,
     variance: Any,
 ) -> None:
-    """Atomically save a variance table with its expected content key."""
+    """Atomically save a variance table with its request key and payload digest.
+
+    The digest detects accidental corruption; it is not an authentication
+    mechanism for files from untrusted authors.
+    """
     if not isinstance(key, str) or len(key) != 64:
         raise ValueError("key must be a SHA-256 hexadecimal digest.")
     try:
@@ -70,6 +84,8 @@ def save_variance_cache(
     variance_array = np.asarray(variance, dtype=float)
     if mass_array.ndim != 1 or variance_array.shape != mass_array.shape:
         raise ValueError("Mass and variance cache arrays must be aligned one-dimensional data.")
+    if mass_array.size < 2:
+        raise ValueError("Variance cache grids must contain at least two masses.")
     if (
         not np.all(np.isfinite(mass_array))
         or np.any(mass_array <= 0.0)
@@ -94,6 +110,7 @@ def save_variance_cache(
                 temporary,
                 schema_version=np.asarray(VARIANCE_CACHE_SCHEMA_VERSION),
                 key=np.asarray(key),
+                payload_sha256=np.asarray(_payload_digest(key, mass_array, variance_array)),
                 mass=mass_array,
                 variance=variance_array,
             )
@@ -108,9 +125,12 @@ def load_variance_cache(
     *,
     expected_key: str,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Load a variance table only when schema and content key match."""
+    """Load only when schema, request key, and payload integrity all match.
+
+    Schema 1 caches lack payload verification and must be recomputed.
+    """
     with np.load(Path(path), allow_pickle=False) as cache:
-        required = {"schema_version", "key", "mass", "variance"}
+        required = {"schema_version", "key", "payload_sha256", "mass", "variance"}
         if set(cache.files) != required:
             raise ValueError("Variance cache has an unsupported field set.")
         if str(cache["schema_version"]) != VARIANCE_CACHE_SCHEMA_VERSION:
@@ -119,8 +139,10 @@ def load_variance_cache(
             raise ValueError("Variance cache key does not match the requested model.")
         mass = np.asarray(cache["mass"], dtype=float)
         variance = np.asarray(cache["variance"], dtype=float)
+        payload_digest = str(cache["payload_sha256"])
     if (
         mass.ndim != 1
+        or mass.size < 2
         or variance.shape != mass.shape
         or not np.all(np.isfinite(mass))
         or np.any(mass <= 0.0)
@@ -129,6 +151,8 @@ def load_variance_cache(
         or np.any(variance < 0.0)
     ):
         raise ValueError("Variance cache contains invalid arrays.")
+    if _payload_digest(expected_key, mass, variance) != payload_digest:
+        raise ValueError("Variance cache payload digest does not match; the cache is corrupt.")
     return mass, variance
 
 
