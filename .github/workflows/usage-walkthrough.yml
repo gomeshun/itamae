@@ -19,7 +19,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           export ITAMAE_SOURCE_REVISION="$(git rev-parse HEAD)"
-          python -m pip install '.[full]' matplotlib h5py numexpr tqdm nbformat nbclient ipykernel
+          python -m pip install '.[demo]' nbformat nbclient
       - name: Execute all cells from outside the source checkout
         run: python scripts/execute_walkthrough.py
       - uses: actions/upload-artifact@v4

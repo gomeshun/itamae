@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — physical examples and src provenance
+
+- Recognize variant src layouts while rejecting source archives inside unrelated repositories.
+- Replace the API-only walkthrough with physical cosmology, NFW and orbit examples.
+- Declare the notebook dependencies in the demo extra and retain the original API notebook in the archive.
+
 ## 0.2.0rc1 — migration review candidate
 
 This breaking candidate establishes canonical units, immutable named weighted

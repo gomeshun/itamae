@@ -83,7 +83,11 @@ def _source_checkout_root(module_file: str | None) -> Path | None:
         relative_path = module_path.relative_to(directory)
         if not relative_path.parts:
             continue
-        is_src_package = relative_path.parts[0] == "src" and (directory / "src" / "itamae").is_dir()
+        is_src_package = (
+            relative_path.parts[0] == "src"
+            and len(relative_path.parts) >= 2
+            and module_path.suffix == ".py"
+        )
         is_top_level_module = len(relative_path.parts) == 1 and module_path.suffix == ".py"
         if not (is_src_package or is_top_level_module):
             continue

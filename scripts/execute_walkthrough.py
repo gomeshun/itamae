@@ -31,6 +31,9 @@ if any(cell.execution_count is None for cell in cells):
 if any(output.output_type == "error" for cell in cells for output in cell.outputs):
     raise RuntimeError("Walkthrough contains an error output")
 
+if not any("image/png" in output.get("data", {}) for cell in cells for output in cell.outputs):
+    raise RuntimeError("The physical walkthrough did not save its figures")
+
 output = source.parents[1] / "artifacts/usage_walkthrough.executed.ipynb"
 output.parent.mkdir(parents=True, exist_ok=True)
 nbformat.write(notebook, output)

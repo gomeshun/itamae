@@ -1,6 +1,7 @@
 """Tests for standardized migration provenance metadata."""
 
 from pathlib import Path
+import subprocess
 from types import SimpleNamespace
 
 import pytest
@@ -13,6 +14,31 @@ from itamae.provenance import (
     package_version,
     source_revision,
 )
+
+
+@pytest.mark.parametrize(
+    "module_path",
+    ["src/itamae/provenance.py", "src/sashimi_c/__init__.py", "src/sashimi_f/_physics.py"],
+)
+def test_src_package_provenance_uses_its_own_repository(tmp_path, module_path):
+    """Both the core and variant src packages identify the owning checkout."""
+    subprocess.run(["git", "init", "--quiet", str(tmp_path)], check=True)
+    (tmp_path / "pyproject.toml").write_text('[project]\nname="example"\nversion="1.0"\n')
+    module = tmp_path / module_path
+    module.parent.mkdir(parents=True)
+    module.write_text("# source module\n")
+    assert provenance._source_checkout_root(str(module)) == tmp_path
+
+
+def test_src_export_does_not_inherit_an_unrelated_parent_repository(tmp_path):
+    """A src layout inside an unpacked archive does not turn its parent into provenance."""
+    subprocess.run(["git", "init", "--quiet", str(tmp_path)], check=True)
+    exported = tmp_path / "unpacked"
+    module = exported / "src" / "sashimi_c" / "__init__.py"
+    module.parent.mkdir(parents=True)
+    module.write_text("# exported module\n")
+    (exported / "pyproject.toml").write_text('[project]\nname="example"\nversion="1.0"\n')
+    assert provenance._source_checkout_root(str(module)) is None
 
 
 def test_build_migration_metadata_includes_standard_keys(monkeypatch) -> None:

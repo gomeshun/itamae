@@ -2,7 +2,7 @@
 
 ## Hands-on usage walkthrough
 
-Start with [the executable usage walkthrough](notebooks/usage_walkthrough.ipynb): setup, main APIs, plots, catalogue export and checks in one notebook for this package. Its coverage table records remaining gaps. The **Usage walkthrough** CI runs every cell against the candidate package and uploads an executed notebook. This is a mandatory migration deliverable tracked in [sashimi-family #28](https://github.com/gomeshun/sashimi-family/issues/28).
+Start with [the physical usage walkthrough](notebooks/usage_walkthrough.ipynb): a normalized cosmological spectrum, mass variance, a Milky Way scale NFW rotation curve and a bound orbit in physical units. Run `uv sync --extra demo` to install its dependencies. The **Usage walkthrough** CI executes all cells outside the source checkout and uploads the notebook. Earlier API-primitives examples remain in [the notebook archive](notebooks/archive/api_primitives.ipynb).
 
 **Integrated Toolkit for Analytical Merger-tree And Evolution**
 
