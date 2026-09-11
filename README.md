@@ -1,5 +1,9 @@
 # ITAMAE
 
+## Hands-on usage walkthrough
+
+Start with [the physical usage walkthrough](notebooks/usage_walkthrough.ipynb): a normalized cosmological spectrum, mass variance, a Milky Way scale NFW rotation curve and a bound orbit in physical units. Run `uv sync --extra demo` to install its dependencies. The **Usage walkthrough** CI executes all cells outside the source checkout and uploads the notebook. Earlier API-primitives examples remain in [the notebook archive](notebooks/archive/api_primitives.ipynb).
+
 **Integrated Toolkit for Analytical Merger-tree And Evolution**
 
 ITAMAE is a shared computational toolkit for the
@@ -11,9 +15,18 @@ prepares and assembles the ingredients. In the same way, ITAMAE provides the
 common numerical machinery and data structures used to construct SASHIMI
 subhalo catalogs.
 
-> **Project status:** early alpha development.
-> The package foundation is implemented, but the public API remains
-> provisional while SASHIMI variants are migrated through regression tests.
+> **Project status:** early alpha migration.
+> The package foundation, generic evolution, weighted-catalog, power/variance,
+> and spherical-orbit mechanisms are implemented. The public API remains
+> provisional until all SASHIMI variants complete their golden regressions.
+
+At the 2026-09-04 review, C/SI already use `PopulationPipeline`; W/F execution
+integration and model-composition hardening remain open. See the current
+[PLAN.md](PLAN.md) and [family migration epic](https://github.com/gomeshun/sashimi-family/issues/1).
+The public Python **distribution** is named `sashimi-itamae` to avoid the
+unrelated PyPI project named `itamae`. The Python **import namespace** remains
+`itamae`. This packaging decision is tracked in
+[#3](https://github.com/gomeshun/itamae/issues/3).
 
 ## Motivation
 
@@ -151,24 +164,26 @@ Downstream projects, including dwarf-spheroidal analyses, should normally
 depend on the relevant SASHIMI variant rather than reconstructing the complete
 physical pipeline directly from low-level ITAMAE components.
 
-## Illustrative API
+## Current migration API
 
-The API has not yet been finalized. The following example only illustrates the
-intended separation between reusable infrastructure and model-specific
-physics.
+These imports exist on the migration branch. The API remains provisional.
+The model example also requires the compatible C migration package.
 
 ```python
-from itamae.catalog import WeightedSubhaloCatalog
-from itamae.integration import GaussHermiteQuadrature
+from itamae.types import WeightedSubhaloCatalog
+from itamae.numerics import gauss_hermite_lognormal
 from itamae.evolution import PerturbativeEvolutionSolver
+from itamae.execution import PopulationPipeline
 
 # Model-specific prescriptions are supplied by a SASHIMI package.
-from sashimi_c import SashimiCDM
+from sashimi_c_itamae import subhalo_properties
 
-model = SashimiCDM()
-catalog: WeightedSubhaloCatalog = model.generate_catalog(
-    host_mass=1.0e12,
-    redshift=0.0,
+model = subhalo_properties(physics_mode="legacy")
+catalog: WeightedSubhaloCatalog = model.subhalo_catalog_calc(
+    1.0e12 * model.Msun,
+    method="pert2_shanks",
+    dz=0.25, zmax=2.0, N_ma=32, N_herm=5, N_hermNa=16,
+    logmamin=5.0, logmamax=10.0,
 )
 ```
 
@@ -189,13 +204,25 @@ than rapid API expansion.
 
 ## Installation
 
-ITAMAE is not yet released on PyPI. The public repository can be installed for
-development with `uv`:
+The `0.2.0rc1` candidate is prepared for peer review and has not been uploaded
+to PyPI. Install the reviewed artifacts from the family wheelhouse:
 
 ```bash
-git clone https://github.com/gomeshun/itamae.git
+python -m pip install --find-links /path/to/reviewed-wheelhouse "sashimi-itamae[full]==0.2.0rc1"
+python -c "import itamae; print(itamae.__version__)"
+```
+
+The distribution is `sashimi-itamae`; the import remains `itamae`. The unrelated
+PyPI distribution `itamae` is not this library. Normal distribution metadata
+uses versioned dependencies. See [release preparation](docs/release-preparation.md)
+for artifact verification and the separate, approval-gated publication procedure.
+
+For development on the migration branch:
+
+```bash
+git clone --branch itamae-migration https://github.com/gomeshun/itamae.git
 cd itamae
-uv sync --all-extras --group dev
+uv sync --locked --all-extras --group dev
 uv run pytest
 ```
 
@@ -204,10 +231,43 @@ documented in [`docs/canonical-units.md`](docs/canonical-units.md). Foundation
 branch-consolidation decisions are recorded in
 [`docs/foundation-integration.md`](docs/foundation-integration.md).
 
+WDM and FDM packages retain their physical transfer functions and compose them
+with ITAMAE explicitly:
+
+```python
+from itamae.power import SharpKWindow, TabulatedPowerSpectrum
+from itamae.variance import IntegratedVarianceModel
+
+power = TabulatedPowerSpectrum(
+    k,
+    p_modified,
+    identifier="sashimi-variant:documented-transfer:v1",
+)
+variance = IntegratedVarianceModel(
+    power=power,
+    window=SharpKWindow(),
+    rho_mean=rho_mean,
+    k_min=k.min(),
+    k_max=k.max(),
+    filter_scale=calibrated_c,
+)
+```
+
+For `SharpKWindow`, the mass-dependent cutoff is used as an exact integration
+endpoint. Its `dS/dM` is evaluated from the analytic moving-boundary term
+rather than by finite-differencing a discontinuous window on a fixed
+wavenumber grid. This avoids artificial zero derivatives and grid-boundary
+spikes in subhalo-abundance calculations. The finite `k_min`/`k_max` interval
+still defines constant truncated regimes outside the tabulated domain.
+
+The identifier, backend, mass grid, and numerical settings can be combined
+with `variance_cache_key`; cache loading rejects a mismatched key rather than
+silently reusing data from another physical model.
+
 ## Contributing
 
-Issues and pull requests are welcome once the initial package structure has
-been established.
+Small implementation PRs should target `itamae-migration`; the final migration
+umbrella targets `main`. The initial package structure is already implemented.
 
 Contributions should, where applicable, include:
 
@@ -219,8 +279,8 @@ Contributions should, where applicable, include:
 
 ## Citation
 
-A dedicated ITAMAE citation will be added when the package and its scientific
-scope are stabilized.
+Use the software metadata in [CITATION.cff](CITATION.cff), and record the exact
+version and embedded source revision used in the calculation.
 
 When using a SASHIMI model, please cite the publications associated with the
 specific SASHIMI variant and with the physical prescriptions used in the
@@ -228,4 +288,6 @@ calculation.
 
 ## License
 
-The license has not yet been selected.
+ITAMAE is distributed under the [MIT license](LICENSE), with copyright attributed
+to Shunichi Horigome. The release candidate license was selected by the
+maintainer on 2026-09-10.

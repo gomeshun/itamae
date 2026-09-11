@@ -30,3 +30,17 @@ Every persisted catalog must record:
 Backend and model identifiers must be stable enough for cache keys and
 regression provenance. Changing cosmology parameters, unit schema, a physical
 prescription, or a numerical convention requires a different identifier.
+
+Power-spectrum and variance caches additionally record or hash:
+
+- power-table or source identifier;
+- model-supplied transfer/power-ratio identifier;
+- smoothing-window identifier and mass-assignment coefficient;
+- integration bounds and resolution;
+- cosmology/backend identifier;
+- exact mass grid;
+- cache-schema version.
+
+ITAMAE never infers whether a variant transfer function is an amplitude or a
+power ratio. The `TransferModifiedPowerSpectrum` API accepts the latter
+explicitly, preventing an unrecorded factor-of-two change in its exponent.
