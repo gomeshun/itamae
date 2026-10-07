@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "Please cite this software and the publications for the SASHIMI model and physical prescriptions used in your calculation."
+type: software
+title: "ITAMAE: Integrated Toolkit for Analytical Merger-tree And Evolution"
+authors:
+  - family-names: Horigome
+    given-names: Shunichi
+repository-code: "https://github.com/gomeshun/itamae"
+license: MIT
+version: "0.2.0rc1"

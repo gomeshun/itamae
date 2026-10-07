@@ -1,47 +1,160 @@
 name: test
-
-on:
-  pull_request:
+'on':
+  pull_request: null
   push:
-    branches: [main]
-  workflow_dispatch:
-
+    branches:
+    - main
+    - itamae-migration
+  workflow_dispatch: null
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.changes.outputs.changed }}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+    - uses: gomeshun/sashimi-family/.github/actions/changed-paths@42a964b21287f802ea323146144ee6784229bbf2
+      id: changes
+      with:
+        paths: |
+          src/**
+          *.py
+          *.toml
+          *.cfg
+          MANIFEST.in
+          uv.lock
+          requirements*.txt
+          data/**
+          .github/workflows/test.yml
+          .github/actions/**
+          tests/**
+          scripts/**
+          README.md
+          LICENSE*
+          NOTICE.md
   quality:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
-      - run: uv sync --locked --all-extras --group dev
-      - run: uv run ruff check .
-      - run: uv run ruff format --check .
-      - run: uv run mypy src/itamae --ignore-missing-imports
-      - run: uv run pytest --cov=itamae --cov-branch --cov-report=term-missing
-      - run: uv build
-
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+    - uses: astral-sh/setup-uv@v6
+    - run: uv sync --locked --all-extras --group dev
+    - run: uv run ruff check .
+    - run: uv run ruff format --check .
+    - run: uv run mypy src/itamae --ignore-missing-imports
+    needs: changes
+    if: needs.changes.outputs.changed == 'true'
   tests:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12", "3.13"]
-        extras: ["", "astropy", "colossus", "full"]
+        python-version:
+        - '3.11'
+        - '3.12'
+        - '3.13'
+        extras:
+        - ''
+        - astropy
+        - colossus
+        - full
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
-        with:
-          python-version: ${{ matrix.python-version }}
-      - run: uv sync --locked --group dev
-      - if: matrix.extras != ''
-        run: uv sync --locked --extra ${{ matrix.extras }} --group dev
-      - run: uv run pytest
-
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+    - uses: astral-sh/setup-uv@v6
+      with:
+        python-version: ${{ matrix.python-version }}
+    - run: uv sync --locked --group dev
+    - if: matrix.extras != ''
+      run: uv sync --locked --extra ${{ matrix.extras }} --group dev
+    - if: matrix.python-version == '3.12' && matrix.extras == 'full'
+      run: uv run pytest --cov=itamae --cov-branch --cov-report=term-missing
+    - if: matrix.python-version != '3.12' || matrix.extras != 'full'
+      run: uv run pytest
+    needs: changes
+    if: needs.changes.outputs.changed == 'true'
   build-and-smoke-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
-      - run: uv build
-      - run: uv venv .venv-smoke
-      - run: uv pip install --python .venv-smoke/bin/python dist/*.whl
-      - run: .venv-smoke/bin/python -c "import itamae; print(itamae.__version__)"
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+    - uses: astral-sh/setup-uv@v6
+    - run: ITAMAE_SOURCE_REVISION="$(git rev-parse HEAD)" uv build
+    - name: Verify collision-free artifact names
+      run: |
+        compgen -G "dist/sashimi_itamae-*.whl" >/dev/null
+        compgen -G "dist/sashimi_itamae-*.tar.gz" >/dev/null
+        if compgen -G "dist/itamae-*" >/dev/null; then
+          echo "legacy/colliding itamae distribution artifact was produced" >&2
+          exit 1
+        fi
+    - run: uv venv .venv-smoke
+    - run: uv pip install --python .venv-smoke/bin/python dist/*.whl
+    - name: Verify distribution/import identity
+      run: |
+        .venv-smoke/bin/python - <<'PY'
+        from importlib import metadata
+
+        import itamae
+
+        assert metadata.version("sashimi-itamae") == itamae.__version__
+        try:
+            metadata.version("itamae")
+        except metadata.PackageNotFoundError:
+            pass
+        else:
+            raise RuntimeError("colliding 'itamae' distribution is installed")
+        print("distribution=sashimi-itamae import=itamae", itamae.__version__)
+        PY
+    - name: Verify durable embedded source revision
+      run: |
+        expected="$(git rev-parse HEAD)"
+        mkdir -p "${RUNNER_TEMP}/itamae-provenance-repository"
+        cd "${RUNNER_TEMP}/itamae-provenance-repository"
+        ITAMAE_SOURCE_REVISION=0000000000000000000000000000000000000000 \
+          EXPECTED_ITAMAE_REVISION="$expected" \
+          "${GITHUB_WORKSPACE}/.venv-smoke/bin/python" - <<'PY'
+        import os
+
+        from itamae.provenance import source_revision
+
+        expected = os.environ["EXPECTED_ITAMAE_REVISION"]
+        assert source_revision("itamae") == expected
+        assert source_revision("sashimi-itamae") == expected
+        PY
+    - name: Rebuild wheel from exported sdist
+      run: |
+        mkdir -p "${RUNNER_TEMP}/itamae-sdist"
+        tar -xzf dist/sashimi_itamae-*.tar.gz -C "${RUNNER_TEMP}/itamae-sdist"
+        source_dir="$(find "${RUNNER_TEMP}/itamae-sdist" -mindepth 1 -maxdepth 1 -type d -print -quit)"
+        test -n "$source_dir"
+        uv build --wheel --out-dir "${RUNNER_TEMP}/itamae-rebuilt" "$source_dir"
+        compgen -G "${RUNNER_TEMP}/itamae-rebuilt/sashimi_itamae-*.whl" >/dev/null
+        uv venv "${RUNNER_TEMP}/itamae-sdist-venv"
+        uv pip install --python "${RUNNER_TEMP}/itamae-sdist-venv/bin/python" \
+          "${RUNNER_TEMP}"/itamae-rebuilt/sashimi_itamae-*.whl
+        EXPECTED_ITAMAE_REVISION="$(git rev-parse HEAD)" \
+          "${RUNNER_TEMP}/itamae-sdist-venv/bin/python" - <<'PY'
+        import os
+        from importlib import metadata
+
+        import itamae
+        from itamae.provenance import source_revision
+
+        assert metadata.version("sashimi-itamae") == itamae.__version__
+        assert source_revision("itamae") == os.environ["EXPECTED_ITAMAE_REVISION"]
+        PY
+    needs: changes
+    if: needs.changes.outputs.changed == 'true'
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.repo.full_name || github.repository }}-${{ github.event_name
+    == 'workflow_dispatch' && github.run_id || github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}

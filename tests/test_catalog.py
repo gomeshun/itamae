@@ -81,3 +81,30 @@ def test_catalog_histogram_realization_and_concatenation():
 def test_poisson_realization_requires_explicit_generator():
     with pytest.raises(TypeError, match="Generator"):
         catalog().poisson_realization(None)
+
+
+def test_catalog_npz_round_trip_without_pickle(tmp_path):
+    original = catalog()
+    path = tmp_path / "catalog.npz"
+    original.to_npz(path)
+    restored = WeightedSubhaloCatalog.from_npz(path)
+
+    assert dict(restored.metadata) == dict(original.metadata)
+    assert set(restored.columns) == set(original.columns)
+    assert set(restored.weights) == set(original.weights)
+    for name in original.columns:
+        np.testing.assert_array_equal(restored.columns[name], original.columns[name])
+    for name in original.weights:
+        np.testing.assert_array_equal(restored.weights[name], original.weights[name])
+
+
+def test_catalog_npz_rejects_wrong_archive_schema(tmp_path):
+    path = tmp_path / "invalid.npz"
+    np.savez(
+        path,
+        manifest_json=np.asarray(
+            '{"archive_schema":"unknown","catalog_metadata":{},"columns":[],"weights":[]}'
+        ),
+    )
+    with pytest.raises(ValueError, match="schema"):
+        WeightedSubhaloCatalog.from_npz(path)
