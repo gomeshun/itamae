@@ -11,13 +11,68 @@ from itamae.variance import IntegratedVarianceModel
 
 @dataclass(frozen=True)
 class ExponentialPower:
+    """Supply P(k)=exp(-k) with an analytic sharp-k integral.
+
+    Parameters
+    ----------
+    identifier : str
+        Stable identifier of the physical and numerical prescription, used to distinguish
+        calculations and cached data.
+
+    Notes
+    -----
+    This fixture/helper supports the controlled checks in this test module; its synthetic
+    values are not a calibrated halo model.
+    """
+
     identifier: str = "test:exp(-k)"
 
     def __call__(self, k):
+        """Evaluate the positive analytic spectrum used to separate integration error from
+        interpolation.
+
+        Parameters
+        ----------
+        k : float or array_like
+            Positive Fourier wavenumber, in the inverse-length convention of the supplied
+            spectrum; factors of h are owned by that spectrum.
+
+        Returns
+        -------
+        numpy.ndarray
+            exp(-k) with the input wavenumber shape.
+
+        Notes
+        -----
+        This fixture/helper supports the controlled checks in this test module; its synthetic
+        values are not a calibrated halo model.
+        """
         return np.exp(-np.asarray(k))
 
 
 def model(n_k=257, chunk_size=256):
+    """Choose a sharp-k variance fixture with R=M**(1/3) and an analytic cutoff.
+
+    Parameters
+    ----------
+    n_k : int
+        Number of logarithmic integration-grid nodes, at least three. Accuracy requires
+        refinement checks for the chosen spectrum.
+    chunk_size : int
+        Maximum mass or quadrature-cell count per allocation; controls memory use without
+        changing the intended integral.
+
+    Returns
+    -------
+    IntegratedVarianceModel
+        Analytic-spectrum variance provider with explicit log-k resolution and memory
+        chunking.
+
+    Notes
+    -----
+    This fixture/helper supports the controlled checks in this test module; its synthetic
+    values are not a calibrated halo model.
+    """
     return IntegratedVarianceModel(
         ExponentialPower(),
         SharpKWindow(),
@@ -30,6 +85,20 @@ def model(n_k=257, chunk_size=256):
 
 
 def test_cutoff_plateau_is_monotonic_without_projection():
+    """Resolve a suppressed spectrum's variance plateau without imposing monotonicity
+    afterward.
+
+    Notes
+    -----
+    Pass criteria: For P(k)=exp(-k), variance decreases with mass and matches the
+    incomplete-gamma integral at rtol=3e-12, atol=3e-16.
+
+    Failure criteria: any mismatch with the stated value, shape or identity requirements
+    fails the test.
+
+    Scope: This controlled calculation does not calibrate a subhalo population against
+    simulations or observations.
+    """
     m = np.geomspace(1e-15, 1e12, 2000)
     calculation = model()
     s = calculation.variance(m)
@@ -40,6 +109,20 @@ def test_cutoff_plateau_is_monotonic_without_projection():
 
 
 def test_moving_boundary_derivative_agrees_with_independent_integral():
+    """Make the sharp-k derivative describe the same continuous variance integral.
+
+    Notes
+    -----
+    Pass criteria: A finite difference agrees with the moving-boundary derivative to
+    rtol=4e-8; chunking preserves values exactly; doubling k-grid resolution agrees to
+    2e-13.
+
+    Failure criteria: any mismatch with the stated value, shape or identity requirements
+    fails the test.
+
+    Scope: This controlled calculation does not calibrate a subhalo population against
+    simulations or observations.
+    """
     m = np.geomspace(1e-3, 1e3, 30)
     calculation = model()
     step = 1e-4
@@ -54,6 +137,19 @@ def test_moving_boundary_derivative_agrees_with_independent_integral():
 
 
 def test_tabulated_spectrum_knots_have_exact_piecewise_polynomial_integrals():
+    """Integrate across input-spectrum knots without missing changes of interpolation slope.
+
+    Notes
+    -----
+    Pass criteria: Variance at six off-knot cutoffs matches direct piecewise polynomial
+    integration to rtol=3e-13.
+
+    Failure criteria: any mismatch with the stated value, shape or identity requirements
+    fails the test.
+
+    Scope: This controlled calculation does not calibrate a subhalo population against
+    simulations or observations.
+    """
     k = np.array([0.01, 0.1234, 0.568, 3.141, 100.0])
     p = np.array([1.0, 8.0, 0.3, 2.0, 0.001])
     base = TabulatedPowerSpectrum(k, p, interpolation="linear")

@@ -13,7 +13,30 @@ from itamae.protocols import PowerSpectrum
 
 
 def _real_array(value: Any, name: str) -> np.ndarray:
-    """Validate real numeric values before any conversion can discard content."""
+    """Validate real numerical input before its use in a physical calculation.
+
+    Parameters
+    ----------
+    value : array_like
+        Numerical input to be checked before use; shape and physical interpretation are set
+        by the caller and retained by the validation helper.
+    name : str
+        Name of the quantity or component included in an error or provenance record so an
+        invalid scientific input can be located.
+
+    Returns
+    -------
+    numpy.ndarray
+        Numerical array with the original shape; the helper rejects the invalid values
+        checked in its implementation.
+
+    Notes
+    -----
+    Power is a density-fluctuation spectrum P(k); a transfer modification supplies a power
+    ratio, not an unsquared amplitude. The model owns normalization, k units, factors of h
+    and any physical cutoff. Content identities distinguish changed tables even when labels
+    are reused.
+    """
     array = np.asarray(value)
     if array.dtype.kind not in "iuf":
         raise ValueError(f"{name} must contain real numeric values.")
@@ -24,7 +47,26 @@ def _real_array(value: Any, name: str) -> np.ndarray:
 
 
 def _array_digest(*arrays: np.ndarray) -> str:
-    """Return a platform-independent digest for floating-point table data."""
+    """Return a platform-independent digest for floating-point table data.
+
+    Parameters
+    ----------
+    *arrays : tuple of numpy.ndarray
+        Ordered numerical arrays whose shapes and canonical little-endian float values are
+        included in the digest.
+
+    Returns
+    -------
+    str
+        SHA-256 of ordered array shapes and canonical float64 values.
+
+    Notes
+    -----
+    Power is a density-fluctuation spectrum P(k); a transfer modification supplies a power
+    ratio, not an unsquared amplitude. The model owns normalization, k units, factors of h
+    and any physical cutoff. Content identities distinguish changed tables even when labels
+    are reused.
+    """
     digest = sha256()
     for array in arrays:
         canonical = np.ascontiguousarray(array, dtype="<f8")
@@ -57,6 +99,11 @@ class TabulatedPowerSpectrum:
     -----
     ITAMAE does not attach units or factors of ``h`` to the table. The SASHIMI
     variant supplying it must document those conventions in ``identifier``.
+
+    Power is a density-fluctuation spectrum P(k); a transfer modification supplies a power
+    ratio, not an unsquared amplitude. The model owns normalization, k units, factors of h
+    and any physical cutoff. Content identities distinguish changed tables even when labels
+    are reused.
     """
 
     def __init__(
@@ -68,6 +115,33 @@ class TabulatedPowerSpectrum:
         interpolation: str = "log-log",
         extrapolate: bool = False,
     ) -> None:
+        """Copy and identify a power table before constructing its chosen interpolant.
+
+        Parameters
+        ----------
+        wavenumber : float or array_like
+            Positive Fourier wavenumber, in the inverse-length convention of the supplied
+            spectrum; factors of h are owned by that spectrum.
+        power : PowerSpectrum or array_like
+            Linear density power P(k), in the volume units reciprocal to k cubed. For a table,
+            supply values aligned with the wavenumber array.
+        identifier : str
+            Stable identifier of the physical and numerical prescription, used to distinguish
+            calculations and cached data.
+        interpolation : str, optional
+            Interpolation rule supported by the owning table; see Notes for its coordinates and
+            permitted choices.
+        extrapolate : bool
+            Whether endpoint slopes may extend the tabulated spectrum outside its knots. False
+            rejects such queries.
+
+        Notes
+        -----
+        Power is a density-fluctuation spectrum P(k); a transfer modification supplies a power
+        ratio, not an unsquared amplitude. The model owns normalization, k units, factors of h
+        and any physical cutoff. Content identities distinguish changed tables even when labels
+        are reused.
+        """
         k = _real_array(wavenumber, "Wavenumbers")
         values = _real_array(power, "Power-spectrum values")
         if k.ndim != 1 or values.ndim != 1 or k.shape != values.shape or k.size < 2:
@@ -105,12 +179,38 @@ class TabulatedPowerSpectrum:
 
     @property
     def identifier(self) -> str:
-        """Return the content digest, evaluation policy, and provenance label."""
+        """Return the content digest, evaluation policy, and provenance label.
+
+        Returns
+        -------
+        str
+            Stable prescription identity for cache separation and catalogue provenance.
+
+        Notes
+        -----
+        Power is a density-fluctuation spectrum P(k); a transfer modification supplies a power
+        ratio, not an unsquared amplitude. The model owns normalization, k units, factors of h
+        and any physical cutoff. Content identities distinguish changed tables even when labels
+        are reused.
+        """
         return self._identifier
 
     @property
     def domain(self) -> tuple[float, float]:
-        """Return the inclusive tabulated wavenumber interval."""
+        """Return the inclusive tabulated wavenumber interval.
+
+        Returns
+        -------
+        tuple of float
+            Inclusive minimum and maximum tabulated wavenumbers in the input convention.
+
+        Notes
+        -----
+        Power is a density-fluctuation spectrum P(k); a transfer modification supplies a power
+        ratio, not an unsquared amplitude. The model owns normalization, k units, factors of h
+        and any physical cutoff. Content identities distinguish changed tables even when labels
+        are reused.
+        """
         return float(self._wavenumber[0]), float(self._wavenumber[-1])
 
     @property
@@ -119,11 +219,43 @@ class TabulatedPowerSpectrum:
 
         Numerical integrators may split intervals at these points. The table
         digest in ``identifier`` already covers their exact content.
+
+        Returns
+        -------
+        numpy.ndarray
+            Copied known spectrum knots where integration cells can split at interpolation slope
+            changes.
+
+        Notes
+        -----
+        Power is a density-fluctuation spectrum P(k); a transfer modification supplies a power
+        ratio, not an unsquared amplitude. The model owns normalization, k units, factors of h
+        and any physical cutoff. Content identities distinguish changed tables even when labels
+        are reused.
         """
         return self._wavenumber.copy()
 
     def __call__(self, wavenumber: Any) -> np.ndarray:
-        """Evaluate the configured interpolant."""
+        """Evaluate the configured interpolant.
+
+        Parameters
+        ----------
+        wavenumber : float or array_like
+            Positive Fourier wavenumber, in the inverse-length convention of the supplied
+            spectrum; factors of h are owned by that spectrum.
+
+        Returns
+        -------
+        numpy.ndarray
+            Nonnegative power P(k), in the base/table power unit and the query wavenumber shape.
+
+        Notes
+        -----
+        Power is a density-fluctuation spectrum P(k); a transfer modification supplies a power
+        ratio, not an unsquared amplitude. The model owns normalization, k units, factors of h
+        and any physical cutoff. Content identities distinguish changed tables even when labels
+        are reused.
+        """
         k = _real_array(wavenumber, "Evaluation wavenumbers")
         if not np.all(np.isfinite(k)) or np.any(k <= 0.0):
             raise ValueError("Evaluation wavenumbers must be finite and positive.")
@@ -149,6 +281,13 @@ class TransferModifiedPowerSpectrum:
         it should be squared.
     ratio_identifier
         Stable identifier owned by the SASHIMI variant.
+
+    Notes
+    -----
+    Power is a density-fluctuation spectrum P(k); a transfer modification supplies a power
+    ratio, not an unsquared amplitude. The model owns normalization, k units, factors of h
+    and any physical cutoff. Content identities distinguish changed tables even when labels
+    are reused.
     """
 
     def __init__(
@@ -158,6 +297,26 @@ class TransferModifiedPowerSpectrum:
         *,
         ratio_identifier: str,
     ) -> None:
+        """Bind a base spectrum to an explicitly identified dark-matter power suppression.
+
+        Parameters
+        ----------
+        base : PowerSpectrum
+            Unsuppressed or reference spectrum with explicit normalization and wavenumber units.
+        power_ratio : callable
+            Function of wavenumber returning the nonnegative ratio P_modified/P_base. This ratio
+            is already squared relative to a transfer amplitude.
+        ratio_identifier : str
+            Stable label of the transfer prescription and its physical parameters, distinct from
+            the base-spectrum identity.
+
+        Notes
+        -----
+        Power is a density-fluctuation spectrum P(k); a transfer modification supplies a power
+        ratio, not an unsquared amplitude. The model owns normalization, k units, factors of h
+        and any physical cutoff. Content identities distinguish changed tables even when labels
+        are reused.
+        """
         if not isinstance(base, PowerSpectrum):
             raise TypeError("base must implement the ITAMAE power-spectrum protocol.")
         if not callable(power_ratio):
@@ -170,16 +329,62 @@ class TransferModifiedPowerSpectrum:
 
     @property
     def identifier(self) -> str:
-        """Return the composed base-spectrum and power-ratio identifier."""
+        """Return the composed base-spectrum and power-ratio identifier.
+
+        Returns
+        -------
+        str
+            Stable prescription identity for cache separation and catalogue provenance.
+
+        Notes
+        -----
+        Power is a density-fluctuation spectrum P(k); a transfer modification supplies a power
+        ratio, not an unsquared amplitude. The model owns normalization, k units, factors of h
+        and any physical cutoff. Content identities distinguish changed tables even when labels
+        are reused.
+        """
         return self._identifier
 
     @property
     def integration_breakpoints(self) -> np.ndarray:
-        """Forward known base-spectrum knots; smooth ratios add none."""
+        """Forward known base-spectrum knots; smooth ratios add none.
+
+        Returns
+        -------
+        numpy.ndarray
+            Copied known spectrum knots where integration cells can split at interpolation slope
+            changes.
+
+        Notes
+        -----
+        Power is a density-fluctuation spectrum P(k); a transfer modification supplies a power
+        ratio, not an unsquared amplitude. The model owns normalization, k units, factors of h
+        and any physical cutoff. Content identities distinguish changed tables even when labels
+        are reused.
+        """
         return np.asarray(getattr(self._base, "integration_breakpoints", []), dtype=float).copy()
 
     def __call__(self, wavenumber: Any) -> np.ndarray:
-        """Return the base spectrum multiplied by the supplied power ratio."""
+        """Return the base spectrum multiplied by the supplied power ratio.
+
+        Parameters
+        ----------
+        wavenumber : float or array_like
+            Positive Fourier wavenumber, in the inverse-length convention of the supplied
+            spectrum; factors of h are owned by that spectrum.
+
+        Returns
+        -------
+        numpy.ndarray
+            Nonnegative power P(k), in the base/table power unit and the query wavenumber shape.
+
+        Notes
+        -----
+        Power is a density-fluctuation spectrum P(k); a transfer modification supplies a power
+        ratio, not an unsquared amplitude. The model owns normalization, k units, factors of h
+        and any physical cutoff. Content identities distinguish changed tables even when labels
+        are reused.
+        """
         k = _real_array(wavenumber, "Evaluation wavenumbers")
         if np.any(k <= 0):
             raise ValueError("Evaluation wavenumbers must be positive.")

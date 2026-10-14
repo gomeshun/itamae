@@ -11,6 +11,19 @@ from itamae.protocols import PowerSpectrum, WindowFunction
 
 
 def test_tabulated_power_spectrum_log_interpolation_and_provenance():
+    """Recover a power-law spectrum without silently extending its support.
+
+    Notes
+    -----
+    Pass criteria: A 7*k**-2 table reproduces queried powers, exposes its source label and
+    protocol, and rejects a point below k_min.
+
+    Failure criteria: a stated numerical/identity mismatch, a missing required exception or
+    warning, or an unexpected calculation failure fails the test.
+
+    Scope: This controlled calculation does not calibrate a subhalo population against
+    simulations or observations.
+    """
     k = np.logspace(-3, 3, 61)
     spectrum = TabulatedPowerSpectrum(k, 7.0 * k**-2, identifier="power-law")
 
@@ -24,6 +37,19 @@ def test_tabulated_power_spectrum_log_interpolation_and_provenance():
 
 
 def test_transfer_modified_spectrum_takes_explicit_power_ratio():
+    """Apply a power suppression once, without confusing transfer amplitude with its square.
+
+    Notes
+    -----
+    Pass criteria: Multiplying a unit base spectrum by exp(-k**2) yields that power ratio
+    and retains its identifier.
+
+    Failure criteria: any mismatch with the stated value, shape or identity requirements
+    fails the test.
+
+    Scope: This controlled calculation does not calibrate a subhalo population against
+    simulations or observations.
+    """
     k = np.logspace(-2, 2, 41)
     base = TabulatedPowerSpectrum(k, np.ones_like(k), identifier="base")
     modified = TransferModifiedPowerSpectrum(
@@ -37,6 +63,19 @@ def test_transfer_modified_spectrum_takes_explicit_power_ratio():
 
 
 def test_linear_power_interpolation_preserves_physical_zero():
+    """Represent a genuine spectral node without imposing a positive floor.
+
+    Notes
+    -----
+    Pass criteria: Linear interpolation preserves a zero tabulated power; log-log
+    interpolation rejects that zero.
+
+    Failure criteria: a stated numerical/identity mismatch, a missing required exception or
+    warning, or an unexpected calculation failure fails the test.
+
+    Scope: This controlled calculation does not calibrate a subhalo population against
+    simulations or observations.
+    """
     spectrum = TabulatedPowerSpectrum(
         [1.0, 2.0, 3.0],
         [1.0, 0.0, 1.0],
@@ -49,6 +88,19 @@ def test_linear_power_interpolation_preserves_physical_zero():
 
 
 def test_window_limits_and_protocols():
+    """Use correctly normalized smoothing windows at long wavelength.
+
+    Notes
+    -----
+    Pass criteria: Top-hat tends to one at x=0 and 1e-6; sharp-k gives [1,1,1,0] at
+    x=[0,1e-6,1,2].
+
+    Failure criteria: any mismatch with the stated value, shape or identity requirements
+    fails the test.
+
+    Scope: This controlled calculation does not calibrate a subhalo population against
+    simulations or observations.
+    """
     top_hat = SphericalTopHatWindow()
     sharp_k = SharpKWindow()
     assert isinstance(top_hat, WindowFunction)
@@ -68,5 +120,27 @@ def test_window_limits_and_protocols():
     ],
 )
 def test_tabulated_power_rejects_invalid_tables(wavenumber, power):
+    """Reject a spectrum that cannot support a well-defined log interpolation.
+
+    Parameters
+    ----------
+    wavenumber : object
+        Controlled input supplied by the parametrization or fixture for the specific
+        physical/reference case described below.
+    power : object
+        Controlled input supplied by the parametrization or fixture for the specific
+        physical/reference case described below.
+
+    Notes
+    -----
+    Pass criteria: Duplicate k, nonpositive power for log interpolation, and NaN k each
+    raise ValueError.
+
+    Failure criteria: a stated numerical/identity mismatch, a missing required exception or
+    warning, or an unexpected calculation failure fails the test.
+
+    Scope: This controlled calculation does not calibrate a subhalo population against
+    simulations or observations.
+    """
     with pytest.raises(ValueError):
         TabulatedPowerSpectrum(wavenumber, power)

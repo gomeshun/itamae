@@ -5,28 +5,6 @@ Numerics derived from gomeshun/sashimi-c's standalone Picard implementation
 units and any validated domain are supplied by the caller, never by ITAMAE.
 """
 
-# MIT License
-#
-# Copyright (c) 2026 Shin'ichiro Ando
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
-#
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -41,10 +19,41 @@ from scipy.interpolate import RegularGridInterpolator, RectBivariateSpline
 
 
 class PicardFallbackWarning(UserWarning):
-    """An explicitly counted high-accuracy ODE fallback was required."""
+    """An explicitly counted high-accuracy ODE fallback was required.
+
+    Notes
+    -----
+    A guarded Picard request required direct DOP853 integration. Inspect diagnostics() for
+    reason and affected mass count; a completed fallback is not evidence that the table met
+    the requested iteration criterion.
+    """
 
 
 def _real(value, name):
+    """Validate real numerical input before its use in a physical calculation.
+
+    Parameters
+    ----------
+    value : array_like
+        Numerical input to be checked before use; shape and physical interpretation are set
+        by the caller and retained by the validation helper.
+    name : str
+        Name of the quantity or component included in an error or provenance record so an
+        invalid scientific input can be located.
+
+    Returns
+    -------
+    numpy.ndarray
+        Numerical array with the original shape; the helper rejects the invalid values
+        checked in its implementation.
+
+    Notes
+    -----
+    The equation is d ln(m)/dz = Phi(z) * [m/M_host(z)]**zeta(z). With nonnegative Phi,
+    integration from accretion to a lower redshift decreases mass. All masses must share the
+    caller unit. The iteration estimate excludes trapezoidal quadrature and interpolation
+    errors.
+    """
     a = np.asarray(value)
     if a.dtype.kind not in "iuf" or np.any(~np.isfinite(a)):
         raise ValueError(f"{name} must contain finite real numbers.")
@@ -52,6 +61,31 @@ def _real(value, name):
 
 
 def _integer(value, name, minimum):
+    """Require a valid grid or iteration count before allocating a tidal table.
+
+    Parameters
+    ----------
+    value : array_like
+        Numerical input to be checked before use; shape and physical interpretation are set
+        by the caller and retained by the validation helper.
+    name : str
+        Name of the quantity or component included in an error or provenance record so an
+        invalid scientific input can be located.
+    minimum : int
+        Smallest supported node/iteration count for this specific numerical control.
+
+    Returns
+    -------
+    int
+        Validated integer at least minimum.
+
+    Notes
+    -----
+    The equation is d ln(m)/dz = Phi(z) * [m/M_host(z)]**zeta(z). With nonnegative Phi,
+    integration from accretion to a lower redshift decreases mass. All masses must share the
+    caller unit. The iteration estimate excludes trapezoidal quadrature and interpolation
+    errors.
+    """
     if (
         isinstance(value, (bool, np.bool_))
         or not np.isscalar(value)
@@ -64,10 +98,50 @@ def _integer(value, name, minimum):
 
 
 def physics_key(solver):
+    """Read the complete physical-state identity that controls tidal-table reuse.
+
+    Parameters
+    ----------
+    solver : PicardMassLossSolver
+        Model-supplied rate, exponent and host-mass callbacks with an identity that changes
+        when their physical inputs change.
+
+    Returns
+    -------
+    object
+        Immutable equality-comparable callback identity for the current solver.
+
+    Notes
+    -----
+    The equation is d ln(m)/dz = Phi(z) * [m/M_host(z)]**zeta(z). With nonnegative Phi,
+    integration from accretion to a lower redshift decreases mass. All masses must share the
+    caller unit. The iteration estimate excludes trapezoidal quadrature and interpolation
+    errors.
+    """
     return solver.state_key()
 
 
 def _state(solver):
+    """Invalidate all cached tidal coefficients and tables when the physical state changes.
+
+    Parameters
+    ----------
+    solver : PicardMassLossSolver
+        Model-supplied rate, exponent and host-mass callbacks with an identity that changes
+        when their physical inputs change.
+
+    Returns
+    -------
+    object
+        Current physical-state key after cache synchronization.
+
+    Notes
+    -----
+    The equation is d ln(m)/dz = Phi(z) * [m/M_host(z)]**zeta(z). With nonnegative Phi,
+    integration from accretion to a lower redshift decreases mass. All masses must share the
+    caller unit. The iteration estimate excludes trapezoidal quadrature and interpolation
+    errors.
+    """
     key = physics_key(solver)
     if getattr(solver, "_picard_physics_key", None) != key:
         solver._picard_tables = {}
@@ -80,6 +154,36 @@ def _state(solver):
 
 
 def _coefficients(solver, z_acc, z_final, count):
+    """Sample the tidal rate, exponent and host history on one redshift path.
+
+    Parameters
+    ----------
+    solver : PicardMassLossSolver
+        Model-supplied rate, exponent and host-mass callbacks with an identity that changes
+        when their physical inputs change.
+    z_acc : float or array_like
+        Dimensionless accretion redshift. History integration requires one scalar accretion
+        epoch.
+    z_final : float
+        Scalar final redshift, no greater than z_acc; count nodes sample the path from z_acc
+        to this endpoint.
+    count : int
+        Number of nodes on a uniformly spaced redshift integration path, including both
+        endpoints.
+
+    Returns
+    -------
+    tuple of numpy.ndarray
+        Redshift, nonnegative Phi, finite zeta and natural-log host mass arrays, each of
+        length count.
+
+    Notes
+    -----
+    The equation is d ln(m)/dz = Phi(z) * [m/M_host(z)]**zeta(z). With nonnegative Phi,
+    integration from accretion to a lower redshift decreases mass. All masses must share the
+    caller unit. The iteration estimate excludes trapezoidal quadrature and interpolation
+    errors.
+    """
     _state(solver)
     key = (float(z_acc), float(z_final), count)
     cached = solver._picard_coefficients.get(key)
@@ -108,6 +212,44 @@ def _coefficients(solver, z_acc, z_final, count):
 
 
 def _iterate(solver, log_ma, z_acc, z_final, n_integration, n_iterations, coefficients=None):
+    """Solve for delta ln(m) with vectorized Picard updates on a fixed redshift path.
+
+    Parameters
+    ----------
+    solver : PicardMassLossSolver
+        Model-supplied rate, exponent and host-mass callbacks with an identity that changes
+        when their physical inputs change.
+    log_ma : array_like
+        Natural logarithm of subhalo mass in the same fixed mass unit as the host callback;
+        only differences of these logarithms enter the rate.
+    z_acc : float or array_like
+        Dimensionless accretion redshift. History integration requires one scalar accretion
+        epoch.
+    z_final : float or array_like, optional
+        Target redshift no greater than the accretion redshift. Explicit tables use one
+        scalar target; None selects solver.z_min.
+    n_integration : int
+        Number of nodes on a uniformly spaced redshift integration path, including both
+        endpoints.
+    n_iterations : int
+        Number of nonlinear Picard updates after the initial zero-exponent integral. One
+        extra update estimates the remaining iteration error.
+    coefficients : tuple, optional
+        Precomputed redshift, Phi, zeta and ln(host mass) arrays on this integration path.
+
+    Returns
+    -------
+    tuple
+        Integration grid (n_integration,), delta ln(m) (n_integration,n_mass), and per-mass
+        remaining-iteration estimates (n_mass,).
+
+    Notes
+    -----
+    The equation is d ln(m)/dz = Phi(z) * [m/M_host(z)]**zeta(z). With nonnegative Phi,
+    integration from accretion to a lower redshift decreases mass. All masses must share the
+    caller unit. The iteration estimate excludes trapezoidal quadrature and interpolation
+    errors.
+    """
     z, phi, zeta, log_host = (
         _coefficients(solver, z_acc, z_final, n_integration)
         if coefficients is None
@@ -119,6 +261,25 @@ def _iterate(solver, log_ma, z_acc, z_final, n_integration, n_iterations, coeffi
     log_ratio = log_ma[None, :] - log_host[:, None]
 
     def update(current):
+        """Integrate the nonlinear tidal rate along the current log-mass trajectory.
+
+        Parameters
+        ----------
+        current : numpy.ndarray
+            Current estimate of delta ln(m), with shape (n_redshift, n_mass).
+
+        Returns
+        -------
+        numpy.ndarray
+            Updated delta ln(m) with shape (n_redshift,n_mass), zero at accretion.
+
+        Notes
+        -----
+        The equation is d ln(m)/dz = Phi(z) * [m/M_host(z)]**zeta(z). With nonnegative Phi,
+        integration from accretion to a lower redshift decreases mass. All masses must share the
+        caller unit. The iteration estimate excludes trapezoidal quadrature and interpolation
+        errors.
+        """
         rhs = phi[:, None] * np.exp(zeta[:, None] * (log_ratio + current))
         return cumulative_trapezoid(rhs, x=z, axis=0, initial=0.0)
 
@@ -135,7 +296,42 @@ def _iterate(solver, log_ma, z_acc, z_final, n_integration, n_iterations, coeffi
 
 
 def direct_log_mass(solver, ma, za, z, *, rtol=1e-11, atol=1e-12):
-    """DOP853 integration of log mass, preserving scalar or full-history shape."""
+    """DOP853 integration of log mass, preserving scalar or full-history shape.
+
+    Parameters
+    ----------
+    solver : PicardMassLossSolver
+        Model-supplied rate, exponent and host-mass callbacks with an identity that changes
+        when their physical inputs change.
+    ma : float or array_like
+        Positive subhalo mass at accretion, in the same units as reference_mass; endpoint
+        queries broadcast over mass and redshift.
+    za : float or array_like
+        Dimensionless accretion redshift. History integration requires one scalar accretion
+        epoch.
+    z : float or array_like
+        Dimensionless redshift. The cosmological background requires z > -1; population
+        nodes use nonnegative redshifts.
+    rtol : float or array_like, optional
+        Positive relative or absolute local ODE error tolerance. Absolute tolerance uses the
+        integrated state units; it is not a physical-model uncertainty.
+    atol : float or array_like, optional
+        Positive relative or absolute local ODE error tolerance. Absolute tolerance uses the
+        integrated state units; it is not a physical-model uncertainty.
+
+    Returns
+    -------
+    float or numpy.ndarray
+        Positive evolved masses; scalar target retains ma.shape, while a history prepends
+        the redshift axis. Repeated target epochs retain their input order.
+
+    Notes
+    -----
+    The equation is d ln(m)/dz = Phi(z) * [m/M_host(z)]**zeta(z). With nonnegative Phi,
+    integration from accretion to a lower redshift decreases mass. All masses must share the
+    caller unit. The iteration estimate excludes trapezoidal quadrature and interpolation
+    errors.
+    """
     mass = _real(ma, "ma")
     redshifts = _real(z, "z")
     za = float(_real(za, "za"))
@@ -151,6 +347,29 @@ def direct_log_mass(solver, ma, za, z, *, rtol=1e-11, atol=1e-12):
         return mass.copy() if scalar_z else np.broadcast_to(mass, times.shape + mass.shape).copy()
 
     def rhs(redshift, log_mass):
+        """Evaluate d ln(m)/dz using the model rate and contemporaneous host mass.
+
+        Parameters
+        ----------
+        redshift : float or array_like
+            Dimensionless redshift. The cosmological background requires z > -1; population
+            nodes use nonnegative redshifts.
+        log_mass : array_like
+            Natural logarithm of subhalo mass in the same fixed mass unit as the host callback;
+            only differences of these logarithms enter the rate.
+
+        Returns
+        -------
+        numpy.ndarray
+            Log-mass derivative with the same flattened mass-state shape.
+
+        Notes
+        -----
+        The equation is d ln(m)/dz = Phi(z) * [m/M_host(z)]**zeta(z). With nonnegative Phi,
+        integration from accretion to a lower redshift decreases mass. All masses must share the
+        caller unit. The iteration estimate excludes trapezoidal quadrature and interpolation
+        errors.
+        """
         return solver.Phi(redshift) * np.exp(
             solver.zetaMz(redshift) * (log_mass - np.log(solver.Mzvir(redshift)))
         )
@@ -169,6 +388,38 @@ def direct_log_mass(solver, ma, za, z, *, rtol=1e-11, atol=1e-12):
 
 
 def _fallback(solver, ma, za, z, reason):
+    """Record and warn about a Picard fallback, then integrate the same tidal equation
+    directly.
+
+    Parameters
+    ----------
+    solver : PicardMassLossSolver
+        Model-supplied rate, exponent and host-mass callbacks with an identity that changes
+        when their physical inputs change.
+    ma : float or array_like
+        Positive subhalo mass at accretion, in the same units as reference_mass; endpoint
+        queries broadcast over mass and redshift.
+    za : float or array_like
+        Dimensionless accretion redshift. History integration requires one scalar accretion
+        epoch.
+    z : float or array_like
+        Dimensionless redshift. The cosmological background requires z > -1; population
+        nodes use nonnegative redshifts.
+    reason : str
+        Physical-domain or iteration-convergence reason recorded for a direct-ODE fallback.
+
+    Returns
+    -------
+    float or numpy.ndarray
+        DOP853 mass solution with the same endpoint/history shape as the request.
+
+    Notes
+    -----
+    The equation is d ln(m)/dz = Phi(z) * [m/M_host(z)]**zeta(z). With nonnegative Phi,
+    integration from accretion to a lower redshift decreases mass. All masses must share the
+    caller unit. The iteration estimate excludes trapezoidal quadrature and interpolation
+    errors.
+    """
     _state(solver)
     event = dict(
         reason=reason,
@@ -186,10 +437,51 @@ def _fallback(solver, ma, za, z, reason):
 
 
 class PicardMassLossTable:
-    """Picard endpoint table; mass and redshift queries never extrapolate.
+    """Tabulate tidal delta ln(m) over accretion epoch and initial host-mass ratio.
 
     The convergence estimate covers the nonlinear iterations. Interpolation
     and quadrature errors are separately validated by the saved ODE campaign.
+
+    Parameters
+    ----------
+    solver : PicardMassLossSolver
+        Model-supplied rate, exponent and host-mass callbacks with an identity that changes
+        when their physical inputs change.
+    z_final : float or array_like, optional
+        Target redshift no greater than the accretion redshift. Explicit tables use one
+        scalar target; None selects solver.z_min.
+    z_acc_max : float, optional
+        Largest tabulated accretion redshift; None selects solver.z_max.
+    n_z_acc : int
+        Number of endpoint-table accretion-redshift nodes, at least two (four for cubic
+        interpolation).
+    n_log_ratio : int
+        Number of endpoint-table log-mass-ratio nodes, at least two (four for cubic
+        interpolation).
+    log10_ratio_min : float
+        Lower or upper endpoint-table bound in log10[ma/M_host(z_acc)].
+    log10_ratio_max : float
+        Lower or upper endpoint-table bound in log10[ma/M_host(z_acc)].
+    n_integration : int
+        Number of nodes on a uniformly spaced redshift integration path, including both
+        endpoints.
+    n_iterations : int
+        Number of nonlinear Picard updates after the initial zero-exponent integral. One
+        extra update estimates the remaining iteration error.
+    convergence_tolerance : float
+        Positive threshold for the estimated remaining change in ln(m). It does not bound
+        quadrature or interpolation error.
+    interpolation : str, optional
+        Interpolation rule supported by the owning table; see Notes for its coordinates and
+        permitted choices.
+
+    Notes
+    -----
+    Call delta_log_mass or mass only within the stored coordinate range and check converged
+    for the iteration estimate. These methods do not automatically fall back to an ODE. Use
+    solver.endpoint for guarded reuse and fallback. A changed physical-state key makes an
+    existing table stale. Cubic interpolation uses at least four nodes per axis; otherwise
+    linear is available.
     """
 
     def __init__(
@@ -206,6 +498,47 @@ class PicardMassLossTable:
         convergence_tolerance=8e-4,
         interpolation=None,
     ):
+        """Precompute endpoint mass loss and an iteration estimate on the requested grid.
+
+        Parameters
+        ----------
+        solver : PicardMassLossSolver
+            Model-supplied rate, exponent and host-mass callbacks with an identity that changes
+            when their physical inputs change.
+        z_final : float or array_like, optional
+            Target redshift no greater than the accretion redshift. Explicit tables use one
+            scalar target; None selects solver.z_min.
+        z_acc_max : float, optional
+            Largest tabulated accretion redshift; None selects solver.z_max.
+        n_z_acc : int
+            Number of endpoint-table accretion-redshift nodes, at least two (four for cubic
+            interpolation).
+        n_log_ratio : int
+            Number of endpoint-table log-mass-ratio nodes, at least two (four for cubic
+            interpolation).
+        log10_ratio_min : float
+            Lower or upper endpoint-table bound in log10[ma/M_host(z_acc)].
+        log10_ratio_max : float
+            Lower or upper endpoint-table bound in log10[ma/M_host(z_acc)].
+        n_integration : int
+            Number of nodes on a uniformly spaced redshift integration path, including both
+            endpoints.
+        n_iterations : int
+            Number of nonlinear Picard updates after the initial zero-exponent integral. One
+            extra update estimates the remaining iteration error.
+        convergence_tolerance : float
+            Positive threshold for the estimated remaining change in ln(m). It does not bound
+            quadrature or interpolation error.
+        interpolation : str, optional
+            Interpolation rule supported by the owning table; see Notes for its coordinates and
+            permitted choices.
+
+        Notes
+        -----
+        None interpolation selects cubic when both axes have at least four nodes, otherwise
+        linear. Bounds describe table coordinates; they are not evidence that the physical model
+        was validated there.
+        """
         self.solver = solver
         self.z_final = float(_real(solver.z_min if z_final is None else z_final, "z_final"))
         self.z_acc_max = float(_real(solver.z_max if z_acc_max is None else z_acc_max, "z_acc_max"))
@@ -284,6 +617,30 @@ class PicardMassLossTable:
             )
 
     def _points(self, ma, z_acc):
+        """Validate an endpoint query and map it to (z_acc, ln[ma/M_host]) coordinates.
+
+        Parameters
+        ----------
+        ma : float or array_like
+            Positive subhalo mass at accretion, in the same units as reference_mass; endpoint
+            queries broadcast over mass and redshift.
+        z_acc : float or array_like
+            Dimensionless accretion redshift. History integration requires one scalar accretion
+            epoch.
+
+        Returns
+        -------
+        tuple
+            Broadcast accretion masses and a flattened coordinate array of shape (mass.size,2).
+            Stale or out-of-range tables raise ValueError.
+
+        Notes
+        -----
+        The equation is d ln(m)/dz = Phi(z) * [m/M_host(z)]**zeta(z). With nonnegative Phi,
+        integration from accretion to a lower redshift decreases mass. All masses must share the
+        caller unit. The iteration estimate excludes trapezoidal quadrature and interpolation
+        errors.
+        """
         if physics_key(self.solver) != getattr(self, "_physics_key", None):
             raise ValueError("Picard table is stale after a host or background change.")
         mass, za = np.broadcast_arrays(_real(ma, "ma"), _real(z_acc, "z_acc"))
@@ -304,6 +661,29 @@ class PicardMassLossTable:
         return mass, np.column_stack((za.ravel(), ratio.ravel()))
 
     def delta_log_mass(self, ma, z_acc):
+        """Interpolate ln[m(z_final)/ma] without extrapolating the endpoint table.
+
+        Parameters
+        ----------
+        ma : float or array_like
+            Positive subhalo mass at accretion, in the same units as reference_mass; endpoint
+            queries broadcast over mass and redshift.
+        z_acc : float or array_like
+            Dimensionless accretion redshift. History integration requires one scalar accretion
+            epoch.
+
+        Returns
+        -------
+        float or numpy.ndarray
+            Dimensionless log-mass change, with broadcast mass/redshift shape.
+
+        Notes
+        -----
+        The equation is d ln(m)/dz = Phi(z) * [m/M_host(z)]**zeta(z). With nonnegative Phi,
+        integration from accretion to a lower redshift decreases mass. All masses must share the
+        caller unit. The iteration estimate excludes trapezoidal quadrature and interpolation
+        errors.
+        """
         mass, points = self._points(ma, z_acc)
         if self._interpolator is None or mass.size == 0:
             values = np.zeros_like(mass)
@@ -315,11 +695,58 @@ class PicardMassLossTable:
         return float(values) if values.ndim == 0 else values
 
     def mass(self, ma, z_acc):
+        """Convert the interpolated log-mass change to the final bound mass.
+
+        Parameters
+        ----------
+        ma : float or array_like
+            Positive subhalo mass at accretion, in the same units as reference_mass; endpoint
+            queries broadcast over mass and redshift.
+        z_acc : float or array_like
+            Dimensionless accretion redshift. History integration requires one scalar accretion
+            epoch.
+
+        Returns
+        -------
+        float or numpy.ndarray
+            ma*exp(delta ln(m)), with broadcast shape and the input mass unit.
+
+        Notes
+        -----
+        The equation is d ln(m)/dz = Phi(z) * [m/M_host(z)]**zeta(z). With nonnegative Phi,
+        integration from accretion to a lower redshift decreases mass. All masses must share the
+        caller unit. The iteration estimate excludes trapezoidal quadrature and interpolation
+        errors.
+        """
         mass = np.asarray(ma)
         values = mass * np.exp(self.delta_log_mass(ma, z_acc))
         return float(values) if values.ndim == 0 else values
 
     def converged(self, ma, z_acc):
+        """Check the largest stored iteration estimate over the interpolation stencil.
+
+        Parameters
+        ----------
+        ma : float or array_like
+            Positive subhalo mass at accretion, in the same units as reference_mass; endpoint
+            queries broadcast over mass and redshift.
+        z_acc : float or array_like
+            Dimensionless accretion redshift. History integration requires one scalar accretion
+            epoch.
+
+        Returns
+        -------
+        numpy.ndarray of bool
+            True where the stencil estimate is at most convergence_tolerance; this is not a
+            total-accuracy certificate.
+
+        Notes
+        -----
+        The equation is d ln(m)/dz = Phi(z) * [m/M_host(z)]**zeta(z). With nonnegative Phi,
+        integration from accretion to a lower redshift decreases mass. All masses must share the
+        caller unit. The iteration estimate excludes trapezoidal quadrature and interpolation
+        errors.
+        """
         mass, points = self._points(ma, z_acc)
         if mass.size == 0 or self._interpolator is None:
             return np.ones(mass.shape, dtype=bool)
@@ -353,6 +780,58 @@ def endpoint_mass(
     convergence_tolerance=8e-4,
     interpolation=None,
 ):
+    """Evaluate guarded tidal endpoints, reusing tables with identical physical and numerical
+    settings.
+
+    Parameters
+    ----------
+    solver : PicardMassLossSolver
+        Model-supplied rate, exponent and host-mass callbacks with an identity that changes
+        when their physical inputs change.
+    ma : float or array_like
+        Positive subhalo mass at accretion, in the same units as reference_mass; endpoint
+        queries broadcast over mass and redshift.
+    za : float or array_like
+        Dimensionless accretion redshift. History integration requires one scalar accretion
+        epoch.
+    z : float or array_like
+        Dimensionless redshift. The cosmological background requires z > -1; population
+        nodes use nonnegative redshifts.
+    n_z_acc : int
+        Number of endpoint-table accretion-redshift nodes, at least two (four for cubic
+        interpolation).
+    n_log_ratio : int
+        Number of endpoint-table log-mass-ratio nodes, at least two (four for cubic
+        interpolation).
+    log10_ratio_min : float
+        Lower or upper endpoint-table bound in log10[ma/M_host(z_acc)].
+    log10_ratio_max : float
+        Lower or upper endpoint-table bound in log10[ma/M_host(z_acc)].
+    n_integration : int
+        Number of nodes on a uniformly spaced redshift integration path, including both
+        endpoints.
+    n_iterations : int
+        Number of nonlinear Picard updates after the initial zero-exponent integral. One
+        extra update estimates the remaining iteration error.
+    convergence_tolerance : float
+        Positive threshold for the estimated remaining change in ln(m). It does not bound
+        quadrature or interpolation error.
+    interpolation : str, optional
+        Interpolation rule supported by the owning table; see Notes for its coordinates and
+        permitted choices.
+
+    Returns
+    -------
+    float or numpy.ndarray
+        Final masses with the broadcast shape of ma, za and z; no evolution is applied when
+        z equals za.
+
+    Notes
+    -----
+    Out-of-domain or unconverged points use counted, warned DOP853 fallbacks. Requested
+    masses can explicitly expand a cached table range; the actual settings are exposed by
+    diagnostics().
+    """
     n_z_acc = _integer(n_z_acc, "n_z_acc", 2)
     n_log_ratio = _integer(n_log_ratio, "n_log_ratio", 2)
     n_integration = _integer(n_integration, "n_integration", 2)
@@ -462,6 +941,48 @@ def history_mass(
     convergence_tolerance=8e-4,
     n_mass_nodes=32,
 ):
+    """Evaluate complete tidal histories from one accretion epoch.
+
+    Parameters
+    ----------
+    solver : PicardMassLossSolver
+        Model-supplied rate, exponent and host-mass callbacks with an identity that changes
+        when their physical inputs change.
+    ma : float or array_like
+        Positive subhalo mass at accretion, in the same units as reference_mass; endpoint
+        queries broadcast over mass and redshift.
+    za : float or array_like
+        Dimensionless accretion redshift. History integration requires one scalar accretion
+        epoch.
+    z : float or array_like
+        Dimensionless redshift. The cosmological background requires z > -1; population
+        nodes use nonnegative redshifts.
+    n_integration : int
+        Number of nodes on a uniformly spaced redshift integration path, including both
+        endpoints.
+    n_iterations : int
+        Number of nonlinear Picard updates after the initial zero-exponent integral. One
+        extra update estimates the remaining iteration error.
+    convergence_tolerance : float
+        Positive threshold for the estimated remaining change in ln(m). It does not bound
+        quadrature or interpolation error.
+    n_mass_nodes : int
+        Minimum history-interpolation mass-node count. The implementation adds nodes when
+        necessary to keep spacing at most 0.25 dex.
+
+    Returns
+    -------
+    float or numpy.ndarray
+        Shape (n_redshift,*ma.shape) for a history or ma.shape for a scalar target, in the
+        input mass unit.
+
+    Notes
+    -----
+    Redshifts must be non-increasing; repeated epochs and omitted accretion endpoints are
+    supported. Linear redshift/mass interpolation is used when needed. Domain violations or
+    failed iteration estimates trigger warned DOP853 fallback; refine the grid separately to
+    assess interpolation and quadrature error.
+    """
     mass = _real(ma, "ma")
     times = _real(z, "z")
     za = float(_real(za, "za"))
@@ -538,12 +1059,36 @@ class PicardDomain:
 
     ``redshift`` and ``log10_mass_ratio`` are inclusive lower/upper bounds.
     Domain validity is a scientific responsibility of the supplying model.
+
+    Parameters
+    ----------
+    redshift : tuple of float
+        Inclusive lower and upper validated redshift bounds, with -1 < lower < upper.
+    log10_mass_ratio : tuple of float
+        Inclusive lower and upper bounds for log10[ma/M_host(z_acc)] in the caller-validated
+        domain.
+
+    Notes
+    -----
+    The equation is d ln(m)/dz = Phi(z) * [m/M_host(z)]**zeta(z). With nonnegative Phi,
+    integration from accretion to a lower redshift decreases mass. All masses must share the
+    caller unit. The iteration estimate excludes trapezoidal quadrature and interpolation
+    errors.
     """
 
     redshift: tuple[float, float]
     log10_mass_ratio: tuple[float, float]
 
     def __post_init__(self):
+        """Require finite increasing physical-domain bounds before accepting a validation claim.
+
+        Notes
+        -----
+        The equation is d ln(m)/dz = Phi(z) * [m/M_host(z)]**zeta(z). With nonnegative Phi,
+        integration from accretion to a lower redshift decreases mass. All masses must share the
+        caller unit. The iteration estimate excludes trapezoidal quadrature and interpolation
+        errors.
+        """
         for name in ("redshift", "log10_mass_ratio"):
             value = _real(getattr(self, name), name)
             if value.shape != (2,) or value[0] >= value[1]:
@@ -566,9 +1111,72 @@ class PicardMassLossSolver:
     Endpoint and full-history queries share the same nonlinear Picard updates.
     The iteration check does not bound quadrature/interpolation error; callers
     must verify those against a direct reference and grid refinement.
+
+    Parameters
+    ----------
+    rate : callable
+        Nonnegative Phi(z) in d ln(m)/dz; accepts scalar or one-dimensional redshifts.
+    exponent : callable
+        Dimensionless zeta(z) multiplying ln(m/M_host) in the tidal-loss law.
+    reference_mass : callable
+        Positive host/reference mass M_host(z), in the same units as accretion masses.
+    z_min : float
+        Lower or upper redshift extent declared by the caller; require -1 < z_min <= z_max.
+    z_max : float
+        Lower or upper redshift extent declared by the caller; require -1 < z_min <= z_max.
+    state_key : callable
+        Zero-argument callback returning an immutable equality-comparable identity covering
+        cosmology, units and every mutable coefficient input.
+    domain : PicardDomain, optional
+        Caller-validated redshift and initial mass-ratio bounds. None declares no such
+        restriction; it does not establish validation.
+
+    Notes
+    -----
+    The model supplies Phi, zeta and M_host in
+    dln(m)/dz=Phi(z)*exp(zeta(z)*ln(m/M_host(z))). Integrating toward lower redshift
+    therefore decreases mass when Phi is nonnegative. Use endpoint or history for guarded
+    Picard evaluation, direct for a DOP853 reference, and diagnostics for actual settings
+    and fallback counts. The caller state_key must change whenever any physical input
+    changes. Iteration estimates alone do not bound interpolation or quadrature error.
     """
 
     def __init__(self, rate, exponent, reference_mass, *, z_min, z_max, state_key, domain=None):
+        """Bind a model-owned tidal-loss equation to reusable numerical integration state.
+
+        Parameters
+        ----------
+        rate : callable
+            Nonnegative Phi(z) in d ln(m)/dz; accepts scalar or one-dimensional redshifts.
+        exponent : callable
+            Dimensionless zeta(z) multiplying ln(m/M_host) in the tidal-loss law.
+        reference_mass : callable
+            Positive host/reference mass M_host(z), in the same units as accretion masses.
+        z_min : float
+            Lower or upper redshift extent declared by the caller; require -1 < z_min <= z_max.
+        z_max : float
+            Lower or upper redshift extent declared by the caller; require -1 < z_min <= z_max.
+        state_key : callable
+            Zero-argument callback returning an immutable equality-comparable identity covering
+            cosmology, units and every mutable coefficient input.
+        domain : PicardDomain, optional
+            Caller-validated redshift and initial mass-ratio bounds. None declares no such
+            restriction; it does not establish validation.
+
+        Raises
+        ------
+        ValueError
+            If redshift bounds are non-finite, reversed, or at/below z=-1.
+        TypeError
+            If the physical callbacks or state_key are not callable.
+
+        Notes
+        -----
+        The equation is d ln(m)/dz = Phi(z) * [m/M_host(z)]**zeta(z). With nonnegative Phi,
+        integration from accretion to a lower redshift decreases mass. All masses must share the
+        caller unit. The iteration estimate excludes trapezoidal quadrature and interpolation
+        errors.
+        """
         for callback in (rate, exponent, reference_mass, state_key):
             if not callable(callback):
                 raise TypeError("Coefficients and state_key must be callable.")
@@ -587,6 +1195,22 @@ class PicardMassLossSolver:
         _state(self)
 
     def state_key(self):
+        """Combine callback identity, declared redshift extent and validated domain for cache
+        invalidation.
+
+        Returns
+        -------
+        tuple
+            State identity including callback objects and the caller physical-input key; not a
+            durable source hash.
+
+        Notes
+        -----
+        The equation is d ln(m)/dz = Phi(z) * [m/M_host(z)]**zeta(z). With nonnegative Phi,
+        integration from accretion to a lower redshift decreases mass. All masses must share the
+        caller unit. The iteration estimate excludes trapezoidal quadrature and interpolation
+        errors.
+        """
         return (
             self._input_key(),
             self.z_min,
@@ -598,15 +1222,75 @@ class PicardMassLossSolver:
         )
 
     def Phi(self, z):
+        """Evaluate the nonnegative tidal rate per unit redshift.
+
+        Parameters
+        ----------
+        z : float or array_like
+            Dimensionless redshift. The cosmological background requires z > -1; population
+            nodes use nonnegative redshifts.
+
+        Returns
+        -------
+        float or numpy.ndarray
+            Phi(z), broadcast to the redshift shape.
+
+        Notes
+        -----
+        The equation is d ln(m)/dz = Phi(z) * [m/M_host(z)]**zeta(z). With nonnegative Phi,
+        integration from accretion to a lower redshift decreases mass. All masses must share the
+        caller unit. The iteration estimate excludes trapezoidal quadrature and interpolation
+        errors.
+        """
         value = np.broadcast_to(_real(self._rate(z), "rate"), np.shape(z))
         if np.any(value < 0):
             raise ValueError("rate must be nonnegative.")
         return value
 
     def zetaMz(self, z):
+        """Evaluate the dimensionless host-mass-ratio exponent.
+
+        Parameters
+        ----------
+        z : float or array_like
+            Dimensionless redshift. The cosmological background requires z > -1; population
+            nodes use nonnegative redshifts.
+
+        Returns
+        -------
+        float or numpy.ndarray
+            zeta(z), broadcast to the redshift shape.
+
+        Notes
+        -----
+        The equation is d ln(m)/dz = Phi(z) * [m/M_host(z)]**zeta(z). With nonnegative Phi,
+        integration from accretion to a lower redshift decreases mass. All masses must share the
+        caller unit. The iteration estimate excludes trapezoidal quadrature and interpolation
+        errors.
+        """
         return np.broadcast_to(_real(self._exponent(z), "exponent"), np.shape(z))
 
     def Mzvir(self, z):
+        """Evaluate and cache a copy of the positive reference host mass.
+
+        Parameters
+        ----------
+        z : float or array_like
+            Dimensionless redshift. The cosmological background requires z > -1; population
+            nodes use nonnegative redshifts.
+
+        Returns
+        -------
+        float or numpy.ndarray
+            Reference mass M_host(z), in the caller mass unit and redshift shape.
+
+        Notes
+        -----
+        The equation is d ln(m)/dz = Phi(z) * [m/M_host(z)]**zeta(z). With nonnegative Phi,
+        integration from accretion to a lower redshift decreases mass. All masses must share the
+        caller unit. The iteration estimate excludes trapezoidal quadrature and interpolation
+        errors.
+        """
         _state(self)
         redshift = np.asarray(z, dtype=float)
         key = (redshift.shape, redshift.tobytes())
@@ -624,6 +1308,32 @@ class PicardMassLossSolver:
         return float(result) if result.ndim == 0 else result
 
     def outside_domain(self, z_acc, z_final, log10_ratio):
+        """Mark queries outside the model-supplied validation rectangle.
+
+        Parameters
+        ----------
+        z_acc : float or array_like
+            Dimensionless accretion redshift. History integration requires one scalar accretion
+            epoch.
+        z_final : float or array_like, optional
+            Target redshift no greater than the accretion redshift. Explicit tables use one
+            scalar target; None selects solver.z_min.
+        log10_ratio : array_like
+            Initial log10[ma/M_host(z_acc)] used for the caller-supplied domain decision.
+
+        Returns
+        -------
+        numpy.ndarray of bool
+            Broadcast mask for unsupported accretion/target redshifts or initial mass ratios;
+            all false if no domain was supplied.
+
+        Notes
+        -----
+        The equation is d ln(m)/dz = Phi(z) * [m/M_host(z)]**zeta(z). With nonnegative Phi,
+        integration from accretion to a lower redshift decreases mass. All masses must share the
+        caller unit. The iteration estimate excludes trapezoidal quadrature and interpolation
+        errors.
+        """
         a, z, ratio = np.broadcast_arrays(z_acc, z_final, log10_ratio)
         if self.domain is None:
             return np.zeros(a.shape, dtype=bool)
@@ -633,23 +1343,139 @@ class PicardMassLossSolver:
         return (a > hi_z + epsilon) | (z < lo_z) | (ratio < lo_m) | (ratio > hi_m + epsilon)
 
     def endpoint(self, ma, z_acc, z_final, **options):
-        """Return final masses, with broadcasting across mass and redshift."""
+        """Return final masses, with broadcasting across mass and redshift.
+
+        Parameters
+        ----------
+        ma : float or array_like
+            Positive subhalo mass at accretion, in the same units as reference_mass; endpoint
+            queries broadcast over mass and redshift.
+        z_acc : float or array_like
+            Dimensionless accretion redshift. History integration requires one scalar accretion
+            epoch.
+        z_final : float or array_like, optional
+            Target redshift no greater than the accretion redshift. Explicit tables use one
+            scalar target; None selects solver.z_min.
+        **options : dict
+            Keyword numerical settings accepted by endpoint_mass, including grid counts,
+            iteration count, interpolation and convergence_tolerance.
+
+        Returns
+        -------
+        float or numpy.ndarray
+            Guarded endpoint mass with broadcast mass/redshift shape.
+
+        Notes
+        -----
+        The equation is d ln(m)/dz = Phi(z) * [m/M_host(z)]**zeta(z). With nonnegative Phi,
+        integration from accretion to a lower redshift decreases mass. All masses must share the
+        caller unit. The iteration estimate excludes trapezoidal quadrature and interpolation
+        errors.
+        """
         return endpoint_mass(self, ma, z_acc, z_final, **options)
 
     def history(self, ma, z_acc, redshifts, **options):
-        """Return shape (n_redshifts, *mass_shape); scalar targets omit that axis."""
+        """Return shape (n_redshifts, *mass_shape); scalar targets omit that axis.
+
+        Parameters
+        ----------
+        ma : float or array_like
+            Positive subhalo mass at accretion, in the same units as reference_mass; endpoint
+            queries broadcast over mass and redshift.
+        z_acc : float or array_like
+            Dimensionless accretion redshift. History integration requires one scalar accretion
+            epoch.
+        redshifts : float or array_like
+            Scalar target or one-dimensional non-increasing redshift history, at or below the
+            scalar accretion redshift.
+        **options : dict
+            Keyword settings accepted by history_mass: n_integration, n_iterations, n_mass_nodes
+            and convergence_tolerance.
+
+        Returns
+        -------
+        float or numpy.ndarray
+            History mass with a leading redshift axis, or ma.shape for a scalar target.
+
+        Notes
+        -----
+        The equation is d ln(m)/dz = Phi(z) * [m/M_host(z)]**zeta(z). With nonnegative Phi,
+        integration from accretion to a lower redshift decreases mass. All masses must share the
+        caller unit. The iteration estimate excludes trapezoidal quadrature and interpolation
+        errors.
+        """
         return history_mass(self, ma, z_acc, redshifts, **options)
 
     def direct(self, ma, z_acc, redshifts, **options):
-        """High-accuracy DOP853 reference using ITAMAE's common ODE controller."""
+        """High-accuracy DOP853 reference using ITAMAE's common ODE controller.
+
+        Parameters
+        ----------
+        ma : float or array_like
+            Positive subhalo mass at accretion, in the same units as reference_mass; endpoint
+            queries broadcast over mass and redshift.
+        z_acc : float or array_like
+            Dimensionless accretion redshift. History integration requires one scalar accretion
+            epoch.
+        redshifts : float or array_like
+            Scalar target or one-dimensional non-increasing redshift history, at or below the
+            scalar accretion redshift.
+        **options : dict
+            Optional rtol and atol for direct_log_mass; these control local error in ln(m).
+
+        Returns
+        -------
+        float or numpy.ndarray
+            Direct log-mass ODE solution with the requested endpoint/history shape.
+
+        Notes
+        -----
+        The equation is d ln(m)/dz = Phi(z) * [m/M_host(z)]**zeta(z). With nonnegative Phi,
+        integration from accretion to a lower redshift decreases mass. All masses must share the
+        caller unit. The iteration estimate excludes trapezoidal quadrature and interpolation
+        errors.
+        """
         return direct_log_mass(self, ma, z_acc, redshifts, **options)
 
     def table(self, **options):
-        """Build an explicit table; use endpoint() for guarded cached queries."""
+        """Build an explicit table; use endpoint() for guarded cached queries.
+
+        Parameters
+        ----------
+        **options : dict
+            Keyword constructor settings for PicardMassLossTable, including target redshift and
+            table coordinates.
+
+        Returns
+        -------
+        PicardMassLossTable
+            Explicit endpoint table bound to the present physical state.
+
+        Notes
+        -----
+        The equation is d ln(m)/dz = Phi(z) * [m/M_host(z)]**zeta(z). With nonnegative Phi,
+        integration from accretion to a lower redshift decreases mass. All masses must share the
+        caller unit. The iteration estimate excludes trapezoidal quadrature and interpolation
+        errors.
+        """
         return PicardMassLossTable(self, **options)
 
     def diagnostics(self):
-        """Return JSON-compatible settings and actual fallback counts."""
+        """Return JSON-compatible settings and actual fallback counts.
+
+        Returns
+        -------
+        dict
+            JSON-compatible backend, actual cached-table/history settings, domain and fallback
+            events/counts for the current physical state.
+
+        Notes
+        -----
+        The equation is d ln(m)/dz = Phi(z) * [m/M_host(z)]**zeta(z). With nonnegative Phi,
+        integration from accretion to a lower redshift decreases mass. All masses must share the
+        caller unit. The iteration estimate excludes trapezoidal quadrature and interpolation
+        errors.
+        """
         _state(self)
         names = (
             "z_final",

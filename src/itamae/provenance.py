@@ -48,31 +48,121 @@ _COMPONENT_DISTRIBUTIONS = {"itamae": ITAMAE_DISTRIBUTION_NAME}
 
 
 def _normalize_distribution_name(package_name: str) -> str:
-    """Return the normalized Python distribution name used for identity matching."""
+    """Return the normalized Python distribution name used for identity matching.
+
+    Parameters
+    ----------
+    package_name : str
+        Logical component or installed Python distribution name whose own scientific
+        source/version is being identified.
+
+    Returns
+    -------
+    str
+        Canonical Python distribution spelling with separators normalized.
+
+    Notes
+    -----
+    This is reproducibility support: source identity records which equations and numerical
+    implementation produced a catalogue. A commit identifier alone does not establish
+    calibration, numerical accuracy, or cleanliness of uncommitted source changes.
+    """
     return _DISTRIBUTION_SEPARATOR_PATTERN.sub("-", package_name).lower()
 
 
 def _component_name(package_name: str) -> str:
-    """Return the canonical logical component name for a package/distribution name."""
+    """Return the canonical logical component name for a package/distribution name.
+
+    Parameters
+    ----------
+    package_name : str
+        Logical component or installed Python distribution name whose own scientific
+        source/version is being identified.
+
+    Returns
+    -------
+    str
+        Logical scientific component name after resolving distribution aliases.
+
+    Notes
+    -----
+    This is reproducibility support: source identity records which equations and numerical
+    implementation produced a catalogue. A commit identifier alone does not establish
+    calibration, numerical accuracy, or cleanliness of uncommitted source changes.
+    """
     normalized_name = _normalize_distribution_name(package_name)
     return _COMPONENT_ALIASES.get(normalized_name, normalized_name)
 
 
 def _distribution_name(package_name: str) -> str:
-    """Return the installed distribution name for a logical component or alias."""
+    """Return the installed distribution name for a logical component or alias.
+
+    Parameters
+    ----------
+    package_name : str
+        Logical component or installed Python distribution name whose own scientific
+        source/version is being identified.
+
+    Returns
+    -------
+    str
+        Installed distribution name corresponding to the requested component.
+
+    Notes
+    -----
+    This is reproducibility support: source identity records which equations and numerical
+    implementation produced a catalogue. A commit identifier alone does not establish
+    calibration, numerical accuracy, or cleanliness of uncommitted source changes.
+    """
     component_name = _component_name(package_name)
     return _COMPONENT_DISTRIBUTIONS.get(component_name, _normalize_distribution_name(package_name))
 
 
 def _valid_source_revision(value: Any) -> str | None:
-    """Return a full lowercase commit SHA or ``None`` for invalid values."""
+    """Return a full lowercase commit SHA or ``None`` for invalid values.
+
+    Parameters
+    ----------
+    value : array_like
+        Numerical input to be checked before use; shape and physical interpretation are set
+        by the caller and retained by the validation helper.
+
+    Returns
+    -------
+    str or None
+        Valid full lowercase source SHA, otherwise None.
+
+    Notes
+    -----
+    This is reproducibility support: source identity records which equations and numerical
+    implementation produced a catalogue. A commit identifier alone does not establish
+    calibration, numerical accuracy, or cleanliness of uncommitted source changes.
+    """
     if isinstance(value, str) and SOURCE_REVISION_PATTERN.fullmatch(value):
         return value
     return None
 
 
 def _source_checkout_root(module_file: str | None) -> Path | None:
-    """Return a repository root only for a recognized source layout."""
+    """Return a repository root only for a recognized source layout.
+
+    Parameters
+    ----------
+    module_file : str, optional
+        File belonging to the package being identified. Only its own recognized source
+        checkout may supply Git identity.
+
+    Returns
+    -------
+    pathlib.Path or None
+        This module package root only when it is its own Git repository.
+
+    Notes
+    -----
+    This is reproducibility support: source identity records which equations and numerical
+    implementation produced a catalogue. A commit identifier alone does not establish
+    calibration, numerical accuracy, or cleanliness of uncommitted source changes.
+    """
     if module_file is None:
         return None
     module_path = Path(module_file).resolve()
@@ -114,7 +204,25 @@ def _source_checkout_root(module_file: str | None) -> Path | None:
 
 
 def _project_version(module_file: str | None) -> str | None:
-    """Read a source checkout's project version when package metadata is absent."""
+    """Read a source checkout's project version when package metadata is absent.
+
+    Parameters
+    ----------
+    module_file : str, optional
+        File belonging to the package being identified. Only its own recognized source
+        checkout may supply Git identity.
+
+    Returns
+    -------
+    str or None
+        Version declared by this source project, if recoverable.
+
+    Notes
+    -----
+    This is reproducibility support: source identity records which equations and numerical
+    implementation produced a catalogue. A commit identifier alone does not establish
+    calibration, numerical accuracy, or cleanliness of uncommitted source changes.
+    """
     source_root = _source_checkout_root(module_file)
     if source_root is None:
         return None
@@ -130,7 +238,28 @@ def _project_version(module_file: str | None) -> str | None:
 
 
 def package_version(package_name: str, *, module_file: str | None = None) -> str:
-    """Resolve a distribution version from installed or source-project metadata."""
+    """Resolve a distribution version from installed or source-project metadata.
+
+    Parameters
+    ----------
+    package_name : str
+        Logical component or installed Python distribution name whose own scientific
+        source/version is being identified.
+    module_file : str, optional
+        File belonging to the package being identified. Only its own recognized source
+        checkout may supply Git identity.
+
+    Returns
+    -------
+    str
+        Installed or source-project version; unknown when unavailable.
+
+    Notes
+    -----
+    This is reproducibility support: source identity records which equations and numerical
+    implementation produced a catalogue. A commit identifier alone does not establish
+    calibration, numerical accuracy, or cleanliness of uncommitted source changes.
+    """
     try:
         return importlib_metadata.version(_distribution_name(package_name))
     except importlib_metadata.PackageNotFoundError:
@@ -138,7 +267,25 @@ def package_version(package_name: str, *, module_file: str | None = None) -> str
 
 
 def _direct_url_revision(package_name: str) -> str | None:
-    """Return a VCS commit recorded in a distribution's direct-url metadata."""
+    """Return a VCS commit recorded in a distribution's direct-url metadata.
+
+    Parameters
+    ----------
+    package_name : str
+        Logical component or installed Python distribution name whose own scientific
+        source/version is being identified.
+
+    Returns
+    -------
+    str or None
+        Exact VCS revision recorded by installation metadata, if present.
+
+    Notes
+    -----
+    This is reproducibility support: source identity records which equations and numerical
+    implementation produced a catalogue. A commit identifier alone does not establish
+    calibration, numerical accuracy, or cleanliness of uncommitted source changes.
+    """
     try:
         direct_url = importlib_metadata.distribution(_distribution_name(package_name)).read_text(
             "direct_url.json"
@@ -158,7 +305,25 @@ def _direct_url_revision(package_name: str) -> str | None:
 
 
 def _embedded_source_revision(package_name: str) -> str | None:
-    """Read a source revision embedded in an installed distribution."""
+    """Read a source revision embedded in an installed distribution.
+
+    Parameters
+    ----------
+    package_name : str
+        Logical component or installed Python distribution name whose own scientific
+        source/version is being identified.
+
+    Returns
+    -------
+    str or None
+        Source SHA embedded in the wheel/archive build descriptor.
+
+    Notes
+    -----
+    This is reproducibility support: source identity records which equations and numerical
+    implementation produced a catalogue. A commit identifier alone does not establish
+    calibration, numerical accuracy, or cleanliness of uncommitted source changes.
+    """
     module_name = _EMBEDDED_SOURCE_MODULES.get(_component_name(package_name))
     if module_name is None:
         return None
@@ -170,7 +335,25 @@ def _embedded_source_revision(package_name: str) -> str | None:
 
 
 def _git_revision(module_file: str | None) -> str | None:
-    """Return the current Git revision for a module in a source checkout."""
+    """Return the current Git revision for a module in a source checkout.
+
+    Parameters
+    ----------
+    module_file : str, optional
+        File belonging to the package being identified. Only its own recognized source
+        checkout may supply Git identity.
+
+    Returns
+    -------
+    str or None
+        HEAD of this package checkout only, never an enclosing unrelated repository.
+
+    Notes
+    -----
+    This is reproducibility support: source identity records which equations and numerical
+    implementation produced a catalogue. A commit identifier alone does not establish
+    calibration, numerical accuracy, or cleanliness of uncommitted source changes.
+    """
     source_root = _source_checkout_root(module_file)
     if source_root is None:
         return None
@@ -200,6 +383,27 @@ def source_revision(
     build-provenance module, so a parent repository or environment variable
     cannot change their reported revision. VCS-installed distributions use
     ``direct_url.json`` as a fallback.
+
+    Parameters
+    ----------
+    package_name : str
+        Logical component or installed Python distribution name whose own scientific
+        source/version is being identified.
+    module_file : str, optional
+        File belonging to the package being identified. Only its own recognized source
+        checkout may supply Git identity.
+
+    Returns
+    -------
+    str
+        Exact source revision; recognized components without durable attribution raise
+        RuntimeError.
+
+    Notes
+    -----
+    This is reproducibility support: source identity records which equations and numerical
+    implementation produced a catalogue. A commit identifier alone does not establish
+    calibration, numerical accuracy, or cleanliness of uncommitted source changes.
     """
     if _source_checkout_root(module_file) is not None:
         revision = _git_revision(module_file)
@@ -221,7 +425,28 @@ def source_revision(
 
 
 def _required_source_revision(package_name: str, *, module_file: str) -> str:
-    """Require an exact source revision for catalog metadata construction."""
+    """Require an exact source revision for catalog metadata construction.
+
+    Parameters
+    ----------
+    package_name : str
+        Logical component or installed Python distribution name whose own scientific
+        source/version is being identified.
+    module_file : str, optional
+        File belonging to the package being identified. Only its own recognized source
+        checkout may supply Git identity.
+
+    Returns
+    -------
+    str
+        Required exact component source revision for a scientific catalogue.
+
+    Notes
+    -----
+    This is reproducibility support: source identity records which equations and numerical
+    implementation produced a catalogue. A commit identifier alone does not establish
+    calibration, numerical accuracy, or cleanliness of uncommitted source changes.
+    """
     revision = source_revision(package_name, module_file=module_file)
     if revision == UNKNOWN_SOURCE_REVISION:
         raise RuntimeError(
@@ -246,7 +471,55 @@ def _build_metadata(
     canonical_unit_schema: str = CANONICAL_UNIT_SCHEMA_VERSION,
     extra: Mapping[str, Any] | None = None,
 ) -> CatalogMetadata:
-    """Build common source/backend metadata with explicit selection fields."""
+    """Build common source/backend metadata with explicit selection fields.
+
+    Parameters
+    ----------
+    variant : str
+        SASHIMI physical-variant label, recorded with the calculation specification.
+    distribution_name : str
+        Logical component or installed Python distribution name whose own scientific
+        source/version is being identified.
+    module_file : str, optional
+        File belonging to the package being identified. Only its own recognized source
+        checkout may supply Git identity.
+    model_identifier : str
+        Stable identifier of the physical and numerical prescription, used to distinguish
+        calculations and cached data.
+    backend_identifier : str
+        Identity of the cosmology, unit and array backends used for this calculation.
+    source_identifier : str
+        Declared source or fixture identity attached to this result, separate from package
+        version numbers.
+    selection_fields : Mapping[str, str]
+        Explicit historical-mode or current calculation-specification fields to record
+        without relabeling existing results.
+    variance_identifier : str
+        Identity of the named variance, spectrum or numerical evolution prescription used to
+        compute the catalogue.
+    power_identifier : str
+        Identity of the named variance, spectrum or numerical evolution prescription used to
+        compute the catalogue.
+    solver_identifier : str
+        Identity of the named variance, spectrum or numerical evolution prescription used to
+        compute the catalogue.
+    canonical_unit_schema : str
+        Version of the unit or catalogue schema required to interpret the numerical arrays.
+    extra : Mapping, optional
+        Additional named model/provenance information; reserved standard fields cannot be
+        overridden.
+
+    Returns
+    -------
+    CatalogMetadata
+        Validated attribution for the chosen physical and numerical calculation.
+
+    Notes
+    -----
+    This is reproducibility support: source identity records which equations and numerical
+    implementation produced a catalogue. A commit identifier alone does not establish
+    calibration, numerical accuracy, or cleanliness of uncommitted source changes.
+    """
     standard = {
         "sashimi_variant": variant,
         **selection_fields,
@@ -296,7 +569,55 @@ def build_migration_metadata(
     canonical_unit_schema: str = CANONICAL_UNIT_SCHEMA_VERSION,
     extra: Mapping[str, Any] | None = None,
 ) -> CatalogMetadata:
-    """Preserve the historical migration schema without relabeling old output."""
+    """Preserve the historical migration schema without relabeling old output.
+
+    Parameters
+    ----------
+    variant : str
+        SASHIMI physical-variant label, recorded with the calculation specification.
+    distribution_name : str
+        Logical component or installed Python distribution name whose own scientific
+        source/version is being identified.
+    module_file : str, optional
+        File belonging to the package being identified. Only its own recognized source
+        checkout may supply Git identity.
+    model_identifier : str
+        Stable identifier of the physical and numerical prescription, used to distinguish
+        calculations and cached data.
+    backend_identifier : str
+        Identity of the cosmology, unit and array backends used for this calculation.
+    source_identifier : str
+        Declared source or fixture identity attached to this result, separate from package
+        version numbers.
+    physics_mode : str
+        Historical A/B/C reference convention used only by the independent frozen-reference
+        fixture, not a current public population option.
+    variance_identifier : str
+        Identity of the named variance, spectrum or numerical evolution prescription used to
+        compute the catalogue.
+    power_identifier : str
+        Identity of the named variance, spectrum or numerical evolution prescription used to
+        compute the catalogue.
+    solver_identifier : str
+        Identity of the named variance, spectrum or numerical evolution prescription used to
+        compute the catalogue.
+    canonical_unit_schema : str
+        Version of the unit or catalogue schema required to interpret the numerical arrays.
+    extra : Mapping, optional
+        Additional named model/provenance information; reserved standard fields cannot be
+        overridden.
+
+    Returns
+    -------
+    CatalogMetadata
+        Historical migration metadata preserving its original interpretation.
+
+    Notes
+    -----
+    This is reproducibility support: source identity records which equations and numerical
+    implementation produced a catalogue. A commit identifier alone does not establish
+    calibration, numerical accuracy, or cleanliness of uncommitted source changes.
+    """
     return _build_metadata(
         variant=variant,
         distribution_name=distribution_name,
@@ -334,6 +655,53 @@ def build_calculation_metadata(
     by the variant. The removed product reproduction flag cannot be injected
     through extra metadata. Historical catalogs retain their own schema and
     are read unchanged; this builder performs no migration or reinterpretation.
+
+    Parameters
+    ----------
+    variant : str
+        SASHIMI physical-variant label, recorded with the calculation specification.
+    distribution_name : str
+        Logical component or installed Python distribution name whose own scientific
+        source/version is being identified.
+    module_file : str, optional
+        File belonging to the package being identified. Only its own recognized source
+        checkout may supply Git identity.
+    model_identifier : str
+        Stable identifier of the physical and numerical prescription, used to distinguish
+        calculations and cached data.
+    backend_identifier : str
+        Identity of the cosmology, unit and array backends used for this calculation.
+    source_identifier : str
+        Declared source or fixture identity attached to this result, separate from package
+        version numbers.
+    calculation_specification : str
+        Versioned identifier of the current physical and numerical calculation choices.
+    variance_identifier : str
+        Identity of the named variance, spectrum or numerical evolution prescription used to
+        compute the catalogue.
+    power_identifier : str
+        Identity of the named variance, spectrum or numerical evolution prescription used to
+        compute the catalogue.
+    solver_identifier : str
+        Identity of the named variance, spectrum or numerical evolution prescription used to
+        compute the catalogue.
+    canonical_unit_schema : str
+        Version of the unit or catalogue schema required to interpret the numerical arrays.
+    extra : Mapping, optional
+        Additional named model/provenance information; reserved standard fields cannot be
+        overridden.
+
+    Returns
+    -------
+    CatalogMetadata
+        Current calculation provenance with versioned specification and exact source
+        identities.
+
+    Notes
+    -----
+    This is reproducibility support: source identity records which equations and numerical
+    implementation produced a catalogue. A commit identifier alone does not establish
+    calibration, numerical accuracy, or cleanliness of uncommitted source changes.
     """
     if not isinstance(calculation_specification, str) or not calculation_specification.strip():
         raise ValueError("calculation_specification must be a non-empty versioned identifier.")

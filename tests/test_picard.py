@@ -9,6 +9,29 @@ from itamae.evolution import PicardDomain, PicardFallbackWarning, PicardMassLoss
 
 
 def make_solver(rate=0.3, exponent=0.04, domain=None):
+    """Bind a constant-coefficient tidal law to mutable state for cache and analytic-solution
+    checks.
+
+    Parameters
+    ----------
+    rate : float
+        Constant nonnegative tidal coefficient Phi in the analytic test law.
+    exponent : float
+        Constant dimensionless mass-ratio exponent zeta in the analytic test law.
+    domain : PicardDomain, optional
+        Caller-validated redshift and initial mass-ratio bounds. None declares no such
+        restriction; it does not establish validation.
+
+    Returns
+    -------
+    tuple
+        Picard solver and the mutable rate/host dictionary used by its physical-state key.
+
+    Notes
+    -----
+    This fixture/helper supports the controlled checks in this test module; its synthetic
+    values are not a calibrated halo model.
+    """
     state = {"rate": rate, "host": 1e12}
     solver = PicardMassLossSolver(
         lambda z: np.full_like(np.asarray(z, dtype=float), state["rate"]),
@@ -23,6 +46,36 @@ def make_solver(rate=0.3, exponent=0.04, domain=None):
 
 
 def exact(mass, za, z, rate=0.3, exponent=0.04, host=1e12):
+    """Evaluate the closed-form mass-loss solution for constant host, rate and exponent.
+
+    Parameters
+    ----------
+    mass : float or array_like
+        Positive halo mass. Use solar masses with the canonical backend; a supplied variance
+        prescription must use the same mass convention and factors of h.
+    za : float or array_like
+        Dimensionless accretion redshift. History integration requires one scalar accretion
+        epoch.
+    z : float or array_like
+        Dimensionless redshift. The cosmological background requires z > -1; population
+        nodes use nonnegative redshifts.
+    rate : float
+        Constant nonnegative tidal coefficient Phi in the analytic test law.
+    exponent : float
+        Constant dimensionless mass-ratio exponent zeta in the analytic test law.
+    host : float
+        Constant positive host mass in the same unit as mass.
+
+    Returns
+    -------
+    float or numpy.ndarray
+        Analytic evolved mass, using the exponential limit when zeta=0.
+
+    Notes
+    -----
+    This fixture/helper supports the controlled checks in this test module; its synthetic
+    values are not a calibrated halo model.
+    """
     if exponent == 0:
         return mass * np.exp(rate * (np.asarray(z) - za))
     return host * ((mass / host) ** -exponent - exponent * rate * (np.asarray(z) - za)) ** (
@@ -32,6 +85,25 @@ def exact(mass, za, z, rate=0.3, exponent=0.04, host=1e12):
 
 @pytest.mark.parametrize("exponent", [0.0, 0.04, -0.01])
 def test_endpoint_and_history_match_independent_analytic_solution(exponent):
+    """Recover the analytic tidal mass history for constant host and loss coefficients.
+
+    Parameters
+    ----------
+    exponent : float
+        Dimensionless exponent of the subhalo-to-host mass ratio in the analytic tidal-loss
+        law.
+
+    Notes
+    -----
+    Pass criteria: For exponents 0,0.04,-0.01, Picard masses agree within rtol=5e-4 and
+    DOP853 within 5e-10, including repeated outputs and an omitted accretion-time output.
+
+    Failure criteria: any mismatch with the stated value, shape or identity requirements
+    fails the test.
+
+    Scope: This controlled calculation does not calibrate a subhalo population against
+    simulations or observations.
+    """
     solver, _ = make_solver(exponent=exponent)
     masses = np.geomspace(1e2, 1e10, 17)
     z = np.array([5.0, 4.3, 2.0, 2.0, 0.0])
@@ -44,6 +116,19 @@ def test_endpoint_and_history_match_independent_analytic_solution(exponent):
 
 
 def test_grid_refinement_reduces_time_dependent_coefficient_error():
+    """Separate redshift-quadrature error from nonlinear Picard convergence.
+
+    Notes
+    -----
+    Pass criteria: For rate=0.1*z**2 and zero exponent, refinement from 33 to 129 nodes
+    reduces analytic endpoint error by more than tenfold and below 2e-4.
+
+    Failure criteria: any mismatch with the stated value, shape or identity requirements
+    fails the test.
+
+    Scope: This controlled calculation does not calibrate a subhalo population against
+    simulations or observations.
+    """
     solver, _ = make_solver(exponent=0.0)
     solver._rate = lambda z: 0.1 * np.asarray(z) ** 2
     mass, za = 1e6, 5.0
@@ -55,6 +140,19 @@ def test_grid_refinement_reduces_time_dependent_coefficient_error():
 
 
 def test_endpoint_broadcasting_and_history_shape():
+    """Keep accretion masses and requested epochs aligned in vectorized stripping queries.
+
+    Notes
+    -----
+    Pass criteria: Endpoint broadcasting and time-leading history shapes are correct;
+    zero-duration histories preserve mass; empty inputs preserve empty axes.
+
+    Failure criteria: any mismatch with the stated value, shape or identity requirements
+    fails the test.
+
+    Scope: This controlled calculation does not calibrate a subhalo population against
+    simulations or observations.
+    """
     solver, _ = make_solver()
     mass = np.array([[1e6], [1e8]])
     za = np.array([0.5, 2.0, 5.0])
@@ -67,6 +165,19 @@ def test_endpoint_broadcasting_and_history_shape():
 
 
 def test_cache_reuse_and_stale_table_rejection_after_provider_change():
+    """Recompute stripping when the physical mass-loss rate changes.
+
+    Notes
+    -----
+    Pass criteria: Unchanged state reuses a table; doubling the rate rejects the old table,
+    builds a replacement and lowers final mass.
+
+    Failure criteria: a stated numerical/identity mismatch, a missing required exception or
+    warning, or an unexpected calculation failure fails the test.
+
+    Scope: This controlled calculation does not calibrate a subhalo population against
+    simulations or observations.
+    """
     solver, state = make_solver()
     old = solver.endpoint(1e6, 3.0, 0.0)
     table = next(iter(solver._picard_tables.values()))
@@ -82,6 +193,25 @@ def test_cache_reuse_and_stale_table_rejection_after_provider_change():
 
 @pytest.mark.parametrize("which", ["endpoint", "history"])
 def test_domain_fallback_is_explicit_and_recorded(which):
+    """Use a direct physical integration outside the caller-validated Picard domain.
+
+    Parameters
+    ----------
+    which : str
+        Endpoint, full-history or direct tidal integration path under test.
+
+    Notes
+    -----
+    Pass criteria: A z_acc=8 query outside the declared domain warns, matches the analytic
+    solution to 5e-10, and records one fallback covering two masses in JSON-safe
+    diagnostics.
+
+    Failure criteria: a stated numerical/identity mismatch, a missing required exception or
+    warning, or an unexpected calculation failure fails the test.
+
+    Scope: This controlled calculation does not calibrate a subhalo population against
+    simulations or observations.
+    """
     solver, _ = make_solver(domain=PicardDomain((0.0, 7.0), (-12.0, 0.0)))
     with pytest.warns(PicardFallbackWarning, match="outside"):
         actual = getattr(solver, which)([1e6, 1e7], 8.0, 0.0)
@@ -94,6 +224,24 @@ def test_domain_fallback_is_explicit_and_recorded(which):
 
 @pytest.mark.parametrize("which", ["endpoint", "history"])
 def test_unconverged_iteration_uses_direct_reference(which):
+    """Avoid accepting an unconverged nonlinear mass-loss approximation.
+
+    Parameters
+    ----------
+    which : str
+        Endpoint, full-history or direct tidal integration path under test.
+
+    Notes
+    -----
+    Pass criteria: A deliberately difficult one-iteration case warns, returns the analytic
+    reference to 5e-10, and counts the fallback mass.
+
+    Failure criteria: a stated numerical/identity mismatch, a missing required exception or
+    warning, or an unexpected calculation failure fails the test.
+
+    Scope: This controlled calculation does not calibrate a subhalo population against
+    simulations or observations.
+    """
     solver, _ = make_solver(rate=2.0, exponent=0.1)
     with pytest.warns(PicardFallbackWarning, match="convergence"):
         actual = getattr(solver, which)(1e10, 7.0, 0.0, n_iterations=1)
@@ -112,12 +260,44 @@ def test_unconverged_iteration_uses_direct_reference(which):
     ],
 )
 def test_invalid_endpoint_options_fail(option):
+    """Reject resolution or interpolation settings that cannot define a valid stripping table.
+
+    Parameters
+    ----------
+    option : object
+        Controlled input supplied by the parametrization or fixture for the specific
+        physical/reference case described below.
+
+    Notes
+    -----
+    Pass criteria: Zero iterations, fractional node counts, Boolean counts, zero tolerance
+    and unknown interpolation each raise ValueError.
+
+    Failure criteria: a stated numerical/identity mismatch, a missing required exception or
+    warning, or an unexpected calculation failure fails the test.
+
+    Scope: This controlled calculation does not calibrate a subhalo population against
+    simulations or observations.
+    """
     solver, _ = make_solver()
     with pytest.raises(ValueError):
         solver.endpoint(1e6, 2.0, 0.0, **option)
 
 
 def test_bad_inputs_fail_without_clipping_or_extrapolation():
+    """Keep invalid masses and reversed cosmic evolution out of the stripping result.
+
+    Notes
+    -----
+    Pass criteria: Nonpositive mass, final redshift above accretion, NaN epochs, increasing
+    history grids, and direct table queries beyond bounds are rejected.
+
+    Failure criteria: a stated numerical/identity mismatch, a missing required exception or
+    warning, or an unexpected calculation failure fails the test.
+
+    Scope: This controlled calculation does not calibrate a subhalo population against
+    simulations or observations.
+    """
     solver, _ = make_solver()
     for mass, za, z in [(0.0, 2.0, 0.0), (1.0, 2.0, 3.0), (1.0, 2.0, np.nan)]:
         with pytest.raises(ValueError):
@@ -133,6 +313,24 @@ def test_bad_inputs_fail_without_clipping_or_extrapolation():
 
 @pytest.mark.parametrize("which", ["endpoint", "history", "direct"])
 def test_invalid_physical_callback_fails_in_every_path(which):
+    """Apply the same physical coefficient checks to Picard and direct integration.
+
+    Parameters
+    ----------
+    which : str
+        Endpoint, full-history or direct tidal integration path under test.
+
+    Notes
+    -----
+    Pass criteria: Negative or NaN stripping rates raise ValueError for endpoint, history
+    and direct paths.
+
+    Failure criteria: a stated numerical/identity mismatch, a missing required exception or
+    warning, or an unexpected calculation failure fails the test.
+
+    Scope: This controlled calculation does not calibrate a subhalo population against
+    simulations or observations.
+    """
     solver, state = make_solver()
     state["rate"] = -1.0
     with pytest.raises(ValueError, match="nonnegative"):
@@ -143,6 +341,19 @@ def test_invalid_physical_callback_fails_in_every_path(which):
 
 
 def test_mass_unit_rescaling_preserves_fractional_evolution():
+    """Make stripping depend on the subhalo-to-host mass ratio rather than a chosen mass unit.
+
+    Notes
+    -----
+    Pass criteria: Scaling host and subhalo masses together by 1e-30 preserves final masses
+    after rescaling to rtol=5e-14.
+
+    Failure criteria: any mismatch with the stated value, shape or identity requirements
+    fails the test.
+
+    Scope: This controlled calculation does not calibrate a subhalo population against
+    simulations or observations.
+    """
     reference, _ = make_solver()
     changed, state = make_solver()
     state["host"] *= 1e-30

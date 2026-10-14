@@ -7,7 +7,24 @@ import numpy as np
 
 
 def _validated_argument(argument: Any) -> np.ndarray:
-    """Return a finite nonnegative dimensionless window argument."""
+    """Return a finite nonnegative dimensionless window argument.
+
+    Parameters
+    ----------
+    argument : float or array_like
+        Nonnegative dimensionless Fourier-window argument x=kR/c; output retains its shape.
+
+    Returns
+    -------
+    numpy.ndarray
+        Finite nonnegative dimensionless smoothing arguments with the input shape.
+
+    Notes
+    -----
+    The window enters S(M) as W(kR/c)**2. Selecting a window and the mass-assignment
+    coefficient c is part of the physical prescription, distinct from resolving the
+    numerical integral.
+    """
     value = np.asarray(argument)
     if value.dtype.kind not in "iuf":
         raise ValueError("Window arguments must contain real numeric values.")
@@ -25,15 +42,49 @@ class SphericalTopHatWindow:
     -----
     The implementation uses a small-argument series for
     :math:`3(\sin x-x\cos x)/x^3` to avoid cancellation.
+
+    The window enters S(M) as W(kR/c)**2. Selecting a window and the mass-assignment
+    coefficient c is part of the physical prescription, distinct from resolving the
+    numerical integral.
     """
 
     @property
     def identifier(self) -> str:
-        """Return the stable window identifier."""
+        """Return the stable window identifier.
+
+        Returns
+        -------
+        str
+            Stable prescription identity for cache separation and catalogue provenance.
+
+        Notes
+        -----
+        The window enters S(M) as W(kR/c)**2. Selecting a window and the mass-assignment
+        coefficient c is part of the physical prescription, distinct from resolving the
+        numerical integral.
+        """
         return "window:spherical-top-hat:v1"
 
     def __call__(self, argument: Any) -> np.ndarray:
-        """Evaluate the window with scalar/array broadcasting."""
+        """Evaluate the window with scalar/array broadcasting.
+
+        Parameters
+        ----------
+        argument : float or array_like
+            Nonnegative dimensionless Fourier-window argument x=kR/c; output retains its shape.
+
+        Returns
+        -------
+        numpy.ndarray
+            Dimensionless window amplitude W(x), with the input shape; square it when forming
+            the variance integrand.
+
+        Notes
+        -----
+        The window enters S(M) as W(kR/c)**2. Selecting a window and the mass-assignment
+        coefficient c is part of the physical prescription, distinct from resolving the
+        numerical integral.
+        """
         x = _validated_argument(argument)
         result = np.empty_like(x, dtype=float)
         small = x < 1.0e-3
@@ -47,15 +98,52 @@ class SphericalTopHatWindow:
 
 @dataclass(frozen=True, slots=True)
 class SharpKWindow:
-    """Evaluate an ideal sharp cutoff in Fourier space."""
+    """Evaluate an ideal sharp cutoff in Fourier space.
+
+    Notes
+    -----
+    The window enters S(M) as W(kR/c)**2. Selecting a window and the mass-assignment
+    coefficient c is part of the physical prescription, distinct from resolving the
+    numerical integral.
+    """
 
     @property
     def identifier(self) -> str:
-        """Return the stable window identifier."""
+        """Return the stable window identifier.
+
+        Returns
+        -------
+        str
+            Stable prescription identity for cache separation and catalogue provenance.
+
+        Notes
+        -----
+        The window enters S(M) as W(kR/c)**2. Selecting a window and the mass-assignment
+        coefficient c is part of the physical prescription, distinct from resolving the
+        numerical integral.
+        """
         return "window:sharp-k:v1"
 
     def __call__(self, argument: Any) -> np.ndarray:
-        """Return one at and below the cutoff and zero above it."""
+        """Return one at and below the cutoff and zero above it.
+
+        Parameters
+        ----------
+        argument : float or array_like
+            Nonnegative dimensionless Fourier-window argument x=kR/c; output retains its shape.
+
+        Returns
+        -------
+        numpy.ndarray
+            Dimensionless window amplitude W(x), with the input shape; square it when forming
+            the variance integrand.
+
+        Notes
+        -----
+        The window enters S(M) as W(kR/c)**2. Selecting a window and the mass-assignment
+        coefficient c is part of the physical prescription, distinct from resolving the
+        numerical integral.
+        """
         return (_validated_argument(argument) <= 1.0).astype(float)
 
 

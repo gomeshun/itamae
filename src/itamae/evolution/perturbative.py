@@ -23,6 +23,12 @@ def shanks_transform(s0: Any, s1: Any, s2: Any, *, tolerance: float = 1e-14) -> 
     numpy.ndarray
         Accelerated estimate. ``s2`` is returned where the denominator is too
         small for a stable transformation.
+
+    Notes
+    -----
+    Picard iteration integrates the supplied equation on the requested grid. Sequence
+    acceleration and a finite iteration count need comparison with a converged direct
+    solution; neither proves accuracy for an arbitrary nonlinear mass-loss law.
     """
     if tolerance < 0.0 or not np.isfinite(tolerance):
         raise ValueError("Shanks tolerance must be finite and nonnegative.")
@@ -47,12 +53,19 @@ class PerturbativeEvolutionSolver:
         integration of the right-hand side evaluated at the initial state.
     shanks
         Apply elementwise Shanks acceleration to the final three iterates.
+    tolerance : float
+        Nonnegative denominator threshold for accepting Shanks acceleration, in the units of
+        the iterate sequence; not an error bound.
 
     Notes
     -----
     The supplied right-hand side must accept the full time grid and current
     trajectory, returning values broadcastable to the grid shape. Calibrated
     mass-loss equations remain owned by individual SASHIMI packages.
+
+    Picard iteration integrates the supplied equation on the requested grid. Sequence
+    acceleration and a finite iteration count need comparison with a converged direct
+    solution; neither proves accuracy for an arbitrary nonlinear mass-loss law.
     """
 
     order: int = 2
@@ -60,7 +73,14 @@ class PerturbativeEvolutionSolver:
     tolerance: float = 1e-14
 
     def __post_init__(self) -> None:
-        """Validate solver configuration."""
+        """Validate solver configuration.
+
+        Notes
+        -----
+        Picard iteration integrates the supplied equation on the requested grid. Sequence
+        acceleration and a finite iteration count need comparison with a converged direct
+        solution; neither proves accuracy for an arbitrary nonlinear mass-loss law.
+        """
         if isinstance(self.order, bool) or not isinstance(self.order, (int, np.integer)):
             raise TypeError("Perturbative order must be an integer.")
         if self.order < 0:
@@ -91,6 +111,18 @@ class PerturbativeEvolutionSolver:
             Strictly increasing or decreasing one-dimensional grid.
         args
             Additional positional arguments forwarded to ``rhs``.
+
+        Returns
+        -------
+        numpy.ndarray
+            Successive-Picard trajectory on t_grid, optionally accelerated using the last three
+            iterates.
+
+        Notes
+        -----
+        Picard iteration integrates the supplied equation on the requested grid. Sequence
+        acceleration and a finite iteration count need comparison with a converged direct
+        solution; neither proves accuracy for an arbitrary nonlinear mass-loss law.
         """
         time = np.asarray(t_grid, dtype=float)
         if time.ndim != 1 or time.size < 2:

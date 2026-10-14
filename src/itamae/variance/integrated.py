@@ -61,6 +61,11 @@ class IntegratedVarianceModel:
 
     WDM/FDM transfer functions and their physical parameters remain owned by
     the calling SASHIMI package.
+
+    EPS accretion uses S=sigma**2 and dS/dM. Keep the same transfer, growth, smoothing and
+    mass-unit conventions in both quantities; a derivative of sigma cannot substitute for
+    dS/dM. Validation rejects malformed inputs without clipping a physical variance or
+    abundance.
     """
 
     power: PowerSpectrum
@@ -77,7 +82,15 @@ class IntegratedVarianceModel:
     sharp_k_order: int = 8
 
     def __post_init__(self) -> None:
-        """Validate physical and numerical configuration."""
+        """Validate physical and numerical configuration.
+
+        Notes
+        -----
+        EPS accretion uses S=sigma**2 and dS/dM. Keep the same transfer, growth, smoothing and
+        mass-unit conventions in both quantities; a derivative of sigma cannot substitute for
+        dS/dM. Validation rejects malformed inputs without clipping a physical variance or
+        abundance.
+        """
         if not isinstance(self.power, PowerSpectrum):
             raise TypeError("power must implement the ITAMAE power-spectrum protocol.")
         if not isinstance(self.window, WindowFunction):
@@ -105,7 +118,20 @@ class IntegratedVarianceModel:
 
     @property
     def identifier(self) -> str:
-        """Return a complete numerical and physical-component identifier."""
+        """Return a complete numerical and physical-component identifier.
+
+        Returns
+        -------
+        str
+            Stable prescription identity for cache separation and catalogue provenance.
+
+        Notes
+        -----
+        EPS accretion uses S=sigma**2 and dS/dM. Keep the same transfer, growth, smoothing and
+        mass-unit conventions in both quantities; a derivative of sigma cannot substitute for
+        dS/dM. Validation rejects malformed inputs without clipping a physical variance or
+        abundance.
+        """
         growth = self.growth_identifier or "growth:redshift-independent"
         knots_digest = sha256(
             np.asarray(self._integration_breakpoints(), dtype="<f8").tobytes()
@@ -121,19 +147,71 @@ class IntegratedVarianceModel:
         )
 
     def _validated_mass(self, mass: Any) -> np.ndarray:
-        """Return finite positive mass values as a floating-point array."""
+        """Return finite positive mass values as a floating-point array.
+
+        Parameters
+        ----------
+        mass : float or array_like
+            Positive halo mass. Use solar masses with the canonical backend; a supplied variance
+            prescription must use the same mass convention and factors of h.
+
+        Returns
+        -------
+        numpy.ndarray
+            Positive finite halo masses retaining input shape.
+
+        Notes
+        -----
+        EPS accretion uses S=sigma**2 and dS/dM. Keep the same transfer, growth, smoothing and
+        mass-unit conventions in both quantities; a derivative of sigma cannot substitute for
+        dS/dM. Validation rejects malformed inputs without clipping a physical variance or
+        abundance.
+        """
         values = real_array(mass, "Mass")
         if not np.all(np.isfinite(values)) or np.any(values <= 0.0):
             raise ValueError("Masses must be finite and positive.")
         return values
 
     def _sharp_k_cutoff(self, mass: np.ndarray) -> np.ndarray:
-        """Return the mass-dependent sharp-k integration boundary."""
+        """Return the mass-dependent sharp-k integration boundary.
+
+        Parameters
+        ----------
+        mass : float or array_like
+            Positive halo mass. Use solar masses with the canonical backend; a supplied variance
+            prescription must use the same mass convention and factors of h.
+
+        Returns
+        -------
+        numpy.ndarray
+            Moving boundary k_c=filter_scale/R(M), in inverse length.
+
+        Notes
+        -----
+        EPS accretion uses S=sigma**2 and dS/dM. Keep the same transfer, growth, smoothing and
+        mass-unit conventions in both quantities; a derivative of sigma cannot substitute for
+        dS/dM. Validation rejects malformed inputs without clipping a physical variance or
+        abundance.
+        """
         radius = (3.0 * mass / (4.0 * np.pi * self.rho_mean)) ** (1.0 / 3.0)
         return self.filter_scale / radius
 
     def _integration_breakpoints(self) -> np.ndarray:
-        """Validate optional spectrum knots; smooth powers need not expose them."""
+        """Validate optional spectrum knots; smooth powers need not expose them.
+
+        Returns
+        -------
+        numpy.ndarray
+            Strictly increasing positive spectrum knots, or an empty array for a smooth
+            provider.
+
+        Notes
+        -----
+        EPS accretion uses S=sigma**2 and dS/dM. Keep the same transfer, growth, smoothing and
+        mass-unit conventions in both quantities; a derivative of sigma cannot substitute for
+        dS/dM. Validation rejects malformed inputs without clipping a physical variance or
+        abundance.
+        """
         knots = real_array(
             getattr(self.power, "integration_breakpoints", []), "Power integration breakpoints"
         )
@@ -149,7 +227,33 @@ class IntegratedVarianceModel:
         return knots
 
     def _sharp_k_cell_integrals(self, lower, upper, fractions, weights):
-        """Integrate fixed log-k cells with positive Gauss-Legendre weights."""
+        """Integrate fixed log-k cells with positive Gauss-Legendre weights.
+
+        Parameters
+        ----------
+        lower : numpy.ndarray
+            Lower or upper log-wavenumber boundary of each aligned sharp-k integration cell.
+        upper : numpy.ndarray
+            Lower or upper log-wavenumber boundary of each aligned sharp-k integration cell.
+        fractions : numpy.ndarray
+            Gauss-Legendre node positions mapped to the unit interval in each log-k cell.
+        weights : Mapping or array_like
+            Explicit nonnegative statistical factors, or the quadrature weights stated by the
+            calling routine. They are not inferred from node spacing.
+
+        Returns
+        -------
+        numpy.ndarray
+            Dimensionless variance contribution from each log-k interval; shape matches
+            lower/upper.
+
+        Notes
+        -----
+        EPS accretion uses S=sigma**2 and dS/dM. Keep the same transfer, growth, smoothing and
+        mass-unit conventions in both quantities; a derivative of sigma cannot substitute for
+        dS/dM. Validation rejects malformed inputs without clipping a physical variance or
+        abundance.
+        """
         width = upper - lower
         log_k = lower[:, None] + width[:, None] * fractions[None, :]
         # Only correct possible one-ulp endpoint excursions of exp(log(k));
@@ -175,6 +279,24 @@ class IntegratedVarianceModel:
         complete cells. This avoids moving the entire integration grid across
         spectral features and creating numerical fluctuations on cutoff plateaus.
         The final partial interval still ends at the physical moving boundary.
+
+        Parameters
+        ----------
+        mass : float or array_like
+            Positive halo mass. Use solar masses with the canonical backend; a supplied variance
+            prescription must use the same mass convention and factors of h.
+
+        Returns
+        -------
+        numpy.ndarray
+            Truncated sharp-k variance S(M,0) with mass input shape.
+
+        Notes
+        -----
+        EPS accretion uses S=sigma**2 and dS/dM. Keep the same transfer, growth, smoothing and
+        mass-unit conventions in both quantities; a derivative of sigma cannot substitute for
+        dS/dM. Validation rejects malformed inputs without clipping a physical variance or
+        abundance.
         """
         values = self._validated_mass(mass)
         flattened = values.reshape(-1)
@@ -218,7 +340,26 @@ class IntegratedVarianceModel:
         return result.reshape(values.shape)
 
     def _variance_z0(self, mass: Any) -> np.ndarray:
-        """Integrate the redshift-zero variance in bounded memory chunks."""
+        """Integrate the redshift-zero variance in bounded memory chunks.
+
+        Parameters
+        ----------
+        mass : float or array_like
+            Positive halo mass. Use solar masses with the canonical backend; a supplied variance
+            prescription must use the same mass convention and factors of h.
+
+        Returns
+        -------
+        numpy.ndarray
+            Window-smoothed linear variance S(M,0) over the configured wavenumber interval.
+
+        Notes
+        -----
+        EPS accretion uses S=sigma**2 and dS/dM. Keep the same transfer, growth, smoothing and
+        mass-unit conventions in both quantities; a derivative of sigma cannot substitute for
+        dS/dM. Validation rejects malformed inputs without clipping a physical variance or
+        abundance.
+        """
         if isinstance(self.window, SharpKWindow):
             return self._sharp_k_variance_z0(mass)
 
@@ -255,7 +396,26 @@ class IntegratedVarianceModel:
         return result.reshape(shape)
 
     def _growth(self, redshift: Any) -> np.ndarray:
-        """Evaluate and validate the optional growth factor."""
+        """Evaluate and validate the optional growth factor.
+
+        Parameters
+        ----------
+        redshift : float or array_like
+            Dimensionless redshift. The cosmological background requires z > -1; population
+            nodes use nonnegative redshifts.
+
+        Returns
+        -------
+        numpy.ndarray
+            Dimensionless D(z) with query shape, or unity when no growth law was supplied.
+
+        Notes
+        -----
+        EPS accretion uses S=sigma**2 and dS/dM. Keep the same transfer, growth, smoothing and
+        mass-unit conventions in both quantities; a derivative of sigma cannot substitute for
+        dS/dM. Validation rejects malformed inputs without clipping a physical variance or
+        abundance.
+        """
         redshift_array = real_array(redshift, "Redshift")
         if self.growth_function is None:
             return np.ones(redshift_array.shape, dtype=float)
@@ -268,13 +428,59 @@ class IntegratedVarianceModel:
         )
 
     def variance(self, mass: Any, z: Any = 0.0) -> np.ndarray:
-        r"""Return :math:`S(M,z)` with mass/redshift broadcasting."""
+        """Return :math:`S(M,z)` with mass/redshift broadcasting.
+
+        Parameters
+        ----------
+        mass : float or array_like
+            Positive halo mass. Use solar masses with the canonical backend; a supplied variance
+            prescription must use the same mass convention and factors of h.
+        z : float or array_like
+            Dimensionless redshift. The cosmological background requires z > -1; population
+            nodes use nonnegative redshifts.
+
+        Returns
+        -------
+        numpy.ndarray
+            Dimensionless linear variance S(M,z)=sigma(M,z)**2, with broadcast mass/redshift
+            shape.
+
+        Notes
+        -----
+        EPS accretion uses S=sigma**2 and dS/dM. Keep the same transfer, growth, smoothing and
+        mass-unit conventions in both quantities; a derivative of sigma cannot substitute for
+        dS/dM. Validation rejects malformed inputs without clipping a physical variance or
+        abundance.
+        """
         mass_array, redshift = coordinates(mass, z)
         with numerical_errors("Variance integration"):
             return self._variance_z0(mass_array) * self._growth(redshift) ** 2
 
     def sigma(self, mass: Any, z: Any = 0.0) -> np.ndarray:
-        r"""Return :math:`\sigma(M,z)=\sqrt{S(M,z)}`."""
+        r"""Return :math:`\sigma(M,z)=\sqrt{S(M,z)}`.
+
+        Parameters
+        ----------
+        mass : float or array_like
+            Positive halo mass. Use solar masses with the canonical backend; a supplied variance
+            prescription must use the same mass convention and factors of h.
+        z : float or array_like
+            Dimensionless redshift. The cosmological background requires z > -1; population
+            nodes use nonnegative redshifts.
+
+        Returns
+        -------
+        numpy.ndarray
+            Dimensionless rms density fluctuation sigma(M,z), with broadcast mass/redshift
+            shape.
+
+        Notes
+        -----
+        EPS accretion uses S=sigma**2 and dS/dM. Keep the same transfer, growth, smoothing and
+        mass-unit conventions in both quantities; a derivative of sigma cannot substitute for
+        dS/dM. Validation rejects malformed inputs without clipping a physical variance or
+        abundance.
+        """
         return np.sqrt(self.variance(mass, z))
 
     def dvariance_dmass(self, mass: Any, z: Any = 0.0) -> np.ndarray:
@@ -290,13 +496,56 @@ class IntegratedVarianceModel:
 
         when the physical cutoff lies inside the configured power-spectrum
         interval. Outside that interval the truncated integral is constant.
+
+        Parameters
+        ----------
+        mass : float or array_like
+            Positive halo mass. Use solar masses with the canonical backend; a supplied variance
+            prescription must use the same mass convention and factors of h.
+        z : float or array_like
+            Dimensionless redshift. The cosmological background requires z > -1; population
+            nodes use nonnegative redshifts.
+
+        Returns
+        -------
+        numpy.ndarray
+            Derivative dS/dM, in inverse mass units, with broadcast mass/redshift shape.
+
+        Notes
+        -----
+        EPS accretion uses S=sigma**2 and dS/dM. Keep the same transfer, growth, smoothing and
+        mass-unit conventions in both quantities; a derivative of sigma cannot substitute for
+        dS/dM. Validation rejects malformed inputs without clipping a physical variance or
+        abundance.
         """
         mass_array, redshift = coordinates(mass, z)
         with numerical_errors("Variance derivative"):
             return self._dvariance_dmass(mass_array, redshift)
 
     def _dvariance_dmass(self, mass_array, redshift):
-        """Evaluate the derivative after validating public coordinates."""
+        """Evaluate the derivative after validating public coordinates.
+
+        Parameters
+        ----------
+        mass_array : float or array_like
+            Positive halo mass. Use solar masses with the canonical backend; a supplied variance
+            prescription must use the same mass convention and factors of h.
+        redshift : float or array_like
+            Dimensionless redshift. The cosmological background requires z > -1; population
+            nodes use nonnegative redshifts.
+
+        Returns
+        -------
+        numpy.ndarray
+            dS/dM with the validated broadcast coordinate shape and inverse mass units.
+
+        Notes
+        -----
+        EPS accretion uses S=sigma**2 and dS/dM. Keep the same transfer, growth, smoothing and
+        mass-unit conventions in both quantities; a derivative of sigma cannot substitute for
+        dS/dM. Validation rejects malformed inputs without clipping a physical variance or
+        abundance.
+        """
         self._validated_mass(mass_array)
         if isinstance(self.window, SharpKWindow):
             cutoff = self._sharp_k_cutoff(mass_array)

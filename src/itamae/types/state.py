@@ -10,7 +10,29 @@ Array = np.ndarray
 
 
 def _aligned_arrays(owner: str, values: Mapping[str, Any]) -> dict[str, Array]:
-    """Convert state values to arrays and require one common shape."""
+    """Convert state values to arrays and require one common shape.
+
+    Parameters
+    ----------
+    owner : str
+        Name of the quantity or component included in an error or provenance record so an
+        invalid scientific input can be located.
+    values : Mapping or array_like
+        Named physical fields or aligned numerical values supplied by the caller; each
+        population field must refer to the same nodes.
+
+    Returns
+    -------
+    dict[str, numpy.ndarray]
+        Finite physical fields with one common shape.
+
+    Notes
+    -----
+    All populated fields describe the same aligned host or subhalo nodes. Canonical
+    dimensional fields use Msun, Mpc, km/s and Gyr; model-specific profile and orbit
+    meanings must be declared in their names or metadata. Containers validate
+    representation, not the evolution law.
+    """
     arrays = {name: np.asarray(value) for name, value in values.items()}
     shapes = {value.shape for value in arrays.values()}
     if len(shapes) > 1:
@@ -22,7 +44,32 @@ def _aligned_arrays(owner: str, values: Mapping[str, Any]) -> dict[str, Array]:
 
 
 def _validate_weight(name: str, value: Any, shape: tuple[int, ...]) -> Array:
-    """Return one finite, nonnegative weight array with the expected shape."""
+    """Return one finite, nonnegative weight array with the expected shape.
+
+    Parameters
+    ----------
+    name : str
+        Name of the quantity or component included in an error or provenance record so an
+        invalid scientific input can be located.
+    value : array_like
+        Numerical input to be checked before use; shape and physical interpretation are set
+        by the caller and retained by the validation helper.
+    shape : tuple of int
+        Required population or coordinate shape. Extra axes cannot be silently treated as
+        additional objects.
+
+    Returns
+    -------
+    numpy.ndarray
+        Finite nonnegative weight values with exactly the required node shape.
+
+    Notes
+    -----
+    All populated fields describe the same aligned host or subhalo nodes. Canonical
+    dimensional fields use Msun, Mpc, km/s and Gyr; model-specific profile and orbit
+    meanings must be declared in their names or metadata. Containers validate
+    representation, not the evolution law.
+    """
     array = np.asarray(value, dtype=float)
     if array.shape != shape:
         raise ValueError(f"{name} has shape {array.shape}; expected {shape}.")
@@ -33,7 +80,43 @@ def _validate_weight(name: str, value: Any, shape: tuple[int, ...]) -> Array:
 
 @dataclass(frozen=True, slots=True)
 class HostState:
-    """Describe a host halo at one or more aligned redshifts."""
+    """Describe a host halo at one or more aligned redshifts.
+
+    Parameters
+    ----------
+    redshift : float or array_like
+        Dimensionless redshift. The cosmological background requires z > -1; population
+        nodes use nonnegative redshifts.
+    time : float or array_like
+        Evolution coordinate or cosmic time, in the units of the supplied equation;
+        canonical state times are in Gyr.
+    m200 : array_like
+        Halo mass within 200 times critical density, in solar masses under the canonical
+        unit schema; aligned with the population coordinates.
+    mvir : array_like
+        Virial halo mass in solar masses under the canonical unit schema. It is distinct
+        from M200 and must be supplied with the model conversion.
+    r200 : float or array_like
+        Physical radius in Mpc under the canonical unit schema; use the same length
+        convention as the profile.
+    rvir : float or array_like
+        Physical radius in Mpc under the canonical unit schema; use the same length
+        convention as the profile.
+    concentration : array_like
+        Positive dimensionless halo concentration aligned with the accretion nodes; its
+        radius definition (r200/r_s or rvir/r_s) must match the supplied mass and structural
+        prescription.
+    metadata : CatalogMetadata or Mapping
+        Physical model, backend, unit and source identities needed to interpret or combine
+        the nodes.
+
+    Notes
+    -----
+    All populated fields describe the same aligned host or subhalo nodes. Canonical
+    dimensional fields use Msun, Mpc, km/s and Gyr; model-specific profile and orbit
+    meanings must be declared in their names or metadata. Containers validate
+    representation, not the evolution law.
+    """
 
     redshift: Array
     time: Array
@@ -45,7 +128,15 @@ class HostState:
     metadata: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        """Validate shape alignment and freeze metadata."""
+        """Validate shape alignment and freeze metadata.
+
+        Notes
+        -----
+        All populated fields describe the same aligned host or subhalo nodes. Canonical
+        dimensional fields use Msun, Mpc, km/s and Gyr; model-specific profile and orbit
+        meanings must be declared in their names or metadata. Containers validate
+        representation, not the evolution law.
+        """
         arrays = _aligned_arrays(
             type(self).__name__,
             {
@@ -70,7 +161,46 @@ class HostState:
 
 @dataclass(frozen=True, slots=True)
 class AccretionBatch:
-    """Store accretion nodes and independent quadrature weights."""
+    """Store accretion nodes and independent quadrature weights.
+
+    Parameters
+    ----------
+    m200_acc : array_like
+        Halo mass within 200 times critical density, in solar masses under the canonical
+        unit schema; aligned with the population coordinates.
+    mvir_acc : array_like
+        Virial halo mass in solar masses under the canonical unit schema. It is distinct
+        from M200 and must be supplied with the model conversion.
+    z_acc : float or array_like
+        Dimensionless accretion redshift. History integration requires one scalar accretion
+        epoch.
+    concentration_acc : array_like
+        Positive dimensionless halo concentration aligned with the accretion nodes; its
+        radius definition (r200/r_s or rvir/r_s) must match the supplied mass and structural
+        prescription.
+    weight_base : array_like
+        Expected population abundance from the accretion quadrature, before independent
+        concentration, orbit and survival factors.
+    weight_concentration : array_like
+        Normalized concentration-quadrature probability, kept distinct from the accretion
+        abundance.
+    metadata : CatalogMetadata or Mapping
+        Physical model, backend, unit and source identities needed to interpret or combine
+        the nodes.
+    weight_host_history : array_like, optional
+        Independent nonnegative host-history or orbit quadrature factor, included once in
+        the final population weight.
+    weight_orbit : array_like, optional
+        Independent nonnegative host-history or orbit quadrature factor, included once in
+        the final population weight.
+
+    Notes
+    -----
+    All populated fields describe the same aligned host or subhalo nodes. Canonical
+    dimensional fields use Msun, Mpc, km/s and Gyr; model-specific profile and orbit
+    meanings must be declared in their names or metadata. Containers validate
+    representation, not the evolution law.
+    """
 
     m200_acc: Array
     mvir_acc: Array
@@ -83,7 +213,15 @@ class AccretionBatch:
     weight_orbit: Array | None = None
 
     def __post_init__(self) -> None:
-        """Validate node alignment, weights, and metadata."""
+        """Validate node alignment, weights, and metadata.
+
+        Notes
+        -----
+        All populated fields describe the same aligned host or subhalo nodes. Canonical
+        dimensional fields use Msun, Mpc, km/s and Gyr; model-specific profile and orbit
+        meanings must be declared in their names or metadata. Containers validate
+        representation, not the evolution law.
+        """
         arrays = _aligned_arrays(
             type(self).__name__,
             {
@@ -112,13 +250,38 @@ class AccretionBatch:
 
 @dataclass(frozen=True, slots=True)
 class ProfileParameters:
-    """Store aligned named parameters for an arbitrary halo profile."""
+    """Store aligned named parameters for an arbitrary halo profile.
+
+    Parameters
+    ----------
+    name : str
+        Name of the quantity or component included in an error or provenance record so an
+        invalid scientific input can be located.
+    values : Mapping or array_like
+        Named physical fields or aligned numerical values supplied by the caller; each
+        population field must refer to the same nodes.
+
+    Notes
+    -----
+    All populated fields describe the same aligned host or subhalo nodes. Canonical
+    dimensional fields use Msun, Mpc, km/s and Gyr; model-specific profile and orbit
+    meanings must be declared in their names or metadata. Containers validate
+    representation, not the evolution law.
+    """
 
     name: str
     values: Mapping[str, Array]
 
     def __post_init__(self) -> None:
-        """Require a named profile with at least one aligned parameter."""
+        """Require a named profile with at least one aligned parameter.
+
+        Notes
+        -----
+        All populated fields describe the same aligned host or subhalo nodes. Canonical
+        dimensional fields use Msun, Mpc, km/s and Gyr; model-specific profile and orbit
+        meanings must be declared in their names or metadata. Containers validate
+        representation, not the evolution law.
+        """
         if not self.name.strip():
             raise ValueError("Profile name must be a non-empty string.")
         if not self.values:
@@ -129,7 +292,31 @@ class ProfileParameters:
 
 @dataclass(slots=True)
 class SubhaloState:
-    """Describe evolved internal subhalo properties."""
+    """Describe evolved internal subhalo properties.
+
+    Parameters
+    ----------
+    m_bound : array_like
+        Nonnegative bound subhalo mass, in solar masses under the canonical state
+        convention.
+    profile : ProfileParameters
+        Aligned named internal halo-profile parameters and their declared physical meaning.
+    alive : array_like of bool
+        Survival state aligned with each subhalo profile; a false value denotes disruption
+        in the model convention.
+    flags : array_like
+        Finite model-defined diagnostic flags aligned with the evolved subhalo population.
+    extra : Mapping, optional
+        Additional named model/provenance information; reserved standard fields cannot be
+        overridden.
+
+    Notes
+    -----
+    All populated fields describe the same aligned host or subhalo nodes. Canonical
+    dimensional fields use Msun, Mpc, km/s and Gyr; model-specific profile and orbit
+    meanings must be declared in their names or metadata. Containers validate
+    representation, not the evolution law.
+    """
 
     m_bound: Array
     profile: ProfileParameters
@@ -138,7 +325,15 @@ class SubhaloState:
     extra: Mapping[str, Array] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        """Validate state arrays against the profile batch shape."""
+        """Validate state arrays against the profile batch shape.
+
+        Notes
+        -----
+        All populated fields describe the same aligned host or subhalo nodes. Canonical
+        dimensional fields use Msun, Mpc, km/s and Gyr; model-specific profile and orbit
+        meanings must be declared in their names or metadata. Containers validate
+        representation, not the evolution law.
+        """
         profile_shape = next(iter(self.profile.values.values())).shape
         reserved = {"m_bound", "alive", "flags"}.intersection(self.extra)
         if reserved:
@@ -164,7 +359,43 @@ class SubhaloState:
 
 @dataclass(frozen=True, slots=True)
 class OrbitalState:
-    """Represent optional instantaneous or orbit-averaged spatial information."""
+    """Represent optional instantaneous or orbit-averaged spatial information.
+
+    Parameters
+    ----------
+    energy : float or array_like
+        Specific orbital energy, in the same velocity-squared units as the supplied
+        potential.
+    angular_momentum : float or array_like
+        Nonnegative specific angular momentum, in length times velocity units consistent
+        with the potential.
+    radius : float or array_like
+        Positive radius or radial bound in one consistent length unit. Pericenter and
+        apocenter bound the allowed radial motion.
+    radial_velocity : array_like, optional
+        Orbital velocity component in the common length/time convention of the state.
+    tangential_velocity : array_like, optional
+        Orbital velocity component in the common length/time convention of the state.
+    pericenter : float or array_like
+        Positive radius or radial bound in one consistent length unit. Pericenter and
+        apocenter bound the allowed radial motion.
+    apocenter : float or array_like
+        Positive radius or radial bound in one consistent length unit. Pericenter and
+        apocenter bound the allowed radial motion.
+    phase : array_like, optional
+        Orbital phase in the convention named by representation; no orbit model is assumed
+        by this container.
+    representation : str
+        Explicit meaning of the spatial fields or radial weights, such as shell-probability;
+        not an implicit volume-density convention.
+
+    Notes
+    -----
+    All populated fields describe the same aligned host or subhalo nodes. Canonical
+    dimensional fields use Msun, Mpc, km/s and Gyr; model-specific profile and orbit
+    meanings must be declared in their names or metadata. Containers validate
+    representation, not the evolution law.
+    """
 
     energy: Array | None = None
     angular_momentum: Array | None = None
@@ -177,7 +408,15 @@ class OrbitalState:
     representation: str = "unspecified"
 
     def __post_init__(self) -> None:
-        """Validate alignment and require explicit spatial semantics."""
+        """Validate alignment and require explicit spatial semantics.
+
+        Notes
+        -----
+        All populated fields describe the same aligned host or subhalo nodes. Canonical
+        dimensional fields use Msun, Mpc, km/s and Gyr; model-specific profile and orbit
+        meanings must be declared in their names or metadata. Containers validate
+        representation, not the evolution law.
+        """
         populated = {
             name: value
             for name in (

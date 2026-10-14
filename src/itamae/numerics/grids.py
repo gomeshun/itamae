@@ -12,6 +12,17 @@ def log_grid(minimum: float, maximum: float, size: int) -> np.ndarray:
         Positive finite endpoints with ``maximum > minimum``.
     size
         Number of nodes, including both endpoints.
+
+    Returns
+    -------
+    numpy.ndarray
+        size positive logarithmically spaced nodes including both endpoints.
+
+    Notes
+    -----
+    Grid endpoints define the physical integration domain. Increasing node count can test
+    numerical convergence, but a finite grid does not establish completeness below the
+    chosen minimum mass or above the maximum redshift.
     """
     if not np.isfinite(minimum) or not np.isfinite(maximum):
         raise ValueError("Logarithmic-grid endpoints must be finite.")
@@ -42,11 +53,20 @@ def redshift_grid(
     include_maximum
         Append ``maximum`` when it is not already on the regular grid.
 
+    Returns
+    -------
+    numpy.ndarray
+        Increasing accretion redshifts above target and no greater than maximum.
+
     Notes
     -----
     The final interval may be shorter than ``step`` when
     ``include_maximum=True``. This behavior makes the integration domain
     explicit and avoids silently extending beyond ``maximum``.
+
+    Grid endpoints define the physical integration domain. Increasing node count can test
+    numerical convergence, but a finite grid does not establish completeness below the
+    chosen minimum mass or above the maximum redshift.
     """
     if not all(np.isfinite(value) for value in (target, maximum, step)):
         raise ValueError("Redshift-grid parameters must be finite.")
