@@ -315,8 +315,9 @@ class NativeFlatLCDM:
         References
         ----------
 
-        .. [cite-growth] Carroll, Press & Turner (1992), The Cosmological Constant, Section 3.5.
+        .. [cite-growth] Carroll, Press & Turner (1992), The Cosmological Constant, Section 3.5, Eq. (29).
             https://doi.org/10.1146/annurev.aa.30.090192.002435
+            Full text: https://ned.ipac.caltech.edu/level5/Carroll/Carroll3_5.html
         """
         z = _redshift(z)
         om = self.omega_m(z)
@@ -354,7 +355,7 @@ class NativeFlatLCDM:
         References
         ----------
 
-        .. [cite-ludlow] Ludlow et al. (2016), The mass-concentration-redshift relation of cold and warm dark matter haloes, Appendix C.
+        .. [cite-ludlow] Ludlow et al. (2016), The mass-concentration-redshift relation of cold and warm dark matter haloes, Eq. (3) and Appendix C, Eqs. (C8)-(C12).
             https://arxiv.org/abs/1601.02624
         """
         return 1.686 / self.growth_factor(z)

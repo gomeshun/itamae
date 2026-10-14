@@ -108,6 +108,11 @@ def invert_nfw_mass_function(y):
     G in Mpc*(km/s)^2/Msun and its zero at infinity, so use Mpc and Msun/Mpc^3 for physical
     profile parameters.
 
+    Navarro et al. print the density and circular-speed relations. The potential with zero
+    at infinity and numerical or Lambert-W inversion of the enclosed-mass factor are
+    derived consequences of that profile; these closed forms and solver controls are not
+    equations printed in the cited paper.
+
     References
     ----------
 
@@ -332,6 +337,11 @@ class NFWProfile:
         The enclosed-mass normalization is M(<r)=4*pi*rho_s*r_s**3*f(r/r_s). The potential fixes
         G in Mpc*(km/s)^2/Msun and its zero at infinity, so use Mpc and Msun/Mpc^3 for physical
         profile parameters.
+
+        Navarro et al. print the density and circular-speed relations. The potential with zero
+        at infinity and numerical or Lambert-W inversion of the enclosed-mass factor are
+        derived consequences of that profile; these closed forms and solver controls are not
+        equations printed in the cited paper.
 
         References
         ----------

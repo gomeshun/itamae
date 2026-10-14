@@ -257,7 +257,7 @@ class ColossusCosmology:
         References
         ----------
 
-        .. [cite-ludlow] Ludlow et al. (2016), The mass-concentration-redshift relation of cold and warm dark matter haloes, Appendix C.
+        .. [cite-ludlow] Ludlow et al. (2016), The mass-concentration-redshift relation of cold and warm dark matter haloes, Eq. (3) and Appendix C, Eqs. (C8)-(C12).
             https://arxiv.org/abs/1601.02624
         """
         return 1.686 / self.growth_factor(z)
