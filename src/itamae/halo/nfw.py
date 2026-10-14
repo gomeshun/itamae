@@ -39,7 +39,7 @@ def _real_numeric(value, name):
 
 
 def nfw_mass_function(x):
-    """Return ``ln(1+x)-x/(1+x)`` for finite nonnegative ``x``.
+    r"""Return ``ln(1+x)-x/(1+x)`` for finite nonnegative ``x``.
 
     A small-radius series avoids subtracting two nearly equal terms. Values
     smaller than the floating-point subnormal range can still underflow.
@@ -56,9 +56,18 @@ def nfw_mass_function(x):
 
     Notes
     -----
+    The enclosed-mass factor ln(1+c)-c/(1+c) follows the NFW density profile. Algebraic
+    inversion tolerances concern this profile identity, not agreement with simulated halos.
+
     The enclosed-mass normalization is M(<r)=4*pi*rho_s*r_s**3*f(r/r_s). The potential fixes
     G in Mpc*(km/s)^2/Msun and its zero at infinity, so use Mpc and Msun/Mpc^3 for physical
     profile parameters.
+
+    References
+    ----------
+
+    .. [cite-nfw] Navarro, Frenk & White (1997), A Universal Density Profile from Hierarchical Clustering.
+        https://arxiv.org/abs/astro-ph/9611107
     """
     x = _real_numeric(x, "NFW radius ratio")
     if not np.all(np.isfinite(x)) or np.any(x < 0.0):
@@ -73,7 +82,7 @@ def nfw_mass_function(x):
 
 
 def invert_nfw_mass_function(y):
-    """Invert the NFW enclosed-mass function over representable positive radii.
+    r"""Invert the NFW enclosed-mass function over representable positive radii.
 
     Solve in log-radius so an absolute tolerance in radius cannot erase a
     small, positive solution. The output retains the input shape.
@@ -92,9 +101,18 @@ def invert_nfw_mass_function(y):
 
     Notes
     -----
+    The enclosed-mass factor ln(1+c)-c/(1+c) follows the NFW density profile. Algebraic
+    inversion tolerances concern this profile identity, not agreement with simulated halos.
+
     The enclosed-mass normalization is M(<r)=4*pi*rho_s*r_s**3*f(r/r_s). The potential fixes
     G in Mpc*(km/s)^2/Msun and its zero at infinity, so use Mpc and Msun/Mpc^3 for physical
     profile parameters.
+
+    References
+    ----------
+
+    .. [cite-nfw] Navarro, Frenk & White (1997), A Universal Density Profile from Hierarchical Clustering.
+        https://arxiv.org/abs/astro-ph/9611107
     """
     y = _real_numeric(y, "Enclosed-mass function")
     if not np.all(np.isfinite(y)) or np.any(y < 0.0):
@@ -171,7 +189,7 @@ def invert_nfw_mass_function(y):
 
 @dataclass(frozen=True, slots=True)
 class NFWProfile:
-    """Spherical NFW profile parameterized by scale radius and density.
+    r"""Spherical NFW profile parameterized by scale radius and density.
 
     Parameters
     ----------
@@ -182,22 +200,40 @@ class NFWProfile:
 
     Notes
     -----
+    The enclosed-mass factor ln(1+c)-c/(1+c) follows the NFW density profile. Algebraic
+    inversion tolerances concern this profile identity, not agreement with simulated halos.
+
     The enclosed-mass normalization is M(<r)=4*pi*rho_s*r_s**3*f(r/r_s). The potential fixes
     G in Mpc*(km/s)^2/Msun and its zero at infinity, so use Mpc and Msun/Mpc^3 for physical
     profile parameters.
+
+    References
+    ----------
+
+    .. [cite-nfw] Navarro, Frenk & White (1997), A Universal Density Profile from Hierarchical Clustering.
+        https://arxiv.org/abs/astro-ph/9611107
     """
 
     r_s: float
     rho_s: float
 
     def __post_init__(self):
-        """Require a physical finite positive scale radius and density.
+        r"""Require a physical finite positive scale radius and density.
 
         Notes
         -----
+        The enclosed-mass factor ln(1+c)-c/(1+c) follows the NFW density profile. Algebraic
+        inversion tolerances concern this profile identity, not agreement with simulated halos.
+
         The enclosed-mass normalization is M(<r)=4*pi*rho_s*r_s**3*f(r/r_s). The potential fixes
         G in Mpc*(km/s)^2/Msun and its zero at infinity, so use Mpc and Msun/Mpc^3 for physical
         profile parameters.
+
+        References
+        ----------
+
+        .. [cite-nfw] Navarro, Frenk & White (1997), A Universal Density Profile from Hierarchical Clustering.
+            https://arxiv.org/abs/astro-ph/9611107
         """
         for name in ("r_s", "rho_s"):
             value = _real_numeric(getattr(self, name), name)
@@ -205,7 +241,7 @@ class NFWProfile:
                 raise ValueError(f"{name} must be finite and positive.")
 
     def enclosed_mass(self, r):
-        """Return enclosed mass in the profile's mass unit.
+        r"""Return enclosed mass in the profile's mass unit.
 
         Parameters
         ----------
@@ -220,9 +256,18 @@ class NFWProfile:
 
         Notes
         -----
+        The enclosed-mass factor ln(1+c)-c/(1+c) follows the NFW density profile. Algebraic
+        inversion tolerances concern this profile identity, not agreement with simulated halos.
+
         The enclosed-mass normalization is M(<r)=4*pi*rho_s*r_s**3*f(r/r_s). The potential fixes
         G in Mpc*(km/s)^2/Msun and its zero at infinity, so use Mpc and Msun/Mpc^3 for physical
         profile parameters.
+
+        References
+        ----------
+
+        .. [cite-nfw] Navarro, Frenk & White (1997), A Universal Density Profile from Hierarchical Clustering.
+            https://arxiv.org/abs/astro-ph/9611107
         """
         r = _real_numeric(r, "Radius")
         if not np.all(np.isfinite(r)) or np.any(r < 0.0):
@@ -230,7 +275,7 @@ class NFWProfile:
         return 4.0 * np.pi * self.rho_s * self.r_s**3 * nfw_mass_function(r / self.r_s)
 
     def density(self, r):
-        """Return density at positive radius.
+        r"""Return density at positive radius.
 
         Parameters
         ----------
@@ -246,9 +291,18 @@ class NFWProfile:
 
         Notes
         -----
+        The enclosed-mass factor ln(1+c)-c/(1+c) follows the NFW density profile. Algebraic
+        inversion tolerances concern this profile identity, not agreement with simulated halos.
+
         The enclosed-mass normalization is M(<r)=4*pi*rho_s*r_s**3*f(r/r_s). The potential fixes
         G in Mpc*(km/s)^2/Msun and its zero at infinity, so use Mpc and Msun/Mpc^3 for physical
         profile parameters.
+
+        References
+        ----------
+
+        .. [cite-nfw] Navarro, Frenk & White (1997), A Universal Density Profile from Hierarchical Clustering.
+            https://arxiv.org/abs/astro-ph/9611107
         """
         r = _real_numeric(r, "Radius")
         if not np.all(np.isfinite(r)) or np.any(r <= 0.0):
@@ -257,7 +311,7 @@ class NFWProfile:
         return self.rho_s / (x * (1.0 + x) ** 2)
 
     def potential(self, r):
-        """Return gravitational potential with zero at infinity.
+        r"""Return gravitational potential with zero at infinity.
 
         Parameters
         ----------
@@ -272,9 +326,18 @@ class NFWProfile:
 
         Notes
         -----
+        The enclosed-mass factor ln(1+c)-c/(1+c) follows the NFW density profile. Algebraic
+        inversion tolerances concern this profile identity, not agreement with simulated halos.
+
         The enclosed-mass normalization is M(<r)=4*pi*rho_s*r_s**3*f(r/r_s). The potential fixes
         G in Mpc*(km/s)^2/Msun and its zero at infinity, so use Mpc and Msun/Mpc^3 for physical
         profile parameters.
+
+        References
+        ----------
+
+        .. [cite-nfw] Navarro, Frenk & White (1997), A Universal Density Profile from Hierarchical Clustering.
+            https://arxiv.org/abs/astro-ph/9611107
         """
         r = _real_numeric(r, "Radius")
         if not np.all(np.isfinite(r)) or np.any(r < 0.0):

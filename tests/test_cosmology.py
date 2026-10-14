@@ -26,10 +26,13 @@ def test_native_cosmology_basic_relations():
 
 
 def test_colossus_backend_matches_order_of_magnitude():
-    """Detect gross background mismatches against the optional Colossus implementation.
+    r"""Detect gross background mismatches against the optional Colossus implementation.
 
     Notes
     -----
+    Planck-like background numbers are controlled test inputs. Equality or rejection here
+    checks the stated background contract, not the cosmological fit.
+
     Pass criteria: At z=0,1,3 the two Planck-like backgrounds agree within 3 percent in H
     and 4 percent in growth.
 
@@ -39,6 +42,12 @@ def test_colossus_backend_matches_order_of_magnitude():
     Scope: Only H and growth are compared, not critical/matter density. The current Colossus
     wrapper multiplies its Msun*h^2/kpc^3 density by 1e9 without applying h^2; this test
     cannot detect that canonical-unit mismatch.
+
+    References
+    ----------
+
+    .. [cite-planck] Planck Collaboration (2020), Planck 2018 results. VI. Cosmological parameters, Table 2.
+        https://arxiv.org/abs/1807.06209
     """
     pytest.importorskip("colossus")
     from itamae.cosmology.colossus import ColossusCosmology

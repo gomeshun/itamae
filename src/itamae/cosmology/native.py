@@ -73,7 +73,7 @@ def _finite_background(evaluate, quantity):
 
 @dataclass(frozen=True, slots=True)
 class NativeFlatLCDM:
-    """Flat-LCDM background with NumPy/SciPy only.
+    r"""Flat-LCDM background with NumPy/SciPy only.
 
     Parameters
     ----------
@@ -84,22 +84,40 @@ class NativeFlatLCDM:
 
     Notes
     -----
+    The defaults Omega_m0=0.315 and h=0.674 are rounded Planck-2018 values. User-supplied
+    alternatives remain explicit background choices.
+
     This matter-plus-Lambda, spatially flat background neglects radiation. Growth uses the
     Carroll-Press-Turner approximation normalized to D(0)=1; the generic background is not a
     calibration of a SASHIMI halo prescription.
+
+    References
+    ----------
+
+    .. [cite-planck] Planck Collaboration (2020), Planck 2018 results. VI. Cosmological parameters, Table 2.
+        https://arxiv.org/abs/1807.06209
     """
 
     omega_m0: float = 0.315
     h: float = 0.674
 
     def __post_init__(self):
-        """Validate the matter-plus-nonnegative-Lambda background domain.
+        r"""Validate the matter-plus-nonnegative-Lambda background domain.
 
         Notes
         -----
+        The defaults Omega_m0=0.315 and h=0.674 are rounded Planck-2018 values. User-supplied
+        alternatives remain explicit background choices.
+
         This matter-plus-Lambda, spatially flat background neglects radiation. Growth uses the
         Carroll-Press-Turner approximation normalized to D(0)=1; the generic background is not a
         calibration of a SASHIMI halo prescription.
+
+        References
+        ----------
+
+        .. [cite-planck] Planck Collaboration (2020), Planck 2018 results. VI. Cosmological parameters, Table 2.
+            https://arxiv.org/abs/1807.06209
         """
         for name in ("omega_m0", "h"):
             value = np.asarray(getattr(self, name))
@@ -271,7 +289,7 @@ class NativeFlatLCDM:
         return self.omega_m0 * (1.0 + z) ** 3 / self.e2(z)
 
     def growth_factor(self, z):
-        """Return the Carroll-Press-Turner growth approximation normalized at z=0.
+        r"""Return the Carroll-Press-Turner growth approximation normalized at z=0.
 
         Parameters
         ----------
@@ -286,9 +304,19 @@ class NativeFlatLCDM:
 
         Notes
         -----
+        The factors 5/2, 4/7 and 1/70 belong to the Carroll--Press--Turner growth approximation.
+        Redshift derivatives differentiate that approximation; they are not a separate growth
+        calibration.
+
         This matter-plus-Lambda, spatially flat background neglects radiation. Growth uses the
         Carroll-Press-Turner approximation normalized to D(0)=1; the generic background is not a
         calibration of a SASHIMI halo prescription.
+
+        References
+        ----------
+
+        .. [cite-growth] Carroll, Press & Turner (1992), The Cosmological Constant, Section 3.5.
+            https://doi.org/10.1146/annurev.aa.30.090192.002435
         """
         z = _redshift(z)
         om = self.omega_m(z)
@@ -300,7 +328,7 @@ class NativeFlatLCDM:
         return g / (g0 * (1.0 + z))
 
     def collapse_threshold(self, z):
-        """Return the spherical-collapse threshold scaled by the growth factor.
+        r"""Return the spherical-collapse threshold scaled by the growth factor.
 
         Parameters
         ----------
@@ -315,9 +343,19 @@ class NativeFlatLCDM:
 
         Notes
         -----
+        The adopted spherical-collapse barrier is delta_c(z)=1.686/D(z), as used in Ludlow et
+        al., Appendix C. This approximation is separate from any mass-dependent WDM collapse
+        correction.
+
         This matter-plus-Lambda, spatially flat background neglects radiation. Growth uses the
         Carroll-Press-Turner approximation normalized to D(0)=1; the generic background is not a
         calibration of a SASHIMI halo prescription.
+
+        References
+        ----------
+
+        .. [cite-ludlow] Ludlow et al. (2016), The mass-concentration-redshift relation of cold and warm dark matter haloes, Appendix C.
+            https://arxiv.org/abs/1601.02624
         """
         return 1.686 / self.growth_factor(z)
 

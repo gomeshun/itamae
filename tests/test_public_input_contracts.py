@@ -380,10 +380,13 @@ def test_native_cosmology_rejects_invalid_redshift(z):
 
 
 def test_native_cosmology_identifies_distinct_float_parameters():
-    """Avoid cache aliasing between numerically distinct cosmological parameters.
+    r"""Avoid cache aliasing between numerically distinct cosmological parameters.
 
     Notes
     -----
+    Planck-like background numbers are controlled test inputs. Equality or rejection here
+    checks the stated background contract, not the cosmological fit.
+
     Pass criteria: h=0.674 and h=0.67400000001 produce different identifiers.
 
     Failure criteria: any mismatch with the stated value, shape or identity requirements
@@ -391,6 +394,12 @@ def test_native_cosmology_identifies_distinct_float_parameters():
 
     Scope: This controlled calculation does not calibrate a subhalo population against
     simulations or observations.
+
+    References
+    ----------
+
+    .. [cite-planck] Planck Collaboration (2020), Planck 2018 results. VI. Cosmological parameters, Table 2.
+        https://arxiv.org/abs/1807.06209
     """
     assert NativeFlatLCDM(h=0.674).identifier != NativeFlatLCDM(h=0.67400000001).identifier
 

@@ -9,7 +9,7 @@ from colossus.cosmology import cosmology as col_cosmology
 
 @dataclass(frozen=True, slots=True)
 class ColossusCosmology:
-    """Wrap a named Colossus cosmology while restoring global state after calls.
+    r"""Wrap a named Colossus cosmology while restoring global state after calls.
 
     Parameters
     ----------
@@ -18,22 +18,48 @@ class ColossusCosmology:
 
     Notes
     -----
+    The default planck18 preset is supplied by Colossus and is based on Planck 2018. The
+    preset is external library data; its full parameter set is not inferred from the rounded
+    native defaults.
+
     Each query activates the named Colossus cosmology and restores the previous global
     selection. The wrapper preserves the implemented provider conversion; comparisons must
     also check factors of h, not only matching parameter labels.
+
+    References
+    ----------
+
+    .. [cite-colossus] Diemer (2018), COLOSSUS: A Python Toolkit for Cosmology, Large-scale Structure, and Dark Matter Halos.
+        https://arxiv.org/abs/1712.04512
+
+    .. [cite-planck] Planck Collaboration (2020), Planck 2018 results. VI. Cosmological parameters, Table 2.
+        https://arxiv.org/abs/1807.06209
     """
 
     name: str = "planck18"
     _params: dict = field(init=False, repr=False)
 
     def __post_init__(self):
-        """Snapshot the named cosmology parameters for this immutable provider.
+        r"""Snapshot the named cosmology parameters for this immutable provider.
 
         Notes
         -----
+        The default planck18 preset is supplied by Colossus and is based on Planck 2018. The
+        preset is external library data; its full parameter set is not inferred from the rounded
+        native defaults.
+
         Each query activates the named Colossus cosmology and restores the previous global
         selection. The wrapper preserves the implemented provider conversion; comparisons must
         also check factors of h, not only matching parameter labels.
+
+        References
+        ----------
+
+        .. [cite-colossus] Diemer (2018), COLOSSUS: A Python Toolkit for Cosmology, Large-scale Structure, and Dark Matter Halos.
+            https://arxiv.org/abs/1712.04512
+
+        .. [cite-planck] Planck Collaboration (2020), Planck 2018 results. VI. Cosmological parameters, Table 2.
+            https://arxiv.org/abs/1807.06209
         """
         object.__setattr__(self, "_params", dict(col_cosmology.cosmologies[self.name]))
 
@@ -205,7 +231,7 @@ class ColossusCosmology:
             return np.asarray(cosmo.growthFactor(z))
 
     def collapse_threshold(self, z):
-        """Return 1.686 divided by the growth factor.
+        r"""Return 1.686 divided by the growth factor.
 
         Parameters
         ----------
@@ -220,9 +246,19 @@ class ColossusCosmology:
 
         Notes
         -----
+        The adopted spherical-collapse barrier is delta_c(z)=1.686/D(z), as used in Ludlow et
+        al., Appendix C. This approximation is separate from any mass-dependent WDM collapse
+        correction.
+
         Each query activates the named Colossus cosmology and restores the previous global
         selection. The wrapper preserves the implemented provider conversion; comparisons must
         also check factors of h, not only matching parameter labels.
+
+        References
+        ----------
+
+        .. [cite-ludlow] Ludlow et al. (2016), The mass-concentration-redshift relation of cold and warm dark matter haloes, Appendix C.
+            https://arxiv.org/abs/1601.02624
         """
         return 1.686 / self.growth_factor(z)
 
