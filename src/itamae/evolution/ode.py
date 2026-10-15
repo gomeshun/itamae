@@ -8,6 +8,29 @@ from scipy.integrate import ODEintWarning, odeint, solve_ivp
 
 
 def _real_finite(value, name):
+    """Validate real numerical input before its use in a physical calculation.
+
+    Parameters
+    ----------
+    value : array_like
+        Numerical input to be checked before use; shape and physical interpretation are set
+        by the caller and retained by the validation helper.
+    name : str
+        Name of the quantity or component included in an error or provenance record so an
+        invalid scientific input can be located.
+
+    Returns
+    -------
+    numpy.ndarray
+        Numerical array with the original shape; the helper rejects the invalid values
+        checked in its implementation.
+
+    Notes
+    -----
+    The controller checks callback shape and finiteness and treats integration failure as an
+    error. Solver tolerances concern the supplied differential equation; they do not
+    validate its physical prescription or its interpolation inputs.
+    """
     array = np.asarray(value)
     if np.iscomplexobj(array):
         raise ValueError(f"{name} must be real and finite.")
@@ -18,6 +41,31 @@ def _real_finite(value, name):
 
 
 def _validated_odeint_options(options, initial, args):
+    """Validate LSODA controls before integrating a physical state.
+
+    Parameters
+    ----------
+    options : Mapping, optional
+        Explicit numerical controls for the named solver or table. Unsupported or reserved
+        keys are rejected by the receiving routine.
+    initial : Mapping or array_like
+        Per-node physical state for the indicated evolution stage; its fields and units are
+        owned by the supplied physical model.
+    args : tuple
+        Additional positional parameters forwarded unchanged to the supplied numerical or
+        physical callback.
+
+    Returns
+    -------
+    dict
+        Checked options, including a time-first Jacobian wrapper when requested.
+
+    Notes
+    -----
+    The controller checks callback shape and finiteness and treats integration failure as an
+    error. Solver tolerances concern the supplied differential equation; they do not
+    validate its physical prescription or its interpolation inputs.
+    """
     if options is None:
         return {}
     if not isinstance(options, Mapping):
@@ -80,6 +128,28 @@ def _validated_odeint_options(options, initial, args):
             shape = shape[::-1]
 
         def evaluate_jacobian(time, state):
+            """Check the supplied Jacobian against the selected dense or banded state layout.
+
+            Parameters
+            ----------
+            time : float or array_like
+                Evolution coordinate or cosmic time, in the units of the supplied equation;
+                canonical state times are in Gyr.
+            state : Mapping or array_like
+                Per-node physical state for the indicated evolution stage; its fields and units are
+                owned by the supplied physical model.
+
+            Returns
+            -------
+            numpy.ndarray
+                Finite Jacobian with the exact requested shape and derivative orientation.
+
+            Notes
+            -----
+            The controller checks callback shape and finiteness and treats integration failure as an
+            error. Solver tolerances concern the supplied differential equation; they do not
+            validate its physical prescription or its interpolation inputs.
+            """
             result = _real_finite(jacobian(time, state, *args), "Dfun")
             if result.shape != shape:
                 raise ValueError(f"Dfun must return shape {shape}; received {result.shape}.")
@@ -122,6 +192,48 @@ def solve_evolution(
     Explicit ``allow_repeated_times=True`` preserves odeint's repeated output
     coordinates, including a constant grid with no evolution. Integration
     runs only on distinct coordinates and results retain requested order.
+
+    Parameters
+    ----------
+    rhs : callable
+        Time-first derivative rhs(t,y,*args) in state units per integration-coordinate unit.
+        The generic controller does not choose a tidal law.
+    y0 : float or array_like
+        Finite initial state at the first integration coordinate; its units must match the
+        derivative convention.
+    t_eval : array_like
+        One-dimensional increasing or decreasing output grid. The first coordinate is the
+        initial condition; redshift evolution usually decreases.
+    args : tuple
+        Additional positional parameters forwarded unchanged to the supplied numerical or
+        physical callback.
+    method : str
+        Explicit SciPy evolution method; odeint uses LSODA, while other names are passed to
+        solve_ivp.
+    rtol : float or array_like, optional
+        Positive relative or absolute local ODE error tolerance. Absolute tolerance uses the
+        integrated state units; it is not a physical-model uncertainty.
+    atol : float or array_like, optional
+        Positive relative or absolute local ODE error tolerance. Absolute tolerance uses the
+        integrated state units; it is not a physical-model uncertainty.
+    odeint_options : Mapping, optional
+        Explicit numerical controls for the named solver or table. Unsupported or reserved
+        keys are rejected by the receiving routine.
+    allow_repeated_times : bool
+        Permit repeated output coordinates only for the odeint backend, retaining the
+        requested ordering.
+
+    Returns
+    -------
+    numpy.ndarray
+        Trajectory of shape (len(t_eval), len(y0)); scalar initial states give one state
+        column.
+
+    Notes
+    -----
+    The controller checks callback shape and finiteness and treats integration failure as an
+    error. Solver tolerances concern the supplied differential equation; they do not
+    validate its physical prescription or its interpolation inputs.
     """
     grid = _real_finite(t_eval, "t_eval")
     initial = np.atleast_1d(_real_finite(y0, "y0"))
@@ -154,6 +266,29 @@ def solve_evolution(
                 raise ValueError(f"{name} must be positive and scalar or match y0.")
 
     def evaluate(time, state):
+        """Evaluate the physical derivative without admitting extra state axes or non-finite
+        values.
+
+        Parameters
+        ----------
+        time : float or array_like
+            Evolution coordinate or cosmic time, in the units of the supplied equation;
+            canonical state times are in Gyr.
+        state : Mapping or array_like
+            Per-node physical state for the indicated evolution stage; its fields and units are
+            owned by the supplied physical model.
+
+        Returns
+        -------
+        numpy.ndarray
+            Finite derivative vector matching the initial state shape.
+
+        Notes
+        -----
+        The controller checks callback shape and finiteness and treats integration failure as an
+        error. Solver tolerances concern the supplied differential equation; they do not
+        validate its physical prescription or its interpolation inputs.
+        """
         derivative = _real_finite(rhs(time, state, *args), "rhs")
         if derivative.shape != initial.shape:
             raise ValueError(f"rhs must return shape {initial.shape}; received {derivative.shape}.")

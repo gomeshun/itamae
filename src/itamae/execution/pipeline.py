@@ -33,7 +33,29 @@ StageColumns = Callable[
 
 
 def _concatenate(values: Iterable[np.ndarray], name: str) -> np.ndarray:
-    """Concatenate one aligned stage field along the population axis."""
+    """Concatenate one aligned stage field along the population axis.
+
+    Parameters
+    ----------
+    values : Mapping or array_like
+        Named physical fields or aligned numerical values supplied by the caller; each
+        population field must refer to the same nodes.
+    name : str
+        Name of the quantity or component included in an error or provenance record so an
+        invalid scientific input can be located.
+
+    Returns
+    -------
+    numpy.ndarray
+        Stage values joined along the population axis, retaining their order.
+
+    Notes
+    -----
+    Physical initialization, evolution, disruption and column definitions belong to the
+    SASHIMI variant. The executor retains aligned nodes and multiplies each independent
+    abundance/probability/survival factor once. It does not introduce a new accretion or
+    halo-evolution prescription.
+    """
     arrays = tuple(np.asarray(value) for value in values)
     if not arrays:
         raise ValueError(f"Cannot concatenate empty field {name!r}.")
@@ -41,7 +63,30 @@ def _concatenate(values: Iterable[np.ndarray], name: str) -> np.ndarray:
 
 
 def _metadata_difference(left: Any, right: Any, path: str = "metadata") -> str | None:
-    """Find the first exact mismatch, including nested mappings and array values."""
+    """Find the first exact mismatch, including nested mappings and array values.
+
+    Parameters
+    ----------
+    left : object
+        Two metadata values to compare exactly before mixing results from different batches.
+    right : object
+        Two metadata values to compare exactly before mixing results from different batches.
+    path : str or pathlib.Path
+        Location of the scientific data archive; no pickle evaluation is used by the NPZ
+        readers.
+
+    Returns
+    -------
+    str or None
+        Path to the first exact metadata difference, or None when compatible.
+
+    Notes
+    -----
+    Physical initialization, evolution, disruption and column definitions belong to the
+    SASHIMI variant. The executor retains aligned nodes and multiplies each independent
+    abundance/probability/survival factor once. It does not introduce a new accretion or
+    halo-evolution prescription.
+    """
     if isinstance(left, Mapping) and isinstance(right, Mapping):
         for key in sorted(left.keys() | right.keys(), key=str):
             field = f"{path}.{key}"
@@ -65,7 +110,21 @@ def _metadata_difference(left: Any, right: Any, path: str = "metadata") -> str |
 
 
 def _validate_batches(values: tuple[AccretionBatch, ...]) -> None:
-    """Reject incompatible contracts before invoking any physical component."""
+    """Reject incompatible contracts before invoking any physical component.
+
+    Parameters
+    ----------
+    values : Mapping or array_like
+        Named physical fields or aligned numerical values supplied by the caller; each
+        population field must refer to the same nodes.
+
+    Notes
+    -----
+    Physical initialization, evolution, disruption and column definitions belong to the
+    SASHIMI variant. The executor retains aligned nodes and multiplies each independent
+    abundance/probability/survival factor once. It does not introduce a new accretion or
+    halo-evolution prescription.
+    """
     if not values:
         raise ValueError("At least one accretion batch is required.")
     for index, batch in enumerate(values):
@@ -86,7 +145,31 @@ def _validate_batches(values: tuple[AccretionBatch, ...]) -> None:
 def _validate_stage(
     values: Mapping[str, Any], shape: tuple[int, ...], stage: str
 ) -> Mapping[str, np.ndarray]:
-    """Validate one callback's aligned finite arrays."""
+    """Validate one callback's aligned finite arrays.
+
+    Parameters
+    ----------
+    values : Mapping or array_like
+        Named physical fields or aligned numerical values supplied by the caller; each
+        population field must refer to the same nodes.
+    shape : tuple of int
+        Required population or coordinate shape. Extra axes cannot be silently treated as
+        additional objects.
+    stage : str
+        Population stage name used to report the location of a failed physical callback.
+
+    Returns
+    -------
+    Mapping[str, numpy.ndarray]
+        Named finite arrays with the required population shape.
+
+    Notes
+    -----
+    Physical initialization, evolution, disruption and column definitions belong to the
+    SASHIMI variant. The executor retains aligned nodes and multiplies each independent
+    abundance/probability/survival factor once. It does not introduce a new accretion or
+    halo-evolution prescription.
+    """
     if not isinstance(values, Mapping):
         raise TypeError(f"{stage} stage must return a mapping of named arrays.")
     if stage == "columns" and not values:
@@ -107,7 +190,29 @@ def _validate_stage(
 
 
 def _validate_survival(value: Any, shape: tuple[int, ...]) -> Mapping[str, np.ndarray]:
-    """Normalize one or more survival masks without changing physical columns."""
+    """Normalize one or more survival masks without changing physical columns.
+
+    Parameters
+    ----------
+    value : array_like
+        Numerical input to be checked before use; shape and physical interpretation are set
+        by the caller and retained by the validation helper.
+    shape : tuple of int
+        Required population or coordinate shape. Extra axes cannot be silently treated as
+        additional objects.
+
+    Returns
+    -------
+    Mapping[str, numpy.ndarray]
+        Named boolean survival masks with the required population shape.
+
+    Notes
+    -----
+    Physical initialization, evolution, disruption and column definitions belong to the
+    SASHIMI variant. The executor retains aligned nodes and multiplies each independent
+    abundance/probability/survival factor once. It does not introduce a new accretion or
+    halo-evolution prescription.
+    """
     values = {"default": value} if not isinstance(value, Mapping) else dict(value)
     if not values:
         raise ValueError("The survival stage must return at least one named mask.")
@@ -129,11 +234,50 @@ def _validate_survival(value: Any, shape: tuple[int, ...]) -> Mapping[str, np.nd
 def concatenate_accretion_batches(
     batches: Iterable[AccretionBatch],
 ) -> AccretionBatch:
-    """Concatenate aligned accretion batches while preserving optional factors."""
+    """Concatenate aligned accretion batches while preserving optional factors.
+
+    Parameters
+    ----------
+    batches : Iterable[AccretionBatch]
+        Accretion batches with the same physical metadata and weight-factor schema; order is
+        preserved during concatenation.
+
+    Returns
+    -------
+    AccretionBatch
+        Combined accretion nodes retaining every independent weight factor.
+
+    Notes
+    -----
+    Physical initialization, evolution, disruption and column definitions belong to the
+    SASHIMI variant. The executor retains aligned nodes and multiplies each independent
+    abundance/probability/survival factor once. It does not introduce a new accretion or
+    halo-evolution prescription.
+    """
     values = tuple(batches)
     _validate_batches(values)
 
     def optional_factor(name: str) -> np.ndarray | None:
+        """Transport one optional population-weight factor without inventing missing probabilities.
+
+        Parameters
+        ----------
+        name : str
+            Name of the quantity or component included in an error or provenance record so an
+            invalid scientific input can be located.
+
+        Returns
+        -------
+        numpy.ndarray or None
+            Joined optional factor, or None only when it is absent in every batch.
+
+        Notes
+        -----
+        Physical initialization, evolution, disruption and column definitions belong to the
+        SASHIMI variant. The executor retains aligned nodes and multiplies each independent
+        abundance/probability/survival factor once. It does not introduce a new accretion or
+        halo-evolution prescription.
+        """
         factors = tuple(getattr(batch, name) for batch in values)
         if all(factor is None for factor in factors):
             return None
@@ -158,7 +302,30 @@ def concatenate_accretion_batches(
 
 @dataclass(frozen=True, slots=True)
 class PopulationExecution:
-    """Hold a transported population before selecting a catalog state view."""
+    """Hold a transported population before selecting a catalog state view.
+
+    Parameters
+    ----------
+    batch : AccretionBatch
+        Aligned accretion nodes with separate population, concentration and optional
+        host/orbit factors.
+    columns : callable or Mapping
+        Model column builder, or aligned physical arrays it produced, kept separately from
+        statistical weights.
+    survival : callable or Mapping
+        Model survival selector, or the named boolean masks it produced; survival enters the
+        final weight once.
+    diagnostics : Mapping, optional
+        Recorded numerical settings or counters for the execution, separate from physical
+        catalogue columns.
+
+    Notes
+    -----
+    Physical initialization, evolution, disruption and column definitions belong to the
+    SASHIMI variant. The executor retains aligned nodes and multiplies each independent
+    abundance/probability/survival factor once. It does not introduce a new accretion or
+    halo-evolution prescription.
+    """
 
     batch: AccretionBatch
     columns: Mapping[str, np.ndarray]
@@ -166,7 +333,15 @@ class PopulationExecution:
     diagnostics: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        """Validate and freeze the transported result."""
+        """Validate and freeze the transported result.
+
+        Notes
+        -----
+        Physical initialization, evolution, disruption and column definitions belong to the
+        SASHIMI variant. The executor retains aligned nodes and multiplies each independent
+        abundance/probability/survival factor once. It does not introduce a new accretion or
+        halo-evolution prescription.
+        """
         columns = _validate_stage(self.columns, self.batch.m200_acc.shape, "columns")
         survival = _validate_survival(self.survival, self.batch.m200_acc.shape)
         object.__setattr__(self, "columns", columns)
@@ -175,7 +350,21 @@ class PopulationExecution:
 
     @property
     def weight_factors(self) -> Mapping[str, np.ndarray]:
-        """Return generation-stage factors supplied by the accretion batch."""
+        """Return generation-stage factors supplied by the accretion batch.
+
+        Returns
+        -------
+        Mapping[str, numpy.ndarray]
+            Generation-stage factors; the survival factor is attached only when a view is
+            selected.
+
+        Notes
+        -----
+        Physical initialization, evolution, disruption and column definitions belong to the
+        SASHIMI variant. The executor retains aligned nodes and multiplies each independent
+        abundance/probability/survival factor once. It does not introduce a new accretion or
+        halo-evolution prescription.
+        """
         values: dict[str, np.ndarray] = {
             "weight_base": self.batch.weight_base,
             "weight_concentration": self.batch.weight_concentration,
@@ -192,7 +381,29 @@ class PopulationExecution:
         *,
         view: str = "default",
     ) -> WeightedSubhaloCatalog:
-        """Assemble one named survival view as a weighted catalog."""
+        """Assemble one named survival view as a weighted catalog.
+
+        Parameters
+        ----------
+        metadata : CatalogMetadata or Mapping
+            Physical model, backend, unit and source identities needed to interpret or combine
+            the nodes.
+        view : str
+            Name of the survival mask used in this catalogue, for example a CDM reference or
+            SIDM selection.
+
+        Returns
+        -------
+        WeightedSubhaloCatalog
+            Selected survival view with explicit generation and survival factors.
+
+        Notes
+        -----
+        Physical initialization, evolution, disruption and column definitions belong to the
+        SASHIMI variant. The executor retains aligned nodes and multiplies each independent
+        abundance/probability/survival factor once. It does not introduce a new accretion or
+        halo-evolution prescription.
+        """
         if view not in self.survival:
             raise ValueError(
                 f"Unknown survival view {view!r}; available views are {sorted(self.survival)}."
@@ -216,6 +427,26 @@ class PopulationPipeline:
     exactly; batch-local coordinates or labels belong in arrays or ``contexts``.
     Nodes and output fields use a flat population axis. An empty iterable is an
     error; a zero-length batch runs the stages and retains their output schema.
+
+    Parameters
+    ----------
+    initialize : callable or PopulationInitializer
+        Model stage assigning the initial physical structure to each accretion node.
+    evolve : callable or PopulationEvolver
+        Model stage evolving the initialized structure under its tidal and dark-matter laws.
+    survival : callable or Mapping
+        Model survival selector, or the named boolean masks it produced; survival enters the
+        final weight once.
+    columns : callable or Mapping
+        Model column builder, or aligned physical arrays it produced, kept separately from
+        statistical weights.
+
+    Notes
+    -----
+    Physical initialization, evolution, disruption and column definitions belong to the
+    SASHIMI variant. The executor retains aligned nodes and multiplies each independent
+    abundance/probability/survival factor once. It does not introduce a new accretion or
+    halo-evolution prescription.
     """
 
     initialize: StageInitializer
@@ -230,7 +461,32 @@ class PopulationPipeline:
         contexts: Iterable[Any] | None = None,
         diagnostics: Mapping[str, Any] | None = None,
     ) -> PopulationExecution:
-        """Run all stages in batch order and return a transport result."""
+        """Run all stages in batch order and return a transport result.
+
+        Parameters
+        ----------
+        batches : Iterable[AccretionBatch]
+            Accretion batches with the same physical metadata and weight-factor schema; order is
+            preserved during concatenation.
+        contexts : Iterable, optional
+            One variant-owned context per accretion batch, in the same order; omitted entries
+            are passed as None.
+        diagnostics : Mapping, optional
+            Recorded numerical settings or counters for the execution, separate from physical
+            catalogue columns.
+
+        Returns
+        -------
+        PopulationExecution
+            Transported columns and named survival masks in input batch order.
+
+        Notes
+        -----
+        Physical initialization, evolution, disruption and column definitions belong to the
+        SASHIMI variant. The executor retains aligned nodes and multiplies each independent
+        abundance/probability/survival factor once. It does not introduce a new accretion or
+        halo-evolution prescription.
+        """
         batch_values = tuple(batches)
         _validate_batches(batch_values)
         if contexts is None:
@@ -248,6 +504,32 @@ class PopulationPipeline:
             def run(
                 stage: str, callback: Callable[..., Any], *args: Any
             ) -> Mapping[str, np.ndarray]:
+                """Run one physical stage and attach its batch identity to any failure.
+
+                Parameters
+                ----------
+                stage : str
+                    Population stage name used to report the location of a failed physical callback.
+                callback : callable
+                    Model callback for the selected execution stage; must return arrays aligned with the
+                    batch.
+                *args : tuple
+                    Additional positional parameters forwarded unchanged to the supplied numerical or
+                    physical callback.
+
+                Returns
+                -------
+                Mapping[str, numpy.ndarray]
+                    Validated stage arrays; callback errors retain the batch/stage location and original
+                    cause.
+
+                Notes
+                -----
+                Physical initialization, evolution, disruption and column definitions belong to the
+                SASHIMI variant. The executor retains aligned nodes and multiplies each independent
+                abundance/probability/survival factor once. It does not introduce a new accretion or
+                halo-evolution prescription.
+                """
                 try:
                     output = callback(*args)
                     if stage == "survival":
@@ -295,7 +577,43 @@ def execute_population(
     contexts: Iterable[Any] | None = None,
     diagnostics: Mapping[str, Any] | None = None,
 ) -> PopulationExecution:
-    """Convenience wrapper around :class:`PopulationPipeline`."""
+    """Transport a population through explicit physical stages and retain factorized expected
+    counts.
+
+    Parameters
+    ----------
+    batches : Iterable[AccretionBatch]
+        Accretion batches with the same physical metadata and weight-factor schema; order is
+        preserved during concatenation.
+    initialize : callable or PopulationInitializer
+        Model stage assigning the initial physical structure to each accretion node.
+    evolve : callable or PopulationEvolver
+        Model stage evolving the initialized structure under its tidal and dark-matter laws.
+    survival : callable or Mapping
+        Model survival selector, or the named boolean masks it produced; survival enters the
+        final weight once.
+    columns : callable or Mapping
+        Model column builder, or aligned physical arrays it produced, kept separately from
+        statistical weights.
+    contexts : Iterable, optional
+        One variant-owned context per accretion batch, in the same order; omitted entries
+        are passed as None.
+    diagnostics : Mapping, optional
+        Recorded numerical settings or counters for the execution, separate from physical
+        catalogue columns.
+
+    Returns
+    -------
+    PopulationExecution
+        Transported columns and named survival masks in input batch order.
+
+    Notes
+    -----
+    Physical initialization, evolution, disruption and column definitions belong to the
+    SASHIMI variant. The executor retains aligned nodes and multiplies each independent
+    abundance/probability/survival factor once. It does not introduce a new accretion or
+    halo-evolution prescription.
+    """
     return PopulationPipeline(
         initialize=initialize,
         evolve=evolve,

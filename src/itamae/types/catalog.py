@@ -30,6 +30,30 @@ _RESERVED_METADATA = {*_REQUIRED_METADATA, "source_identifier"}
 
 
 def _real_finite_array(value, description):
+    """Validate real numerical input before its use in a physical calculation.
+
+    Parameters
+    ----------
+    value : array_like
+        Numerical input to be checked before use; shape and physical interpretation are set
+        by the caller and retained by the validation helper.
+    description : str
+        Name of the quantity or component included in an error or provenance record so an
+        invalid scientific input can be located.
+
+    Returns
+    -------
+    numpy.ndarray
+        Numerical array with the original shape; the helper rejects the invalid values
+        checked in its implementation.
+
+    Notes
+    -----
+    Catalogue nodes are deterministic quadrature points with expected-count weights.
+    Preserve factorization and common model/unit/source metadata when selecting, summing or
+    combining them; Poisson sampling adds count noise and does not calibrate the physical
+    population model.
+    """
     array = np.asarray(value)
     if array.dtype.kind not in "biuf":
         raise ValueError(f"{description} must contain real numeric values.")
@@ -39,6 +63,30 @@ def _real_finite_array(value, description):
 
 
 def _weight_product(weights, shape):
+    """Multiply independent population factors once and reject a non-finite expected count.
+
+    Parameters
+    ----------
+    weights : Mapping or array_like
+        Explicit nonnegative statistical factors, or the quadrature weights stated by the
+        calling routine. They are not inferred from node spacing.
+    shape : tuple of int
+        Required population or coordinate shape. Extra axes cannot be silently treated as
+        additional objects.
+
+    Returns
+    -------
+    numpy.ndarray
+        Product of the independent statistical factors, representing expected counts per
+        node.
+
+    Notes
+    -----
+    Catalogue nodes are deterministic quadrature points with expected-count weights.
+    Preserve factorization and common model/unit/source metadata when selecting, summing or
+    combining them; Poisson sampling adds count noise and does not calibrate the physical
+    population model.
+    """
     result = np.ones(shape, dtype=float)
     try:
         with np.errstate(over="raise", invalid="raise"):
@@ -77,6 +125,13 @@ class CatalogMetadata:
         ``variance_identifier``, ``power_identifier``, ``solver_identifier``,
         and ``catalog_schema_version``. Variant-specific fields belong here
         without replacing those stable keys.
+
+    Notes
+    -----
+    Catalogue nodes are deterministic quadrature points with expected-count weights.
+    Preserve factorization and common model/unit/source metadata when selecting, summing or
+    combining them; Poisson sampling adds count noise and does not calibrate the physical
+    population model.
     """
 
     model_identifier: str
@@ -86,7 +141,15 @@ class CatalogMetadata:
     extra: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        """Validate stable identifiers and freeze additional metadata."""
+        """Validate stable identifiers and freeze additional metadata.
+
+        Notes
+        -----
+        Catalogue nodes are deterministic quadrature points with expected-count weights.
+        Preserve factorization and common model/unit/source metadata when selecting, summing or
+        combining them; Poisson sampling adds count noise and does not calibrate the physical
+        population model.
+        """
         for name in ("model_identifier", "backend_identifier", "schema_version"):
             value = getattr(self, name)
             if not isinstance(value, str) or not value.strip():
@@ -103,7 +166,20 @@ class CatalogMetadata:
         object.__setattr__(self, "extra", MappingProxyType(dict(self.extra)))
 
     def as_mapping(self) -> Mapping[str, Any]:
-        """Return a flat immutable mapping suitable for serialization."""
+        """Return a flat immutable mapping suitable for serialization.
+
+        Returns
+        -------
+        Mapping[str, object]
+            Immutable flat metadata used to serialize the calculation identity.
+
+        Notes
+        -----
+        Catalogue nodes are deterministic quadrature points with expected-count weights.
+        Preserve factorization and common model/unit/source metadata when selecting, summing or
+        combining them; Poisson sampling adds count noise and does not calibrate the physical
+        population model.
+        """
         values = {
             "schema_version": self.schema_version,
             "model_identifier": self.model_identifier,
@@ -131,6 +207,13 @@ class WeightedSubhaloCatalog:
         Reproducibility metadata. A :class:`CatalogMetadata` object is
         preferred; mappings must provide ``schema_version``,
         ``model_identifier``, and ``backend_identifier``.
+
+    Notes
+    -----
+    Catalogue nodes are deterministic quadrature points with expected-count weights.
+    Preserve factorization and common model/unit/source metadata when selecting, summing or
+    combining them; Poisson sampling adds count noise and does not calibrate the physical
+    population model.
     """
 
     canonical_weight_factors: ClassVar[tuple[str, ...]] = CANONICAL_WEIGHT_FACTORS
@@ -140,7 +223,15 @@ class WeightedSubhaloCatalog:
     metadata: CatalogMetadata | Mapping[str, Any]
 
     def __post_init__(self) -> None:
-        """Validate shapes, weight semantics, and reproducibility metadata."""
+        """Validate shapes, weight semantics, and reproducibility metadata.
+
+        Notes
+        -----
+        Catalogue nodes are deterministic quadrature points with expected-count weights.
+        Preserve factorization and common model/unit/source metadata when selecting, summing or
+        combining them; Poisson sampling adds count noise and does not calibrate the physical
+        population model.
+        """
         if not self.columns:
             raise ValueError("A catalog must contain at least one physical column.")
         invalid_columns = [
@@ -208,20 +299,79 @@ class WeightedSubhaloCatalog:
 
     @property
     def shape(self) -> tuple[int, ...]:
-        """Return the common catalog shape."""
+        """Return the common catalog shape.
+
+        Returns
+        -------
+        tuple of int
+            Common physical-column and weight-array shape.
+
+        Notes
+        -----
+        Catalogue nodes are deterministic quadrature points with expected-count weights.
+        Preserve factorization and common model/unit/source metadata when selecting, summing or
+        combining them; Poisson sampling adds count noise and does not calibrate the physical
+        population model.
+        """
         return next(iter(self.columns.values())).shape
 
     def __len__(self) -> int:
-        """Return the size of the leading catalog axis."""
+        """Return the size of the leading catalog axis.
+
+        Returns
+        -------
+        int
+            Leading-axis length, or one for a scalar catalogue.
+
+        Notes
+        -----
+        Catalogue nodes are deterministic quadrature points with expected-count weights.
+        Preserve factorization and common model/unit/source metadata when selecting, summing or
+        combining them; Poisson sampling adds count noise and does not calibrate the physical
+        population model.
+        """
         return self.shape[0] if self.shape else 1
 
     @property
     def weight_final(self) -> np.ndarray:
-        """Multiply independent factors, rejecting non-finite products."""
+        """Multiply independent factors, rejecting non-finite products.
+
+        Returns
+        -------
+        numpy.ndarray
+            Product of the independent statistical factors, representing expected counts per
+            node.
+
+        Notes
+        -----
+        Catalogue nodes are deterministic quadrature points with expected-count weights.
+        Preserve factorization and common model/unit/source metadata when selecting, summing or
+        combining them; Poisson sampling adds count noise and does not calibrate the physical
+        population model.
+        """
         return _weight_product(self.weights, self.shape)
 
     def select(self, mask: Any) -> WeightedSubhaloCatalog:
-        """Return a catalog subset while preserving metadata."""
+        """Return a catalog subset while preserving metadata.
+
+        Parameters
+        ----------
+        mask : array_like
+            Boolean mask or indices selecting the same subset from every physical column and
+            weight factor.
+
+        Returns
+        -------
+        WeightedSubhaloCatalog
+            Same physical/provenance interpretation restricted to the selected nodes.
+
+        Notes
+        -----
+        Catalogue nodes are deterministic quadrature points with expected-count weights.
+        Preserve factorization and common model/unit/source metadata when selecting, summing or
+        combining them; Poisson sampling adds count noise and does not calibrate the physical
+        population model.
+        """
         return type(self)(
             columns={name: value[mask] for name, value in self.columns.items()},
             weights={name: value[mask] for name, value in self.weights.items()},
@@ -229,7 +379,26 @@ class WeightedSubhaloCatalog:
         )
 
     def weighted_sum(self, values: Any) -> float:
-        """Return the weighted sum of an array aligned with the catalog."""
+        """Return the weighted sum of an array aligned with the catalog.
+
+        Parameters
+        ----------
+        values : Mapping or array_like
+            Named physical fields or aligned numerical values supplied by the caller; each
+            population field must refer to the same nodes.
+
+        Returns
+        -------
+        float
+            Sum of values times expected-count weights, in the value units.
+
+        Notes
+        -----
+        Catalogue nodes are deterministic quadrature points with expected-count weights.
+        Preserve factorization and common model/unit/source metadata when selecting, summing or
+        combining them; Poisson sampling adds count noise and does not calibrate the physical
+        population model.
+        """
         array = np.asarray(_real_finite_array(values, "Values"), dtype=float)
         if array.shape != self.shape:
             raise ValueError("Values must have the catalog shape.")
@@ -255,6 +424,18 @@ class WeightedSubhaloCatalog:
             Bin specification forwarded to :func:`numpy.histogram`.
         **kwargs
             Additional arguments forwarded to :func:`numpy.histogram`.
+
+        Returns
+        -------
+        tuple of numpy.ndarray
+            Weighted bin totals (or the explicitly requested density) and bin edges.
+
+        Notes
+        -----
+        Catalogue nodes are deterministic quadrature points with expected-count weights.
+        Preserve factorization and common model/unit/source metadata when selecting, summing or
+        combining them; Poisson sampling adds count noise and does not calibrate the physical
+        population model.
         """
         if "weights" in kwargs:
             raise TypeError("weighted_histogram determines weights from the catalog.")
@@ -284,6 +465,13 @@ class WeightedSubhaloCatalog:
         Mapping[str, numpy.ndarray]
             Realized physical columns. Deterministic population weights are not
             copied into the stochastic catalog.
+
+        Notes
+        -----
+        Catalogue nodes are deterministic quadrature points with expected-count weights.
+        Preserve factorization and common model/unit/source metadata when selecting, summing or
+        combining them; Poisson sampling adds count noise and does not calibrate the physical
+        population model.
         """
         if not isinstance(rng, np.random.Generator):
             raise TypeError("rng must be an explicit numpy.random.Generator.")
@@ -308,6 +496,11 @@ class WeightedSubhaloCatalog:
         canonical floating-point values. A manifest maps names to numbered
         archive fields so model-specific names never become executable object
         payloads.
+
+        Catalogue nodes are deterministic quadrature points with expected-count weights.
+        Preserve factorization and common model/unit/source metadata when selecting, summing or
+        combining them; Poisson sampling adds count noise and does not calibrate the physical
+        population model.
         """
         for name, value in self.columns.items():
             _real_finite_array(value, f"Catalog column {name!r}")
@@ -359,7 +552,26 @@ class WeightedSubhaloCatalog:
 
     @classmethod
     def from_npz(cls, path: str | os.PathLike[str]) -> WeightedSubhaloCatalog:
-        """Load and validate a catalog produced by :meth:`to_npz`."""
+        """Load and validate a catalog produced by :meth:`to_npz`.
+
+        Parameters
+        ----------
+        path : str or pathlib.Path
+            Location of the scientific data archive; no pickle evaluation is used by the NPZ
+            readers.
+
+        Returns
+        -------
+        WeightedSubhaloCatalog
+            Reconstructed catalogue after schema, field and physical-value validation.
+
+        Notes
+        -----
+        Catalogue nodes are deterministic quadrature points with expected-count weights.
+        Preserve factorization and common model/unit/source metadata when selecting, summing or
+        combining them; Poisson sampling adds count noise and does not calibrate the physical
+        population model.
+        """
         with np.load(Path(path), allow_pickle=False) as archive:
             try:
                 manifest = json.loads(str(archive["manifest_json"]))
@@ -403,7 +615,26 @@ class WeightedSubhaloCatalog:
 
     @classmethod
     def concatenate(cls, catalogs: Sequence[WeightedSubhaloCatalog]) -> WeightedSubhaloCatalog:
-        """Concatenate compatible catalogs along their leading axis."""
+        """Concatenate compatible catalogs along their leading axis.
+
+        Parameters
+        ----------
+        catalogs : Sequence[WeightedSubhaloCatalog]
+            Catalogues with matching physical columns, factor names and exact provenance
+            metadata.
+
+        Returns
+        -------
+        WeightedSubhaloCatalog
+            Catalogues joined along their leading axis with unchanged common provenance.
+
+        Notes
+        -----
+        Catalogue nodes are deterministic quadrature points with expected-count weights.
+        Preserve factorization and common model/unit/source metadata when selecting, summing or
+        combining them; Poisson sampling adds count noise and does not calibrate the physical
+        population model.
+        """
         if not catalogs:
             raise ValueError("At least one catalog is required for concatenation.")
         first = catalogs[0]

@@ -8,6 +8,25 @@ from itamae.types import CatalogMetadata
 
 
 def _batch(offset: float):
+    """Create two distinguishable accretion nodes with known concentration and abundance
+    factors.
+
+    Parameters
+    ----------
+    offset : float
+        Controlled shift separating the toy population batches while preserving their known
+        weight factors.
+
+    Returns
+    -------
+    AccretionBatch
+        Two aligned toy nodes with distinct M200 and virial masses.
+
+    Notes
+    -----
+    This fixture/helper supports the controlled checks in this test module; its synthetic
+    values are not a calibrated halo model.
+    """
     return build_accretion_batch(
         np.array([1.0, 2.0]) + offset,
         0.5 + offset,
@@ -21,21 +40,123 @@ def _batch(offset: float):
 
 @dataclass(frozen=True)
 class ToyInitializer:
+    """Assign a controlled initial virial-mass offset for stage-order checks.
+
+    Notes
+    -----
+    This fixture/helper supports the controlled checks in this test module; its synthetic
+    values are not a calibrated halo model.
+    """
+
     def initialize(self, batch, context):
+        """Add the context offset to each virial accretion mass.
+
+        Parameters
+        ----------
+        batch : AccretionBatch
+            Aligned accretion nodes with separate population, concentration and optional
+            host/orbit factors.
+        context : object
+            Variant-owned state for this batch, for example host history, epoch or numerical
+            settings; it is not interpreted by the generic executor.
+
+        Returns
+        -------
+        dict
+            Initial toy masses, aligned with the batch.
+
+        Notes
+        -----
+        This fixture/helper supports the controlled checks in this test module; its synthetic
+        values are not a calibrated halo model.
+        """
         return {"initial": batch.mvir_acc + context["offset"]}
 
 
 @dataclass(frozen=True)
 class ToyEvolver:
+    """Apply a known multiplicative mass change for population-transport checks.
+
+    Notes
+    -----
+    This fixture/helper supports the controlled checks in this test module; its synthetic
+    values are not a calibrated halo model.
+    """
+
     def evolve(self, batch, initial, context):
+        """Scale the initialized toy masses using the batch context.
+
+        Parameters
+        ----------
+        batch : AccretionBatch
+            Aligned accretion nodes with separate population, concentration and optional
+            host/orbit factors.
+        initial : Mapping or array_like
+            Per-node physical state for the indicated evolution stage; its fields and units are
+            owned by the supplied physical model.
+        context : object
+            Variant-owned state for this batch, for example host history, epoch or numerical
+            settings; it is not interpreted by the generic executor.
+
+        Returns
+        -------
+        dict
+            Known bound-mass array without modifying the statistical weights.
+
+        Notes
+        -----
+        This fixture/helper supports the controlled checks in this test module; its synthetic
+        values are not a calibrated halo model.
+        """
         return {"m_bound": initial["initial"] * context["scale"]}
 
 
 @dataclass(frozen=True)
 class ToySurvival:
+    """Define two threshold survival views on one transported toy population.
+
+    Parameters
+    ----------
+    threshold : float
+        Toy survival threshold in the fixture mass convention; used to distinguish two masks
+        on the same nodes.
+
+    Notes
+    -----
+    This fixture/helper supports the controlled checks in this test module; its synthetic
+    values are not a calibrated halo model.
+    """
+
     threshold: float
 
     def select(self, batch, initial, evolved, context):
+        """Select ordinary and stricter survival masks from the same bound masses.
+
+        Parameters
+        ----------
+        batch : AccretionBatch
+            Aligned accretion nodes with separate population, concentration and optional
+            host/orbit factors.
+        initial : Mapping or array_like
+            Per-node physical state for the indicated evolution stage; its fields and units are
+            owned by the supplied physical model.
+        evolved : bool
+            Use present bound masses/profiles when true or accretion masses/profiles when false,
+            under the observable population selection.
+        context : object
+            Variant-owned state for this batch, for example host history, epoch or numerical
+            settings; it is not interpreted by the generic executor.
+
+        Returns
+        -------
+        dict
+            Boolean masks at threshold and threshold+1.
+
+        Notes
+        -----
+        This fixture/helper supports the controlled checks in this test module; its synthetic
+        values are not a calibrated halo model.
+        """
         return {
             "default": evolved["m_bound"] > self.threshold,
             "strict": evolved["m_bound"] > self.threshold + 1.0,
@@ -44,7 +165,45 @@ class ToySurvival:
 
 @dataclass(frozen=True)
 class ToyColumns:
+    """Expose initial and evolved toy masses for independent stage comparisons.
+
+    Notes
+    -----
+    This fixture/helper supports the controlled checks in this test module; its synthetic
+    values are not a calibrated halo model.
+    """
+
     def build(self, batch, initial, evolved, survival, context):
+        """Retain accretion, initialized and bound masses as separate physical columns.
+
+        Parameters
+        ----------
+        batch : AccretionBatch
+            Aligned accretion nodes with separate population, concentration and optional
+            host/orbit factors.
+        initial : Mapping or array_like
+            Per-node physical state for the indicated evolution stage; its fields and units are
+            owned by the supplied physical model.
+        evolved : bool
+            Use present bound masses/profiles when true or accretion masses/profiles when false,
+            under the observable population selection.
+        survival : callable or Mapping
+            Model survival selector, or the named boolean masks it produced; survival enters the
+            final weight once.
+        context : object
+            Variant-owned state for this batch, for example host history, epoch or numerical
+            settings; it is not interpreted by the generic executor.
+
+        Returns
+        -------
+        dict
+            Three aligned arrays used to verify stage transport.
+
+        Notes
+        -----
+        This fixture/helper supports the controlled checks in this test module; its synthetic
+        values are not a calibrated halo model.
+        """
         return {
             "m200_acc": batch.m200_acc,
             "initial": initial["initial"],
@@ -53,6 +212,18 @@ class ToyColumns:
 
 
 def _callback_pipeline():
+    """Construct the same toy physical stages as the component-based execution fixture.
+
+    Returns
+    -------
+    PopulationPipeline
+        Callback executor for a controlled equivalence comparison.
+
+    Notes
+    -----
+    This fixture/helper supports the controlled checks in this test module; its synthetic
+    values are not a calibrated halo model.
+    """
     return PopulationPipeline(
         initialize=lambda batch, context: {"initial": batch.mvir_acc + context["offset"]},
         evolve=lambda batch, initial, context: {"m_bound": initial["initial"] * context["scale"]},
@@ -69,6 +240,18 @@ def _callback_pipeline():
 
 
 def test_population_components_delegate_to_canonical_pipeline():
+    """Check the concrete pipeline class returned by component composition.
+
+    Notes
+    -----
+    Pass criteria: The composed object is an instance of PopulationPipeline.
+
+    Failure criteria: any mismatch with the stated value, shape or identity requirements
+    fails the test.
+
+    Scope: This is an API or output-compatibility check; it does not test a physical
+    equation or numerical accuracy.
+    """
     components = PopulationComponents(
         initializer=ToyInitializer(),
         evolver=ToyEvolver(),
@@ -80,6 +263,20 @@ def test_population_components_delegate_to_canonical_pipeline():
 
 
 def test_population_components_match_callback_execution_and_catalogs():
+    """Preserve the physical population when the same stages are supplied as objects or
+    callbacks.
+
+    Notes
+    -----
+    Pass criteria: Both routes return exactly the same toy columns, survival views, weight
+    factors, and strict-view catalogue.
+
+    Failure criteria: any mismatch with the stated value, shape or identity requirements
+    fails the test.
+
+    Scope: This controlled calculation does not calibrate a subhalo population against
+    simulations or observations.
+    """
     batches = [_batch(0.0), _batch(1.0)]
     contexts = [
         {"offset": 0.1, "scale": 1.0},

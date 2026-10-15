@@ -80,6 +80,7 @@ genuinely shared across the SASHIMI family.
 * numerical integration and interpolation;
 * generic ordinary differential-equation solvers;
 * perturbative evolution solvers;
+* [shared Picard endpoint and full-history mass evolution](docs/picard-mass-loss.md);
 * chunked and parallel batch execution;
 * reproducible random-number handling;
 * caching and serialization.

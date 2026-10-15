@@ -35,6 +35,13 @@ class PopulationComponents:
         Variant-owned component that selects one or more survival views.
     columns
         Variant-owned component that constructs final catalog columns.
+
+    Notes
+    -----
+    Physical initialization, evolution, disruption and column definitions belong to the
+    SASHIMI variant. The executor retains aligned nodes and multiplies each independent
+    abundance/probability/survival factor once. It does not introduce a new accretion or
+    halo-evolution prescription.
     """
 
     initializer: PopulationInitializer
@@ -43,7 +50,20 @@ class PopulationComponents:
     columns: CatalogColumnBuilder
 
     def to_pipeline(self) -> PopulationPipeline:
-        """Return the canonical callback executor wired to these components."""
+        """Return the canonical callback executor wired to these components.
+
+        Returns
+        -------
+        PopulationPipeline
+            Canonical executor wired to these four model component methods.
+
+        Notes
+        -----
+        Physical initialization, evolution, disruption and column definitions belong to the
+        SASHIMI variant. The executor retains aligned nodes and multiplies each independent
+        abundance/probability/survival factor once. It does not introduce a new accretion or
+        halo-evolution prescription.
+        """
         return PopulationPipeline(
             initialize=self.initializer.initialize,
             evolve=self.evolver.evolve,
@@ -58,7 +78,32 @@ class PopulationComponents:
         contexts: Iterable[Any] | None = None,
         diagnostics: Mapping[str, Any] | None = None,
     ) -> PopulationExecution:
-        """Execute the composed components through the canonical pipeline."""
+        """Execute the composed components through the canonical pipeline.
+
+        Parameters
+        ----------
+        batches : Iterable[AccretionBatch]
+            Accretion batches with the same physical metadata and weight-factor schema; order is
+            preserved during concatenation.
+        contexts : Iterable, optional
+            One variant-owned context per accretion batch, in the same order; omitted entries
+            are passed as None.
+        diagnostics : Mapping, optional
+            Recorded numerical settings or counters for the execution, separate from physical
+            catalogue columns.
+
+        Returns
+        -------
+        PopulationExecution
+            Aligned transported columns, survival masks and uncombined generation weights.
+
+        Notes
+        -----
+        Physical initialization, evolution, disruption and column definitions belong to the
+        SASHIMI variant. The executor retains aligned nodes and multiplies each independent
+        abundance/probability/survival factor once. It does not introduce a new accretion or
+        halo-evolution prescription.
+        """
         return self.to_pipeline().execute(
             batches,
             contexts=contexts,

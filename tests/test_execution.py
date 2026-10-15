@@ -8,6 +8,25 @@ from itamae.types import CatalogMetadata
 
 
 def _batch(offset: float):
+    """Create two distinguishable accretion nodes with known concentration and abundance
+    factors.
+
+    Parameters
+    ----------
+    offset : float
+        Controlled shift separating the toy population batches while preserving their known
+        weight factors.
+
+    Returns
+    -------
+    AccretionBatch
+        Two aligned toy nodes with distinct M200 and virial masses.
+
+    Notes
+    -----
+    This fixture/helper supports the controlled checks in this test module; its synthetic
+    values are not a calibrated halo model.
+    """
     return build_accretion_batch(
         np.array([1.0, 2.0]) + offset,
         0.5 + offset,
@@ -20,10 +39,36 @@ def _batch(offset: float):
 
 
 def test_execution_reuses_canonical_variance_protocol():
+    """Track the compatibility alias for the variance interface used by population execution.
+
+    Notes
+    -----
+    Pass criteria: The re-exported VarianceModel is the same Python object as the canonical
+    protocol.
+
+    Failure criteria: any mismatch with the stated value, shape or identity requirements
+    fails the test.
+
+    Scope: This is an API or output-compatibility check; it does not test a physical
+    equation or numerical accuracy.
+    """
     assert VarianceModel is ExecutionVarianceModel
 
 
 def test_population_pipeline_transports_stages_and_factorized_weights():
+    """Keep each accretion node aligned with its evolved mass and abundance factors.
+
+    Notes
+    -----
+    Pass criteria: The two toy slices yield bound masses [1.1,2.2,4.2,6.4], unchanged base
+    factors, and final CDM weights [0.14,0.24,0.14,0.24].
+
+    Failure criteria: any mismatch with the stated value, shape or identity requirements
+    fails the test.
+
+    Scope: This controlled calculation does not calibrate a subhalo population against
+    simulations or observations.
+    """
     pipeline = PopulationPipeline(
         initialize=lambda batch, context: {"initial": batch.mvir_acc},
         evolve=lambda batch, initial, context: {"m_bound": initial["initial"] * context},
@@ -48,6 +93,19 @@ def test_population_pipeline_transports_stages_and_factorized_weights():
 
 
 def test_population_pipeline_rejects_misaligned_contexts():
+    """Prevent redshift or host context from being assigned to the wrong accretion slice.
+
+    Notes
+    -----
+    Pass criteria: A context list with a different length from the batch list raises
+    ValueError.
+
+    Failure criteria: a stated numerical/identity mismatch, a missing required exception or
+    warning, or an unexpected calculation failure fails the test.
+
+    Scope: This controlled calculation does not calibrate a subhalo population against
+    simulations or observations.
+    """
     pipeline = PopulationPipeline(
         initialize=lambda batch, context: {},
         evolve=lambda batch, initial, context: {},
