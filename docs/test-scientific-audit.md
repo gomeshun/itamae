@@ -1602,7 +1602,7 @@ quadrature accuracy or physical calibration for varying model coefficients.
 
 ### `test_endpoint_integrates_interval_without_distinct_table_nodes`
 
-[Source](../tests/test_picard.py#L434) · **Retain** · Role: representability guard.
+[Source](../tests/test_picard.py#L430) · **Retain** · Role: representability guard.
 
 **Purpose.** Handle adjacent floating-point epochs when the requested table grid
 cannot contain enough distinct redshifts. Four cases cover different floating

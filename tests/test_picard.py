@@ -397,11 +397,7 @@ def test_endpoint_respects_bounded_callback_extent(declared_upper, n_z_acc):
     law, not calibration or accuracy for a time-dependent physical model.
     """
     upper = 7.0 if declared_upper is None else declared_upper
-    domain = (
-        None
-        if declared_upper is None
-        else PicardDomain((0.0, declared_upper), (-12.0, 0.0))
-    )
+    domain = None if declared_upper is None else PicardDomain((0.0, declared_upper), (-12.0, 0.0))
     solver = PicardMassLossSolver(
         interp1d([0.0, upper], [0.3, 0.3], bounds_error=True),
         interp1d([0.0, upper], [0.0, 0.0], bounds_error=True),
