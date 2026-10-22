@@ -8,6 +8,10 @@ ITAMAE owns shape validation, weight semantics, and reproducibility metadata.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import json
+import os
+from pathlib import Path
+import tempfile
 from types import MappingProxyType
 from typing import Any, ClassVar, Mapping, Sequence
 
@@ -23,6 +27,77 @@ CANONICAL_WEIGHT_FACTORS = (
 )
 _REQUIRED_METADATA = ("schema_version", "model_identifier", "backend_identifier")
 _RESERVED_METADATA = {*_REQUIRED_METADATA, "source_identifier"}
+
+
+def _real_finite_array(value, description):
+    """Validate real numerical input before its use in a physical calculation.
+
+    Parameters
+    ----------
+    value : array_like
+        Numerical input to be checked before use; shape and physical interpretation are set
+        by the caller and retained by the validation helper.
+    description : str
+        Name of the quantity or component included in an error or provenance record so an
+        invalid scientific input can be located.
+
+    Returns
+    -------
+    numpy.ndarray
+        Numerical array with the original shape; the helper rejects the invalid values
+        checked in its implementation.
+
+    Notes
+    -----
+    Catalogue nodes are deterministic quadrature points with expected-count weights.
+    Preserve factorization and common model/unit/source metadata when selecting, summing or
+    combining them; Poisson sampling adds count noise and does not calibrate the physical
+    population model.
+    """
+    array = np.asarray(value)
+    if array.dtype.kind not in "biuf":
+        raise ValueError(f"{description} must contain real numeric values.")
+    if not np.all(np.isfinite(array)):
+        raise ValueError(f"{description} contains non-finite values.")
+    return array
+
+
+def _weight_product(weights, shape):
+    """Multiply independent population factors once and reject a non-finite expected count.
+
+    Parameters
+    ----------
+    weights : Mapping or array_like
+        Explicit nonnegative statistical factors, or the quadrature weights stated by the
+        calling routine. They are not inferred from node spacing.
+    shape : tuple of int
+        Required population or coordinate shape. Extra axes cannot be silently treated as
+        additional objects.
+
+    Returns
+    -------
+    numpy.ndarray
+        Product of the independent statistical factors, representing expected counts per
+        node.
+
+    Notes
+    -----
+    Catalogue nodes are deterministic quadrature points with expected-count weights.
+    Preserve factorization and common model/unit/source metadata when selecting, summing or
+    combining them; Poisson sampling adds count noise and does not calibrate the physical
+    population model.
+    """
+    result = np.ones(shape, dtype=float)
+    try:
+        with np.errstate(over="raise", invalid="raise"):
+            for name, value in weights.items():
+                value = _real_finite_array(value, f"Weight factor {name!r}")
+                if np.any(value < 0):
+                    raise ValueError(f"Weight factor {name!r} contains negative values.")
+                result *= value
+    except FloatingPointError as error:
+        raise ValueError("Weight product must be finite; numerical overflow occurred.") from error
+    return result
 
 
 @dataclass(frozen=True, slots=True)
@@ -41,6 +116,22 @@ class CatalogMetadata:
         ITAMAE catalog-schema version.
     extra
         Additional JSON-compatible provenance fields.
+        Standard SASHIMI catalogs identify a ``calculation_specification`` and
+        ``provenance_schema``. Historical migration catalogs retain
+        ``physics_mode`` unchanged. Common keys include
+        ``sashimi_variant``, ``itamae_version``,
+        ``itamae_source_revision``, ``sashimi_version``,
+        ``sashimi_source_revision``, ``canonical_unit_schema``,
+        ``variance_identifier``, ``power_identifier``, ``solver_identifier``,
+        and ``catalog_schema_version``. Variant-specific fields belong here
+        without replacing those stable keys.
+
+    Notes
+    -----
+    Catalogue nodes are deterministic quadrature points with expected-count weights.
+    Preserve factorization and common model/unit/source metadata when selecting, summing or
+    combining them; Poisson sampling adds count noise and does not calibrate the physical
+    population model.
     """
 
     model_identifier: str
@@ -50,7 +141,15 @@ class CatalogMetadata:
     extra: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        """Validate stable identifiers and freeze additional metadata."""
+        """Validate stable identifiers and freeze additional metadata.
+
+        Notes
+        -----
+        Catalogue nodes are deterministic quadrature points with expected-count weights.
+        Preserve factorization and common model/unit/source metadata when selecting, summing or
+        combining them; Poisson sampling adds count noise and does not calibrate the physical
+        population model.
+        """
         for name in ("model_identifier", "backend_identifier", "schema_version"):
             value = getattr(self, name)
             if not isinstance(value, str) or not value.strip():
@@ -67,7 +166,20 @@ class CatalogMetadata:
         object.__setattr__(self, "extra", MappingProxyType(dict(self.extra)))
 
     def as_mapping(self) -> Mapping[str, Any]:
-        """Return a flat immutable mapping suitable for serialization."""
+        """Return a flat immutable mapping suitable for serialization.
+
+        Returns
+        -------
+        Mapping[str, object]
+            Immutable flat metadata used to serialize the calculation identity.
+
+        Notes
+        -----
+        Catalogue nodes are deterministic quadrature points with expected-count weights.
+        Preserve factorization and common model/unit/source metadata when selecting, summing or
+        combining them; Poisson sampling adds count noise and does not calibrate the physical
+        population model.
+        """
         values = {
             "schema_version": self.schema_version,
             "model_identifier": self.model_identifier,
@@ -95,6 +207,13 @@ class WeightedSubhaloCatalog:
         Reproducibility metadata. A :class:`CatalogMetadata` object is
         preferred; mappings must provide ``schema_version``,
         ``model_identifier``, and ``backend_identifier``.
+
+    Notes
+    -----
+    Catalogue nodes are deterministic quadrature points with expected-count weights.
+    Preserve factorization and common model/unit/source metadata when selecting, summing or
+    combining them; Poisson sampling adds count noise and does not calibrate the physical
+    population model.
     """
 
     canonical_weight_factors: ClassVar[tuple[str, ...]] = CANONICAL_WEIGHT_FACTORS
@@ -104,7 +223,15 @@ class WeightedSubhaloCatalog:
     metadata: CatalogMetadata | Mapping[str, Any]
 
     def __post_init__(self) -> None:
-        """Validate shapes, weight semantics, and reproducibility metadata."""
+        """Validate shapes, weight semantics, and reproducibility metadata.
+
+        Notes
+        -----
+        Catalogue nodes are deterministic quadrature points with expected-count weights.
+        Preserve factorization and common model/unit/source metadata when selecting, summing or
+        combining them; Poisson sampling adds count noise and does not calibrate the physical
+        population model.
+        """
         if not self.columns:
             raise ValueError("A catalog must contain at least one physical column.")
         invalid_columns = [
@@ -125,8 +252,14 @@ class WeightedSubhaloCatalog:
                 f"got {invalid_names}."
             )
 
-        columns = {name: np.asarray(value) for name, value in self.columns.items()}
-        weights = {name: np.asarray(value, dtype=float) for name, value in self.weights.items()}
+        columns = {
+            name: _real_finite_array(value, f"Catalog column {name!r}")
+            for name, value in self.columns.items()
+        }
+        weights = {
+            name: np.asarray(_real_finite_array(value, f"Weight factor {name!r}"), dtype=float)
+            for name, value in self.weights.items()
+        }
         shapes = {value.shape for value in [*columns.values(), *weights.values()]}
         if len(shapes) != 1:
             raise ValueError(f"All catalog arrays must have the same shape; got {shapes}.")
@@ -135,6 +268,7 @@ class WeightedSubhaloCatalog:
                 raise ValueError(f"Weight factor {name!r} contains non-finite values.")
             if np.any(value < 0.0):
                 raise ValueError(f"Weight factor {name!r} contains negative values.")
+        _weight_product(weights, next(iter(columns.values())).shape)
 
         metadata = (
             self.metadata.as_mapping()
@@ -165,23 +299,79 @@ class WeightedSubhaloCatalog:
 
     @property
     def shape(self) -> tuple[int, ...]:
-        """Return the common catalog shape."""
+        """Return the common catalog shape.
+
+        Returns
+        -------
+        tuple of int
+            Common physical-column and weight-array shape.
+
+        Notes
+        -----
+        Catalogue nodes are deterministic quadrature points with expected-count weights.
+        Preserve factorization and common model/unit/source metadata when selecting, summing or
+        combining them; Poisson sampling adds count noise and does not calibrate the physical
+        population model.
+        """
         return next(iter(self.columns.values())).shape
 
     def __len__(self) -> int:
-        """Return the size of the leading catalog axis."""
+        """Return the size of the leading catalog axis.
+
+        Returns
+        -------
+        int
+            Leading-axis length, or one for a scalar catalogue.
+
+        Notes
+        -----
+        Catalogue nodes are deterministic quadrature points with expected-count weights.
+        Preserve factorization and common model/unit/source metadata when selecting, summing or
+        combining them; Poisson sampling adds count noise and does not calibrate the physical
+        population model.
+        """
         return self.shape[0] if self.shape else 1
 
     @property
     def weight_final(self) -> np.ndarray:
-        """Multiply every independent weight factor."""
-        result = np.ones(self.shape, dtype=float)
-        for value in self.weights.values():
-            result *= value
-        return result
+        """Multiply independent factors, rejecting non-finite products.
+
+        Returns
+        -------
+        numpy.ndarray
+            Product of the independent statistical factors, representing expected counts per
+            node.
+
+        Notes
+        -----
+        Catalogue nodes are deterministic quadrature points with expected-count weights.
+        Preserve factorization and common model/unit/source metadata when selecting, summing or
+        combining them; Poisson sampling adds count noise and does not calibrate the physical
+        population model.
+        """
+        return _weight_product(self.weights, self.shape)
 
     def select(self, mask: Any) -> WeightedSubhaloCatalog:
-        """Return a catalog subset while preserving metadata."""
+        """Return a catalog subset while preserving metadata.
+
+        Parameters
+        ----------
+        mask : array_like
+            Boolean mask or indices selecting the same subset from every physical column and
+            weight factor.
+
+        Returns
+        -------
+        WeightedSubhaloCatalog
+            Same physical/provenance interpretation restricted to the selected nodes.
+
+        Notes
+        -----
+        Catalogue nodes are deterministic quadrature points with expected-count weights.
+        Preserve factorization and common model/unit/source metadata when selecting, summing or
+        combining them; Poisson sampling adds count noise and does not calibrate the physical
+        population model.
+        """
         return type(self)(
             columns={name: value[mask] for name, value in self.columns.items()},
             weights={name: value[mask] for name, value in self.weights.items()},
@@ -189,11 +379,37 @@ class WeightedSubhaloCatalog:
         )
 
     def weighted_sum(self, values: Any) -> float:
-        """Return the weighted sum of an array aligned with the catalog."""
-        array = np.asarray(values, dtype=float)
+        """Return the weighted sum of an array aligned with the catalog.
+
+        Parameters
+        ----------
+        values : Mapping or array_like
+            Named physical fields or aligned numerical values supplied by the caller; each
+            population field must refer to the same nodes.
+
+        Returns
+        -------
+        float
+            Sum of values times expected-count weights, in the value units.
+
+        Notes
+        -----
+        Catalogue nodes are deterministic quadrature points with expected-count weights.
+        Preserve factorization and common model/unit/source metadata when selecting, summing or
+        combining them; Poisson sampling adds count noise and does not calibrate the physical
+        population model.
+        """
+        array = np.asarray(_real_finite_array(values, "Values"), dtype=float)
         if array.shape != self.shape:
             raise ValueError("Values must have the catalog shape.")
-        return float(np.sum(array * self.weight_final))
+        try:
+            with np.errstate(over="raise", invalid="raise"):
+                result = float(np.sum(array * self.weight_final))
+        except FloatingPointError as error:
+            raise ValueError("Weighted sum must be finite; numerical overflow occurred.") from error
+        if not np.isfinite(result):
+            raise ValueError("Weighted sum must be finite.")
+        return result
 
     def weighted_histogram(
         self, column: str, bins: Any, **kwargs: Any
@@ -208,10 +424,32 @@ class WeightedSubhaloCatalog:
             Bin specification forwarded to :func:`numpy.histogram`.
         **kwargs
             Additional arguments forwarded to :func:`numpy.histogram`.
+
+        Returns
+        -------
+        tuple of numpy.ndarray
+            Weighted bin totals (or the explicitly requested density) and bin edges.
+
+        Notes
+        -----
+        Catalogue nodes are deterministic quadrature points with expected-count weights.
+        Preserve factorization and common model/unit/source metadata when selecting, summing or
+        combining them; Poisson sampling adds count noise and does not calibrate the physical
+        population model.
         """
         if "weights" in kwargs:
             raise TypeError("weighted_histogram determines weights from the catalog.")
-        return np.histogram(self.columns[column], bins=bins, weights=self.weight_final, **kwargs)
+        values = _real_finite_array(self.columns[column], f"Catalog column {column!r}")
+        try:
+            with np.errstate(over="raise", invalid="raise", divide="raise"):
+                counts, edges = np.histogram(values, bins=bins, weights=self.weight_final, **kwargs)
+        except FloatingPointError as error:
+            raise ValueError(
+                "Weighted histogram is non-finite or its density is undefined."
+            ) from error
+        if not np.all(np.isfinite(counts)):
+            raise ValueError("Weighted histogram must be finite.")
+        return counts, edges
 
     def poisson_realization(self, rng: np.random.Generator) -> Mapping[str, np.ndarray]:
         """Draw a Poisson realization of the weighted catalog.
@@ -227,6 +465,13 @@ class WeightedSubhaloCatalog:
         Mapping[str, numpy.ndarray]
             Realized physical columns. Deterministic population weights are not
             copied into the stochastic catalog.
+
+        Notes
+        -----
+        Catalogue nodes are deterministic quadrature points with expected-count weights.
+        Preserve factorization and common model/unit/source metadata when selecting, summing or
+        combining them; Poisson sampling adds count noise and does not calibrate the physical
+        population model.
         """
         if not isinstance(rng, np.random.Generator):
             raise TypeError("rng must be an explicit numpy.random.Generator.")
@@ -236,9 +481,160 @@ class WeightedSubhaloCatalog:
         indices = np.repeat(np.arange(len(self)), multiplicity)
         return MappingProxyType({name: value[indices] for name, value in self.columns.items()})
 
+    def to_npz(self, path: str | os.PathLike[str]) -> None:
+        """Atomically serialize the catalog without Python pickle objects.
+
+        Parameters
+        ----------
+        path
+            Destination ``.npz`` path. Metadata must be finite
+            JSON-compatible data.
+
+        Notes
+        -----
+        Physical arrays retain their NumPy dtypes. Weight arrays are already
+        canonical floating-point values. A manifest maps names to numbered
+        archive fields so model-specific names never become executable object
+        payloads.
+
+        Catalogue nodes are deterministic quadrature points with expected-count weights.
+        Preserve factorization and common model/unit/source metadata when selecting, summing or
+        combining them; Poisson sampling adds count noise and does not calibrate the physical
+        population model.
+        """
+        for name, value in self.columns.items():
+            _real_finite_array(value, f"Catalog column {name!r}")
+        self.weight_final
+        metadata = (
+            self.metadata.as_mapping()
+            if isinstance(self.metadata, CatalogMetadata)
+            else self.metadata
+        )
+        manifest = {
+            "archive_schema": "itamae-weighted-catalog-npz:1.0",
+            "catalog_metadata": dict(metadata),
+            "columns": list(self.columns),
+            "weights": list(self.weights),
+        }
+        try:
+            manifest_json = json.dumps(
+                manifest,
+                sort_keys=True,
+                separators=(",", ":"),
+                allow_nan=False,
+            )
+        except (TypeError, ValueError) as exc:
+            raise ValueError("Catalog metadata must be finite JSON-compatible data.") from exc
+
+        payload = {"manifest_json": np.asarray(manifest_json)}
+        payload.update(
+            {f"column_{index}": value for index, value in enumerate(self.columns.values())}
+        )
+        payload.update(
+            {f"weight_{index}": value for index, value in enumerate(self.weights.values())}
+        )
+        destination = Path(path)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        temporary_name: str | None = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                dir=destination.parent,
+                prefix=f".{destination.name}.",
+                suffix=".npz",
+                delete=False,
+            ) as temporary:
+                temporary_name = temporary.name
+                np.savez_compressed(temporary, **payload)  # type: ignore[arg-type]
+            os.replace(temporary_name, destination)
+        finally:
+            if temporary_name is not None and os.path.exists(temporary_name):
+                os.unlink(temporary_name)
+
+    @classmethod
+    def from_npz(cls, path: str | os.PathLike[str]) -> WeightedSubhaloCatalog:
+        """Load and validate a catalog produced by :meth:`to_npz`.
+
+        Parameters
+        ----------
+        path : str or pathlib.Path
+            Location of the scientific data archive; no pickle evaluation is used by the NPZ
+            readers.
+
+        Returns
+        -------
+        WeightedSubhaloCatalog
+            Reconstructed catalogue after schema, field and physical-value validation.
+
+        Notes
+        -----
+        Catalogue nodes are deterministic quadrature points with expected-count weights.
+        Preserve factorization and common model/unit/source metadata when selecting, summing or
+        combining them; Poisson sampling adds count noise and does not calibrate the physical
+        population model.
+        """
+        with np.load(Path(path), allow_pickle=False) as archive:
+            try:
+                manifest = json.loads(str(archive["manifest_json"]))
+            except (KeyError, json.JSONDecodeError, TypeError) as exc:
+                raise ValueError("Catalog archive has an invalid manifest.") from exc
+            if not isinstance(manifest, dict):
+                raise ValueError("Catalog archive has an invalid manifest.")
+            if manifest.get("archive_schema") != "itamae-weighted-catalog-npz:1.0":
+                raise ValueError("Catalog archive schema is unsupported.")
+            column_names = manifest.get("columns")
+            weight_names = manifest.get("weights")
+            metadata = manifest.get("catalog_metadata")
+            if (
+                not isinstance(column_names, list)
+                or not all(isinstance(name, str) for name in column_names)
+                or not isinstance(weight_names, list)
+                or not all(isinstance(name, str) for name in weight_names)
+                or not isinstance(metadata, dict)
+            ):
+                raise ValueError("Catalog archive manifest fields are invalid.")
+            if len(set(column_names)) != len(column_names) or len(set(weight_names)) != len(
+                weight_names
+            ):
+                raise ValueError("Catalog archive names must be unique; duplicate names found.")
+            expected_fields = {
+                "manifest_json",
+                *(f"column_{index}" for index in range(len(column_names))),
+                *(f"weight_{index}" for index in range(len(weight_names))),
+            }
+            if set(archive.files) != expected_fields:
+                raise ValueError("Catalog archive field set does not match its manifest.")
+            columns = {
+                name: np.asarray(archive[f"column_{index}"])
+                for index, name in enumerate(column_names)
+            }
+            weights = {
+                name: np.asarray(archive[f"weight_{index}"])
+                for index, name in enumerate(weight_names)
+            }
+        return cls(columns=columns, weights=weights, metadata=metadata)
+
     @classmethod
     def concatenate(cls, catalogs: Sequence[WeightedSubhaloCatalog]) -> WeightedSubhaloCatalog:
-        """Concatenate compatible catalogs along their leading axis."""
+        """Concatenate compatible catalogs along their leading axis.
+
+        Parameters
+        ----------
+        catalogs : Sequence[WeightedSubhaloCatalog]
+            Catalogues with matching physical columns, factor names and exact provenance
+            metadata.
+
+        Returns
+        -------
+        WeightedSubhaloCatalog
+            Catalogues joined along their leading axis with unchanged common provenance.
+
+        Notes
+        -----
+        Catalogue nodes are deterministic quadrature points with expected-count weights.
+        Preserve factorization and common model/unit/source metadata when selecting, summing or
+        combining them; Poisson sampling adds count noise and does not calibrate the physical
+        population model.
+        """
         if not catalogs:
             raise ValueError("At least one catalog is required for concatenation.")
         first = catalogs[0]

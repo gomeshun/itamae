@@ -1,0 +1,747 @@
+{
+  "scope": "itamae",
+  "baseline": {
+    "root": "/tmp/sashimi-picard-migration-20261014/itamae",
+    "head": "4aeb13ed4e3e3e87171fe800e08f74b95c1244a2",
+    "branch": "codex/shared-picard-20261014",
+    "status": "",
+    "comparison_baseline": {}
+  },
+  "definitions": [
+    {
+      "repo": "itamae",
+      "file": "src/itamae/cosmology/colossus.py",
+      "name": "ColossusCosmology",
+      "line_before": 11,
+      "line_after": 11,
+      "source_url_before": "https://github.com/gomeshun/itamae/blob/4aeb13ed4e3e3e87171fe800e08f74b95c1244a2/src/itamae/cosmology/colossus.py#L11",
+      "references_before": [
+        "colossus",
+        "planck"
+      ],
+      "references_after": [
+        "colossus",
+        "planck"
+      ],
+      "baseline_mapping": {
+        "repo": "itamae",
+        "file": "src/itamae/cosmology/colossus.py",
+        "name": "ColossusCosmology",
+        "status": "no author baseline: new shared library",
+        "original_definitions": []
+      },
+      "occurrences_before": [
+        {
+          "key": "colossus",
+          "category": "context",
+          "role": "scientific implementation or composition",
+          "qualification": "Use the source comparison and the definition's own Notes together."
+        },
+        {
+          "key": "planck",
+          "category": "adopted",
+          "role": "scientific implementation or composition",
+          "qualification": "Use the source comparison and the definition's own Notes together."
+        }
+      ],
+      "occurrences_after": [
+        {
+          "key": "colossus",
+          "category": "context",
+          "role": "scientific implementation or composition",
+          "qualification": "Use the source comparison and the definition's own Notes together."
+        },
+        {
+          "key": "planck",
+          "category": "adopted",
+          "role": "scientific implementation or composition",
+          "qualification": "Use the source comparison and the definition's own Notes together."
+        }
+      ],
+      "correction": "verified without edit",
+      "doc_after": "Wrap a named Colossus cosmology while restoring global state after calls.\n\nParameters\n----------\nname : str\n    Named Colossus cosmology, such as planck18, used for every background query.\n\nNotes\n-----\nThe default planck18 preset is supplied by Colossus and is based on Planck 2018. The\npreset is external library data; its full parameter set is not inferred from the rounded\nnative defaults.\n\nEach query activates the named Colossus cosmology and restores the previous global\nselection. The wrapper preserves the implemented provider conversion; comparisons must\nalso check factors of h, not only matching parameter labels.\n\nReferences\n----------\n\n.. [cite-colossus] Diemer (2018), COLOSSUS: A Python Toolkit for Cosmology, Large-scale Structure, and Dark Matter Halos.\n    https://arxiv.org/abs/1712.04512\n\n.. [cite-planck] Planck Collaboration (2020), Planck 2018 results. VI. Cosmological parameters, Table 2.\n    https://arxiv.org/abs/1807.06209"
+    },
+    {
+      "repo": "itamae",
+      "file": "src/itamae/cosmology/colossus.py",
+      "name": "ColossusCosmology.__post_init__",
+      "line_before": 42,
+      "line_after": 42,
+      "source_url_before": "https://github.com/gomeshun/itamae/blob/4aeb13ed4e3e3e87171fe800e08f74b95c1244a2/src/itamae/cosmology/colossus.py#L42",
+      "references_before": [
+        "colossus",
+        "planck"
+      ],
+      "references_after": [
+        "colossus",
+        "planck"
+      ],
+      "baseline_mapping": {
+        "repo": "itamae",
+        "file": "src/itamae/cosmology/colossus.py",
+        "name": "ColossusCosmology.__post_init__",
+        "status": "no author baseline: new shared library",
+        "original_definitions": []
+      },
+      "occurrences_before": [
+        {
+          "key": "colossus",
+          "category": "context",
+          "role": "scientific implementation or composition",
+          "qualification": "Use the source comparison and the definition's own Notes together."
+        },
+        {
+          "key": "planck",
+          "category": "adopted",
+          "role": "scientific implementation or composition",
+          "qualification": "Use the source comparison and the definition's own Notes together."
+        }
+      ],
+      "occurrences_after": [
+        {
+          "key": "colossus",
+          "category": "context",
+          "role": "scientific implementation or composition",
+          "qualification": "Use the source comparison and the definition's own Notes together."
+        },
+        {
+          "key": "planck",
+          "category": "adopted",
+          "role": "scientific implementation or composition",
+          "qualification": "Use the source comparison and the definition's own Notes together."
+        }
+      ],
+      "correction": "verified without edit",
+      "doc_after": "Snapshot the named cosmology parameters for this immutable provider.\n\nNotes\n-----\nThe default planck18 preset is supplied by Colossus and is based on Planck 2018. The\npreset is external library data; its full parameter set is not inferred from the rounded\nnative defaults.\n\nEach query activates the named Colossus cosmology and restores the previous global\nselection. The wrapper preserves the implemented provider conversion; comparisons must\nalso check factors of h, not only matching parameter labels.\n\nReferences\n----------\n\n.. [cite-colossus] Diemer (2018), COLOSSUS: A Python Toolkit for Cosmology, Large-scale Structure, and Dark Matter Halos.\n    https://arxiv.org/abs/1712.04512\n\n.. [cite-planck] Planck Collaboration (2020), Planck 2018 results. VI. Cosmological parameters, Table 2.\n    https://arxiv.org/abs/1807.06209"
+    },
+    {
+      "repo": "itamae",
+      "file": "src/itamae/cosmology/colossus.py",
+      "name": "ColossusCosmology.collapse_threshold",
+      "line_before": 233,
+      "line_after": 233,
+      "source_url_before": "https://github.com/gomeshun/itamae/blob/4aeb13ed4e3e3e87171fe800e08f74b95c1244a2/src/itamae/cosmology/colossus.py#L233",
+      "references_before": [
+        "ludlow"
+      ],
+      "references_after": [
+        "ludlow"
+      ],
+      "baseline_mapping": {
+        "repo": "itamae",
+        "file": "src/itamae/cosmology/colossus.py",
+        "name": "ColossusCosmology.collapse_threshold",
+        "status": "no author baseline: new shared library",
+        "original_definitions": []
+      },
+      "occurrences_before": [
+        {
+          "key": "ludlow",
+          "category": "printed",
+          "role": "scientific implementation or composition",
+          "qualification": "Use the source comparison and the definition's own Notes together."
+        }
+      ],
+      "occurrences_after": [
+        {
+          "key": "ludlow",
+          "category": "printed",
+          "role": "scientific implementation or composition",
+          "qualification": "Use the source comparison and the definition's own Notes together."
+        }
+      ],
+      "correction": "docstring changed",
+      "doc_after": "Return 1.686 divided by the growth factor.\n\nParameters\n----------\nz : float or array_like\n    Dimensionless redshift. The cosmological background requires z > -1; population\n    nodes use nonnegative redshifts.\n\nReturns\n-------\nfloat or numpy.ndarray\n    Dimensionless linearly extrapolated spherical-collapse barrier 1.686/D(z).\n\nNotes\n-----\nThe adopted spherical-collapse barrier is delta_c(z)=1.686/D(z), as used in Ludlow et\nal., Appendix C. This approximation is separate from any mass-dependent WDM collapse\ncorrection.\n\nEach query activates the named Colossus cosmology and restores the previous global\nselection. The wrapper preserves the implemented provider conversion; comparisons must\nalso check factors of h, not only matching parameter labels.\n\nReferences\n----------\n\n.. [cite-ludlow] Ludlow et al. (2016), The mass-concentration-redshift relation of cold and warm dark matter haloes, Eq. (3) and Appendix C, Eqs. (C8)-(C12).\n    https://arxiv.org/abs/1601.02624"
+    },
+    {
+      "repo": "itamae",
+      "file": "src/itamae/cosmology/native.py",
+      "name": "NativeFlatLCDM",
+      "line_before": 75,
+      "line_after": 75,
+      "source_url_before": "https://github.com/gomeshun/itamae/blob/4aeb13ed4e3e3e87171fe800e08f74b95c1244a2/src/itamae/cosmology/native.py#L75",
+      "references_before": [
+        "planck"
+      ],
+      "references_after": [
+        "planck"
+      ],
+      "baseline_mapping": {
+        "repo": "itamae",
+        "file": "src/itamae/cosmology/native.py",
+        "name": "NativeFlatLCDM",
+        "status": "no author baseline: new shared library",
+        "original_definitions": []
+      },
+      "occurrences_before": [
+        {
+          "key": "planck",
+          "category": "adopted",
+          "role": "scientific implementation or composition",
+          "qualification": "Use the source comparison and the definition's own Notes together."
+        }
+      ],
+      "occurrences_after": [
+        {
+          "key": "planck",
+          "category": "adopted",
+          "role": "scientific implementation or composition",
+          "qualification": "Use the source comparison and the definition's own Notes together."
+        }
+      ],
+      "correction": "verified without edit",
+      "doc_after": "Flat-LCDM background with NumPy/SciPy only.\n\nParameters\n----------\nomega_m0\n    Present-day matter density fraction.\nh\n    Reduced Hubble constant.\n\nNotes\n-----\nThe defaults Omega_m0=0.315 and h=0.674 are rounded Planck-2018 values. User-supplied\nalternatives remain explicit background choices.\n\nThis matter-plus-Lambda, spatially flat background neglects radiation. Growth uses the\nCarroll-Press-Turner approximation normalized to D(0)=1; the generic background is not a\ncalibration of a SASHIMI halo prescription.\n\nReferences\n----------\n\n.. [cite-planck] Planck Collaboration (2020), Planck 2018 results. VI. Cosmological parameters, Table 2.\n    https://arxiv.org/abs/1807.06209"
+    },
+    {
+      "repo": "itamae",
+      "file": "src/itamae/cosmology/native.py",
+      "name": "NativeFlatLCDM.__post_init__",
+      "line_before": 104,
+      "line_after": 104,
+      "source_url_before": "https://github.com/gomeshun/itamae/blob/4aeb13ed4e3e3e87171fe800e08f74b95c1244a2/src/itamae/cosmology/native.py#L104",
+      "references_before": [
+        "planck"
+      ],
+      "references_after": [
+        "planck"
+      ],
+      "baseline_mapping": {
+        "repo": "itamae",
+        "file": "src/itamae/cosmology/native.py",
+        "name": "NativeFlatLCDM.__post_init__",
+        "status": "no author baseline: new shared library",
+        "original_definitions": []
+      },
+      "occurrences_before": [
+        {
+          "key": "planck",
+          "category": "adopted",
+          "role": "scientific implementation or composition",
+          "qualification": "Use the source comparison and the definition's own Notes together."
+        }
+      ],
+      "occurrences_after": [
+        {
+          "key": "planck",
+          "category": "adopted",
+          "role": "scientific implementation or composition",
+          "qualification": "Use the source comparison and the definition's own Notes together."
+        }
+      ],
+      "correction": "verified without edit",
+      "doc_after": "Validate the matter-plus-nonnegative-Lambda background domain.\n\nNotes\n-----\nThe defaults Omega_m0=0.315 and h=0.674 are rounded Planck-2018 values. User-supplied\nalternatives remain explicit background choices.\n\nThis matter-plus-Lambda, spatially flat background neglects radiation. Growth uses the\nCarroll-Press-Turner approximation normalized to D(0)=1; the generic background is not a\ncalibration of a SASHIMI halo prescription.\n\nReferences\n----------\n\n.. [cite-planck] Planck Collaboration (2020), Planck 2018 results. VI. Cosmological parameters, Table 2.\n    https://arxiv.org/abs/1807.06209"
+    },
+    {
+      "repo": "itamae",
+      "file": "src/itamae/cosmology/native.py",
+      "name": "NativeFlatLCDM.growth_factor",
+      "line_before": 291,
+      "line_after": 291,
+      "source_url_before": "https://github.com/gomeshun/itamae/blob/4aeb13ed4e3e3e87171fe800e08f74b95c1244a2/src/itamae/cosmology/native.py#L291",
+      "references_before": [
+        "growth"
+      ],
+      "references_after": [
+        "growth"
+      ],
+      "baseline_mapping": {
+        "repo": "itamae",
+        "file": "src/itamae/cosmology/native.py",
+        "name": "NativeFlatLCDM.growth_factor",
+        "status": "no author baseline: new shared library",
+        "original_definitions": []
+      },
+      "occurrences_before": [
+        {
+          "key": "growth",
+          "category": "derived",
+          "role": "scientific implementation or composition",
+          "qualification": "Normalized growth or its derivative follows the printed suppression approximation."
+        }
+      ],
+      "occurrences_after": [
+        {
+          "key": "growth",
+          "category": "derived",
+          "role": "scientific implementation or composition",
+          "qualification": "Normalized growth or its derivative follows the printed suppression approximation."
+        }
+      ],
+      "correction": "docstring changed",
+      "doc_after": "Return the Carroll-Press-Turner growth approximation normalized at z=0.\n\nParameters\n----------\nz : float or array_like\n    Dimensionless redshift. The cosmological background requires z > -1; population\n    nodes use nonnegative redshifts.\n\nReturns\n-------\nfloat or numpy.ndarray\n    Dimensionless linear growth D(z), normalized at z=0.\n\nNotes\n-----\nThe factors 5/2, 4/7 and 1/70 belong to the Carroll--Press--Turner growth approximation.\nRedshift derivatives differentiate that approximation; they are not a separate growth\ncalibration.\n\nThis matter-plus-Lambda, spatially flat background neglects radiation. Growth uses the\nCarroll-Press-Turner approximation normalized to D(0)=1; the generic background is not a\ncalibration of a SASHIMI halo prescription.\n\nReferences\n----------\n\n.. [cite-growth] Carroll, Press & Turner (1992), The Cosmological Constant, Section 3.5, Eq. (29).\n    https://doi.org/10.1146/annurev.aa.30.090192.002435\n    Full text: https://ned.ipac.caltech.edu/level5/Carroll/Carroll3_5.html"
+    },
+    {
+      "repo": "itamae",
+      "file": "src/itamae/cosmology/native.py",
+      "name": "NativeFlatLCDM.collapse_threshold",
+      "line_before": 330,
+      "line_after": 331,
+      "source_url_before": "https://github.com/gomeshun/itamae/blob/4aeb13ed4e3e3e87171fe800e08f74b95c1244a2/src/itamae/cosmology/native.py#L330",
+      "references_before": [
+        "ludlow"
+      ],
+      "references_after": [
+        "ludlow"
+      ],
+      "baseline_mapping": {
+        "repo": "itamae",
+        "file": "src/itamae/cosmology/native.py",
+        "name": "NativeFlatLCDM.collapse_threshold",
+        "status": "no author baseline: new shared library",
+        "original_definitions": []
+      },
+      "occurrences_before": [
+        {
+          "key": "ludlow",
+          "category": "printed",
+          "role": "scientific implementation or composition",
+          "qualification": "Use the source comparison and the definition's own Notes together."
+        }
+      ],
+      "occurrences_after": [
+        {
+          "key": "ludlow",
+          "category": "printed",
+          "role": "scientific implementation or composition",
+          "qualification": "Use the source comparison and the definition's own Notes together."
+        }
+      ],
+      "correction": "docstring changed",
+      "doc_after": "Return the spherical-collapse threshold scaled by the growth factor.\n\nParameters\n----------\nz : float or array_like\n    Dimensionless redshift. The cosmological background requires z > -1; population\n    nodes use nonnegative redshifts.\n\nReturns\n-------\nfloat or numpy.ndarray\n    Dimensionless linearly extrapolated spherical-collapse barrier 1.686/D(z).\n\nNotes\n-----\nThe adopted spherical-collapse barrier is delta_c(z)=1.686/D(z), as used in Ludlow et\nal., Appendix C. This approximation is separate from any mass-dependent WDM collapse\ncorrection.\n\nThis matter-plus-Lambda, spatially flat background neglects radiation. Growth uses the\nCarroll-Press-Turner approximation normalized to D(0)=1; the generic background is not a\ncalibration of a SASHIMI halo prescription.\n\nReferences\n----------\n\n.. [cite-ludlow] Ludlow et al. (2016), The mass-concentration-redshift relation of cold and warm dark matter haloes, Eq. (3) and Appendix C, Eqs. (C8)-(C12).\n    https://arxiv.org/abs/1601.02624"
+    },
+    {
+      "repo": "itamae",
+      "file": "src/itamae/halo/nfw.py",
+      "name": "nfw_mass_function",
+      "line_before": 41,
+      "line_after": 41,
+      "source_url_before": "https://github.com/gomeshun/itamae/blob/4aeb13ed4e3e3e87171fe800e08f74b95c1244a2/src/itamae/halo/nfw.py#L41",
+      "references_before": [
+        "nfw"
+      ],
+      "references_after": [
+        "nfw"
+      ],
+      "baseline_mapping": {
+        "repo": "itamae",
+        "file": "src/itamae/halo/nfw.py",
+        "name": "nfw_mass_function",
+        "status": "no author baseline: new shared library",
+        "original_definitions": []
+      },
+      "occurrences_before": [
+        {
+          "key": "nfw",
+          "category": "derived",
+          "role": "scientific implementation or composition",
+          "qualification": "Density/circular-speed law supports this NFW consequence; solvers and inverses are derived."
+        }
+      ],
+      "occurrences_after": [
+        {
+          "key": "nfw",
+          "category": "derived",
+          "role": "scientific implementation or composition",
+          "qualification": "Density/circular-speed law supports this NFW consequence; solvers and inverses are derived."
+        }
+      ],
+      "correction": "verified without edit",
+      "doc_after": "Return ``ln(1+x)-x/(1+x)`` for finite nonnegative ``x``.\n\nA small-radius series avoids subtracting two nearly equal terms. Values\nsmaller than the floating-point subnormal range can still underflow.\n\nParameters\n----------\nx : float or array_like\n    Nonnegative dimensionless NFW radius r/r_s; zero gives zero enclosed mass.\n\nReturns\n-------\nnumpy.ndarray\n    Dimensionless f(x)=ln(1+x)-x/(1+x), retaining the nonnegative radius-ratio shape.\n\nNotes\n-----\nThe enclosed-mass factor ln(1+c)-c/(1+c) follows the NFW density profile. Algebraic\ninversion tolerances concern this profile identity, not agreement with simulated halos.\n\nThe enclosed-mass normalization is M(<r)=4*pi*rho_s*r_s**3*f(r/r_s). The potential fixes\nG in Mpc*(km/s)^2/Msun and its zero at infinity, so use Mpc and Msun/Mpc^3 for physical\nprofile parameters.\n\nReferences\n----------\n\n.. [cite-nfw] Navarro, Frenk & White (1997), A Universal Density Profile from Hierarchical Clustering.\n    https://arxiv.org/abs/astro-ph/9611107"
+    },
+    {
+      "repo": "itamae",
+      "file": "src/itamae/halo/nfw.py",
+      "name": "invert_nfw_mass_function",
+      "line_before": 84,
+      "line_after": 84,
+      "source_url_before": "https://github.com/gomeshun/itamae/blob/4aeb13ed4e3e3e87171fe800e08f74b95c1244a2/src/itamae/halo/nfw.py#L84",
+      "references_before": [
+        "nfw"
+      ],
+      "references_after": [
+        "nfw"
+      ],
+      "baseline_mapping": {
+        "repo": "itamae",
+        "file": "src/itamae/halo/nfw.py",
+        "name": "invert_nfw_mass_function",
+        "status": "no author baseline: new shared library",
+        "original_definitions": []
+      },
+      "occurrences_before": [
+        {
+          "key": "nfw",
+          "category": "derived",
+          "role": "scientific implementation or composition",
+          "qualification": "Density/circular-speed law supports this NFW consequence; solvers and inverses are derived."
+        }
+      ],
+      "occurrences_after": [
+        {
+          "key": "nfw",
+          "category": "derived",
+          "role": "scientific implementation or composition",
+          "qualification": "Density/circular-speed law supports this NFW consequence; solvers and inverses are derived."
+        }
+      ],
+      "correction": "docstring changed",
+      "doc_after": "Invert the NFW enclosed-mass function over representable positive radii.\n\nSolve in log-radius so an absolute tolerance in radius cannot erase a\nsmall, positive solution. The output retains the input shape.\n\nParameters\n----------\ny : float or array_like\n    Dimensionless enclosed mass M/(4*pi*rho_s*r_s**3), within the representable inverse\n    range.\n\nReturns\n-------\nfloat or numpy.ndarray\n    Nonnegative radius ratio r/r_s whose NFW mass function equals y; input shape is\n    retained.\n\nNotes\n-----\nThe enclosed-mass factor ln(1+c)-c/(1+c) follows the NFW density profile. Algebraic\ninversion tolerances concern this profile identity, not agreement with simulated halos.\n\nThe enclosed-mass normalization is M(<r)=4*pi*rho_s*r_s**3*f(r/r_s). The potential fixes\nG in Mpc*(km/s)^2/Msun and its zero at infinity, so use Mpc and Msun/Mpc^3 for physical\nprofile parameters.\n\nNavarro et al. print the density and circular-speed relations. The potential with zero\nat infinity and numerical or Lambert-W inversion of the enclosed-mass factor are\nderived consequences of that profile; these closed forms and solver controls are not\nequations printed in the cited paper.\n\nReferences\n----------\n\n.. [cite-nfw] Navarro, Frenk & White (1997), A Universal Density Profile from Hierarchical Clustering.\n    https://arxiv.org/abs/astro-ph/9611107"
+    },
+    {
+      "repo": "itamae",
+      "file": "src/itamae/halo/nfw.py",
+      "name": "NFWProfile",
+      "line_before": 191,
+      "line_after": 196,
+      "source_url_before": "https://github.com/gomeshun/itamae/blob/4aeb13ed4e3e3e87171fe800e08f74b95c1244a2/src/itamae/halo/nfw.py#L191",
+      "references_before": [
+        "nfw"
+      ],
+      "references_after": [
+        "nfw"
+      ],
+      "baseline_mapping": {
+        "repo": "itamae",
+        "file": "src/itamae/halo/nfw.py",
+        "name": "NFWProfile",
+        "status": "no author baseline: new shared library",
+        "original_definitions": []
+      },
+      "occurrences_before": [
+        {
+          "key": "nfw",
+          "category": "derived",
+          "role": "scientific implementation or composition",
+          "qualification": "Density/circular-speed law supports this NFW consequence; solvers and inverses are derived."
+        }
+      ],
+      "occurrences_after": [
+        {
+          "key": "nfw",
+          "category": "derived",
+          "role": "scientific implementation or composition",
+          "qualification": "Density/circular-speed law supports this NFW consequence; solvers and inverses are derived."
+        }
+      ],
+      "correction": "verified without edit",
+      "doc_after": "Spherical NFW profile parameterized by scale radius and density.\n\nParameters\n----------\nr_s : float\n    NFW scale radius in Mpc for the canonical profile, strictly positive.\nrho_s : float\n    NFW scale density in solar masses per Mpc cubed, strictly positive.\n\nNotes\n-----\nThe enclosed-mass factor ln(1+c)-c/(1+c) follows the NFW density profile. Algebraic\ninversion tolerances concern this profile identity, not agreement with simulated halos.\n\nThe enclosed-mass normalization is M(<r)=4*pi*rho_s*r_s**3*f(r/r_s). The potential fixes\nG in Mpc*(km/s)^2/Msun and its zero at infinity, so use Mpc and Msun/Mpc^3 for physical\nprofile parameters.\n\nReferences\n----------\n\n.. [cite-nfw] Navarro, Frenk & White (1997), A Universal Density Profile from Hierarchical Clustering.\n    https://arxiv.org/abs/astro-ph/9611107"
+    },
+    {
+      "repo": "itamae",
+      "file": "src/itamae/halo/nfw.py",
+      "name": "NFWProfile.__post_init__",
+      "line_before": 220,
+      "line_after": 225,
+      "source_url_before": "https://github.com/gomeshun/itamae/blob/4aeb13ed4e3e3e87171fe800e08f74b95c1244a2/src/itamae/halo/nfw.py#L220",
+      "references_before": [
+        "nfw"
+      ],
+      "references_after": [
+        "nfw"
+      ],
+      "baseline_mapping": {
+        "repo": "itamae",
+        "file": "src/itamae/halo/nfw.py",
+        "name": "NFWProfile.__post_init__",
+        "status": "no author baseline: new shared library",
+        "original_definitions": []
+      },
+      "occurrences_before": [
+        {
+          "key": "nfw",
+          "category": "derived",
+          "role": "scientific implementation or composition",
+          "qualification": "Density/circular-speed law supports this NFW consequence; solvers and inverses are derived."
+        }
+      ],
+      "occurrences_after": [
+        {
+          "key": "nfw",
+          "category": "derived",
+          "role": "scientific implementation or composition",
+          "qualification": "Density/circular-speed law supports this NFW consequence; solvers and inverses are derived."
+        }
+      ],
+      "correction": "verified without edit",
+      "doc_after": "Require a physical finite positive scale radius and density.\n\nNotes\n-----\nThe enclosed-mass factor ln(1+c)-c/(1+c) follows the NFW density profile. Algebraic\ninversion tolerances concern this profile identity, not agreement with simulated halos.\n\nThe enclosed-mass normalization is M(<r)=4*pi*rho_s*r_s**3*f(r/r_s). The potential fixes\nG in Mpc*(km/s)^2/Msun and its zero at infinity, so use Mpc and Msun/Mpc^3 for physical\nprofile parameters.\n\nReferences\n----------\n\n.. [cite-nfw] Navarro, Frenk & White (1997), A Universal Density Profile from Hierarchical Clustering.\n    https://arxiv.org/abs/astro-ph/9611107"
+    },
+    {
+      "repo": "itamae",
+      "file": "src/itamae/halo/nfw.py",
+      "name": "NFWProfile.enclosed_mass",
+      "line_before": 243,
+      "line_after": 248,
+      "source_url_before": "https://github.com/gomeshun/itamae/blob/4aeb13ed4e3e3e87171fe800e08f74b95c1244a2/src/itamae/halo/nfw.py#L243",
+      "references_before": [
+        "nfw"
+      ],
+      "references_after": [
+        "nfw"
+      ],
+      "baseline_mapping": {
+        "repo": "itamae",
+        "file": "src/itamae/halo/nfw.py",
+        "name": "NFWProfile.enclosed_mass",
+        "status": "no author baseline: new shared library",
+        "original_definitions": []
+      },
+      "occurrences_before": [
+        {
+          "key": "nfw",
+          "category": "derived",
+          "role": "scientific implementation or composition",
+          "qualification": "Density/circular-speed law supports this NFW consequence; solvers and inverses are derived."
+        }
+      ],
+      "occurrences_after": [
+        {
+          "key": "nfw",
+          "category": "derived",
+          "role": "scientific implementation or composition",
+          "qualification": "Density/circular-speed law supports this NFW consequence; solvers and inverses are derived."
+        }
+      ],
+      "correction": "verified without edit",
+      "doc_after": "Return enclosed mass in the profile's mass unit.\n\nParameters\n----------\nr : float or array_like\n    Physical radius in Mpc under the canonical unit schema; use the same length\n    convention as the profile.\n\nReturns\n-------\nnumpy.ndarray\n    Enclosed mass in Msun for canonical radius/density parameters.\n\nNotes\n-----\nThe enclosed-mass factor ln(1+c)-c/(1+c) follows the NFW density profile. Algebraic\ninversion tolerances concern this profile identity, not agreement with simulated halos.\n\nThe enclosed-mass normalization is M(<r)=4*pi*rho_s*r_s**3*f(r/r_s). The potential fixes\nG in Mpc*(km/s)^2/Msun and its zero at infinity, so use Mpc and Msun/Mpc^3 for physical\nprofile parameters.\n\nReferences\n----------\n\n.. [cite-nfw] Navarro, Frenk & White (1997), A Universal Density Profile from Hierarchical Clustering.\n    https://arxiv.org/abs/astro-ph/9611107"
+    },
+    {
+      "repo": "itamae",
+      "file": "src/itamae/halo/nfw.py",
+      "name": "NFWProfile.density",
+      "line_before": 277,
+      "line_after": 282,
+      "source_url_before": "https://github.com/gomeshun/itamae/blob/4aeb13ed4e3e3e87171fe800e08f74b95c1244a2/src/itamae/halo/nfw.py#L277",
+      "references_before": [
+        "nfw"
+      ],
+      "references_after": [
+        "nfw"
+      ],
+      "baseline_mapping": {
+        "repo": "itamae",
+        "file": "src/itamae/halo/nfw.py",
+        "name": "NFWProfile.density",
+        "status": "no author baseline: new shared library",
+        "original_definitions": []
+      },
+      "occurrences_before": [
+        {
+          "key": "nfw",
+          "category": "printed",
+          "role": "scientific implementation or composition",
+          "qualification": "Density/circular-speed law supports this NFW consequence; solvers and inverses are derived."
+        }
+      ],
+      "occurrences_after": [
+        {
+          "key": "nfw",
+          "category": "printed",
+          "role": "scientific implementation or composition",
+          "qualification": "Density/circular-speed law supports this NFW consequence; solvers and inverses are derived."
+        }
+      ],
+      "correction": "verified without edit",
+      "doc_after": "Return density at positive radius.\n\nParameters\n----------\nr : float or array_like\n    Physical radius in Mpc under the canonical unit schema; use the same length\n    convention as the profile.\n\nReturns\n-------\nnumpy.ndarray\n    NFW density rho_s/[x*(1+x)**2] in Msun/Mpc^3; r=0 is rejected because the density is\n    singular.\n\nNotes\n-----\nThe enclosed-mass factor ln(1+c)-c/(1+c) follows the NFW density profile. Algebraic\ninversion tolerances concern this profile identity, not agreement with simulated halos.\n\nThe enclosed-mass normalization is M(<r)=4*pi*rho_s*r_s**3*f(r/r_s). The potential fixes\nG in Mpc*(km/s)^2/Msun and its zero at infinity, so use Mpc and Msun/Mpc^3 for physical\nprofile parameters.\n\nReferences\n----------\n\n.. [cite-nfw] Navarro, Frenk & White (1997), A Universal Density Profile from Hierarchical Clustering.\n    https://arxiv.org/abs/astro-ph/9611107"
+    },
+    {
+      "repo": "itamae",
+      "file": "src/itamae/halo/nfw.py",
+      "name": "NFWProfile.potential",
+      "line_before": 313,
+      "line_after": 318,
+      "source_url_before": "https://github.com/gomeshun/itamae/blob/4aeb13ed4e3e3e87171fe800e08f74b95c1244a2/src/itamae/halo/nfw.py#L313",
+      "references_before": [
+        "nfw"
+      ],
+      "references_after": [
+        "nfw"
+      ],
+      "baseline_mapping": {
+        "repo": "itamae",
+        "file": "src/itamae/halo/nfw.py",
+        "name": "NFWProfile.potential",
+        "status": "no author baseline: new shared library",
+        "original_definitions": []
+      },
+      "occurrences_before": [
+        {
+          "key": "nfw",
+          "category": "derived",
+          "role": "scientific implementation or composition",
+          "qualification": "Density/circular-speed law supports this NFW consequence; solvers and inverses are derived."
+        }
+      ],
+      "occurrences_after": [
+        {
+          "key": "nfw",
+          "category": "derived",
+          "role": "scientific implementation or composition",
+          "qualification": "Density/circular-speed law supports this NFW consequence; solvers and inverses are derived."
+        }
+      ],
+      "correction": "docstring changed",
+      "doc_after": "Return gravitational potential with zero at infinity.\n\nParameters\n----------\nr : float or array_like\n    Physical radius in Mpc under the canonical unit schema; use the same length\n    convention as the profile.\n\nReturns\n-------\nnumpy.ndarray\n    Specific gravitational potential in (km/s)^2, finite at r=0 and zero at infinity.\n\nNotes\n-----\nThe enclosed-mass factor ln(1+c)-c/(1+c) follows the NFW density profile. Algebraic\ninversion tolerances concern this profile identity, not agreement with simulated halos.\n\nThe enclosed-mass normalization is M(<r)=4*pi*rho_s*r_s**3*f(r/r_s). The potential fixes\nG in Mpc*(km/s)^2/Msun and its zero at infinity, so use Mpc and Msun/Mpc^3 for physical\nprofile parameters.\n\nNavarro et al. print the density and circular-speed relations. The potential with zero\nat infinity and numerical or Lambert-W inversion of the enclosed-mass factor are\nderived consequences of that profile; these closed forms and solver controls are not\nequations printed in the cited paper.\n\nReferences\n----------\n\n.. [cite-nfw] Navarro, Frenk & White (1997), A Universal Density Profile from Hierarchical Clustering.\n    https://arxiv.org/abs/astro-ph/9611107"
+    },
+    {
+      "repo": "itamae",
+      "file": "tests/test_cosmology.py",
+      "name": "test_colossus_backend_matches_order_of_magnitude",
+      "line_before": 28,
+      "line_after": 28,
+      "source_url_before": "https://github.com/gomeshun/itamae/blob/4aeb13ed4e3e3e87171fe800e08f74b95c1244a2/tests/test_cosmology.py#L28",
+      "references_before": [
+        "planck"
+      ],
+      "references_after": [
+        "planck"
+      ],
+      "baseline_mapping": {
+        "repo": "itamae",
+        "file": "tests/test_cosmology.py",
+        "name": "test_colossus_backend_matches_order_of_magnitude",
+        "status": "no author baseline: new shared library",
+        "original_definitions": []
+      },
+      "occurrences_before": [
+        {
+          "key": "planck",
+          "category": "adopted",
+          "role": "controlled test or fixture",
+          "qualification": "Use the source comparison and the definition's own Notes together."
+        }
+      ],
+      "occurrences_after": [
+        {
+          "key": "planck",
+          "category": "adopted",
+          "role": "controlled test or fixture",
+          "qualification": "Use the source comparison and the definition's own Notes together."
+        }
+      ],
+      "correction": "verified without edit",
+      "doc_after": "Detect gross background mismatches against the optional Colossus implementation.\n\nNotes\n-----\nPlanck-like background numbers are controlled test inputs. Equality or rejection here\nchecks the stated background contract, not the cosmological fit.\n\nPass criteria: At z=0,1,3 the two Planck-like backgrounds agree within 3 percent in H\nand 4 percent in growth.\n\nFailure criteria: any mismatch with the stated value, shape or identity requirements\nfails the test.\n\nScope: Only H and growth are compared, not critical/matter density. The current Colossus\nwrapper multiplies its Msun*h^2/kpc^3 density by 1e9 without applying h^2; this test\ncannot detect that canonical-unit mismatch.\n\nReferences\n----------\n\n.. [cite-planck] Planck Collaboration (2020), Planck 2018 results. VI. Cosmological parameters, Table 2.\n    https://arxiv.org/abs/1807.06209"
+    },
+    {
+      "repo": "itamae",
+      "file": "tests/test_public_input_contracts.py",
+      "name": "test_native_cosmology_identifies_distinct_float_parameters",
+      "line_before": 382,
+      "line_after": 382,
+      "source_url_before": "https://github.com/gomeshun/itamae/blob/4aeb13ed4e3e3e87171fe800e08f74b95c1244a2/tests/test_public_input_contracts.py#L382",
+      "references_before": [
+        "planck"
+      ],
+      "references_after": [
+        "planck"
+      ],
+      "baseline_mapping": {
+        "repo": "itamae",
+        "file": "tests/test_public_input_contracts.py",
+        "name": "test_native_cosmology_identifies_distinct_float_parameters",
+        "status": "no author baseline: new shared library",
+        "original_definitions": []
+      },
+      "occurrences_before": [
+        {
+          "key": "planck",
+          "category": "adopted",
+          "role": "controlled test or fixture",
+          "qualification": "Use the source comparison and the definition's own Notes together."
+        }
+      ],
+      "occurrences_after": [
+        {
+          "key": "planck",
+          "category": "adopted",
+          "role": "controlled test or fixture",
+          "qualification": "Use the source comparison and the definition's own Notes together."
+        }
+      ],
+      "correction": "verified without edit",
+      "doc_after": "Avoid cache aliasing between numerically distinct cosmological parameters.\n\nNotes\n-----\nPlanck-like background numbers are controlled test inputs. Equality or rejection here\nchecks the stated background contract, not the cosmological fit.\n\nPass criteria: h=0.674 and h=0.67400000001 produce different identifiers.\n\nFailure criteria: any mismatch with the stated value, shape or identity requirements\nfails the test.\n\nScope: This controlled calculation does not calibrate a subhalo population against\nsimulations or observations.\n\nReferences\n----------\n\n.. [cite-planck] Planck Collaboration (2020), Planck 2018 results. VI. Cosmological parameters, Table 2.\n    https://arxiv.org/abs/1807.06209"
+    }
+  ],
+  "sources": {
+    "planck": {
+      "key": "planck",
+      "title": "Planck Collaboration (2020), Planck 2018 results. VI. Cosmological parameters, Table 2.",
+      "identifier_url": "https://arxiv.org/abs/1807.06209",
+      "original_url_status": 200,
+      "full_text_url": "https://arxiv.org/pdf/1807.06209",
+      "full_text_status": 200,
+      "source_version": "1807.06209v4 [astro-ph.CO] 9 Aug 2021",
+      "full_text_sha256": "8e172730faf07c9f4ff3fdcc7043f76ed67df6f76066d47df30d693025b6ce77",
+      "checked_at": "2026-10-14T22:51:52.560656+00:00",
+      "location": "Table 2, p.16 (TT,TE,EE+lowE+lensing column)",
+      "comparison_category": "adopted",
+      "manual_comparison": "H0=67.36, Omega_m=0.3153, omega_b=0.02237, tau=0.0544 and A_s=2.100e-9 support the rounded native/control inputs. Omega_b is obtained by dividing omega_b by h^2. The Colossus planck18 preset selects a different data combination; its name does not make it identical to the native parameter vector."
+    },
+    "colossus": {
+      "key": "colossus",
+      "title": "Diemer (2018), COLOSSUS: A Python Toolkit for Cosmology, Large-scale Structure, and Dark Matter Halos.",
+      "identifier_url": "https://arxiv.org/abs/1712.04512",
+      "original_url_status": 200,
+      "full_text_url": "https://arxiv.org/pdf/1712.04512",
+      "full_text_status": 200,
+      "source_version": "1712.04512v3 [astro-ph.CO] 18 Dec 2018",
+      "full_text_sha256": "48e2116484b3c65193c9b15187ed0726e94f320b12a5e8401cd55ae4bab5aba8",
+      "checked_at": "2026-10-14T22:51:52.481278+00:00",
+      "location": "Table 1, p.2; Sections 2.1-2.2",
+      "comparison_category": "context",
+      "manual_comparison": "The v3 paper lists planck18 (H0=67.66, Omega_m=0.3111, Omega_b=0.0490) and planck18-only (67.36, 0.3153, 0.0493) separately. It describes named presets and global cosmology state. Saving/restoring that state is this wrapper's implementation, not a published physical equation."
+    },
+    "growth": {
+      "key": "growth",
+      "title": "Carroll, Press & Turner (1992), The Cosmological Constant, Section 3.5.",
+      "identifier_url": "https://doi.org/10.1146/annurev.aa.30.090192.002435",
+      "original_url_status": 200,
+      "full_text_url": "https://ned.ipac.caltech.edu/level5/Carroll/Carroll3_5.html",
+      "full_text_status": 200,
+      "source_version": "NED full-text reprint",
+      "full_text_sha256": "e426a8e74fab7b894643e12e778d289ec491637ac2ce54f172991bd9c5fe12cf",
+      "checked_at": "2026-10-14T22:54:10.553918+00:00",
+      "location": "Section 3.5, Eq. (29), NED full-text reprint",
+      "comparison_category": "derived",
+      "manual_comparison": "The displayed growth suppression is g=2.5*Omega_m/[Omega_m^(4/7)-Omega_Lambda+(1+Omega_m/2)*(1+Omega_Lambda/70)]. The normalized D(z)=g(z)/[(1+z)*g(0)] and code redshift derivatives are derived uses. The DOI reaches a publisher landing page; the NED equation image provides accessible full text.",
+      "equation_image": {
+        "url": "https://ned.ipac.caltech.edu/level5/Carroll/Equations/eq29.gif",
+        "status": 200,
+        "sha256": "cef907d4bef7ac364a27a90d9f9ba89dddb0075f8d8e25a2c07042d2b48a1143",
+        "content_type": "image/gif"
+      }
+    },
+    "ludlow": {
+      "key": "ludlow",
+      "title": "Ludlow et al. (2016), The mass-concentration-redshift relation of cold and warm dark matter haloes, Appendix C.",
+      "identifier_url": "https://arxiv.org/abs/1601.02624",
+      "original_url_status": 200,
+      "full_text_url": "https://arxiv.org/pdf/1601.02624",
+      "full_text_status": 200,
+      "source_version": "1601.02624v2 [astro-ph.CO] 10 May 2016",
+      "full_text_sha256": "f37a68ab8129a598eb180ad07ae3f0699a000f534353ee16649f576f329146ed",
+      "checked_at": "2026-10-14T22:51:52.400795+00:00",
+      "location": "Eq. (3) and following text, p.5; Appendix C, pp.18-19, Eqs. (C8)-(C12)",
+      "comparison_category": "printed",
+      "manual_comparison": "The paper explicitly uses delta_sc(z)=1.686/D(z). The variance fit is sigma=22.26*xi^0.292/(1+1.53*xi^0.275+3.36*xi^0.198), xi=(M/(1e10 h^-1 Msun))^-1. It reports about 2.5% fit accuracy over 1e-7 to 1e15 h^-1 Msun. Differentiation is derived. WDM host histories integrate their spectrum and do not use this CDM variance fit; their redundant citation was removed."
+    },
+    "nfw": {
+      "key": "nfw",
+      "title": "Navarro, Frenk & White (1997), A Universal Density Profile from Hierarchical Clustering.",
+      "identifier_url": "https://arxiv.org/abs/astro-ph/9611107",
+      "original_url_status": 200,
+      "full_text_url": "https://arxiv.org/pdf/astro-ph/9611107",
+      "full_text_status": 200,
+      "source_version": "astro-ph/9611107v4 21 Oct 1997",
+      "full_text_sha256": "a5847011c47580d6e0a2df3eb0e4a809ed42387cbda6d507277b1c068648bbc4",
+      "checked_at": "2026-10-14T22:51:53.862155+00:00",
+      "location": "Eq. (1), p.2; Eqs. (2)-(3), p.7",
+      "comparison_category": "derived",
+      "manual_comparison": "The density and circular-speed laws are printed. f(x)=ln(1+x)-x/(1+x) follows by integrating the density. Potential with zero at infinity, exact mass-conversion root finding, and c=-1/W0(-exp[-(y+1)])-1 are derived consequences; the paper does not print the implementation's inverse or solver. The 2.163 and 4.625 factors are rounded maximum-speed identities."
+    }
+  },
+  "verification": {
+    "python_file_count": 74,
+    "historical_file_count": 0
+  },
+  "executable_ast_changed": false
+}

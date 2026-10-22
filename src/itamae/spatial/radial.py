@@ -1,11 +1,94 @@
 """Normalized radial distributions for deterministic spatial quadrature."""
 
+from dataclasses import dataclass
+from typing import Any
+
 import numpy as np
 from scipy.integrate import trapezoid
 
 
+@dataclass(frozen=True, slots=True)
+class RadialMeasure:
+    """Store aligned radius nodes and normalized nonnegative probabilities.
+
+    Parameters
+    ----------
+    radius : float or array_like
+        Positive radius or radial bound in one consistent length unit. Pericenter and
+        apocenter bound the allowed radial motion.
+    weight : array_like
+        Nonnegative shell probabilities or unnormalized shell weights, aligned with radius
+        nodes.
+    representation : str
+        Explicit meaning of the spatial fields or radial weights, such as shell-probability;
+        not an implicit volume-density convention.
+
+    Notes
+    -----
+    Weights denote shell probabilities whose sum is one, not density per unit volume. A
+    radial density must be integrated with the appropriate coordinate measure before
+    multiplying a population abundance.
+    """
+
+    radius: np.ndarray
+    weight: np.ndarray
+    representation: str = "shell-probability"
+
+    def __post_init__(self) -> None:
+        """Validate shape, domain, normalization, and representation.
+
+        Notes
+        -----
+        Weights denote shell probabilities whose sum is one, not density per unit volume. A
+        radial density must be integrated with the appropriate coordinate measure before
+        multiplying a population abundance.
+        """
+        radius = np.asarray(self.radius, dtype=float)
+        weight = np.asarray(self.weight, dtype=float)
+        if (
+            radius.ndim != 1
+            or radius.size == 0
+            or weight.shape != radius.shape
+            or not np.all(np.isfinite(radius))
+            or np.any(radius < 0.0)
+            or np.any(np.diff(radius) <= 0.0)
+        ):
+            raise ValueError("Radius nodes must be aligned, finite, and strictly increasing.")
+        if (
+            not np.all(np.isfinite(weight))
+            or np.any(weight < 0.0)
+            or not np.isclose(np.sum(weight), 1.0, rtol=0.0, atol=1.0e-12)
+        ):
+            raise ValueError("Radial weights must be finite, nonnegative, and normalized.")
+        if not isinstance(self.representation, str) or not self.representation.strip():
+            raise ValueError("Radial representation must be a non-empty string.")
+        object.__setattr__(self, "radius", radius)
+        object.__setattr__(self, "weight", weight)
+
+
 def normalize_radial_pdf(q, pdf_q):
-    """Normalize a probability density defined per unit ``q``."""
+    """Normalize a probability density defined per unit ``q``.
+
+    Parameters
+    ----------
+    q : array_like
+        Increasing radial coordinate nodes, centers or edges, all in one common radius
+        convention.
+    pdf_q : array_like
+        Nonnegative probability density per unit radial coordinate q, aligned with the
+        supplied nodes or centers.
+
+    Returns
+    -------
+    numpy.ndarray
+        Density divided by its trapezoidal integral over q; still a density per unit q.
+
+    Notes
+    -----
+    Weights denote shell probabilities whose sum is one, not density per unit volume. A
+    radial density must be integrated with the appropriate coordinate measure before
+    multiplying a population abundance.
+    """
     q = np.asarray(q, dtype=float)
     pdf_q = np.asarray(pdf_q, dtype=float)
     if q.ndim != 1 or pdf_q.shape != q.shape:
@@ -19,7 +102,31 @@ def normalize_radial_pdf(q, pdf_q):
 
 
 def shell_probabilities(q_edges, pdf_q, q_centers):
-    """Approximate shell probabilities from a density sampled at shell centers."""
+    """Approximate shell probabilities from a density sampled at shell centers.
+
+    Parameters
+    ----------
+    q_edges : array_like
+        Increasing radial coordinate nodes, centers or edges, all in one common radius
+        convention.
+    pdf_q : array_like
+        Nonnegative probability density per unit radial coordinate q, aligned with the
+        supplied nodes or centers.
+    q_centers : array_like
+        Increasing radial coordinate nodes, centers or edges, all in one common radius
+        convention.
+
+    Returns
+    -------
+    numpy.ndarray
+        Normalized midpoint-rule shell probabilities proportional to pdf_q*diff(q_edges).
+
+    Notes
+    -----
+    Weights denote shell probabilities whose sum is one, not density per unit volume. A
+    radial density must be integrated with the appropriate coordinate measure before
+    multiplying a population abundance.
+    """
     q_edges = np.asarray(q_edges, dtype=float)
     q_centers = np.asarray(q_centers, dtype=float)
     pdf_q = np.asarray(pdf_q, dtype=float)
@@ -30,3 +137,46 @@ def shell_probabilities(q_edges, pdf_q, q_centers):
     if total <= 0.0:
         raise ValueError("Shell probabilities have nonpositive total weight.")
     return probabilities / total
+
+
+def radial_measure(radius: Any, weight: Any) -> RadialMeasure:
+    """Construct a normalized shell-probability measure.
+
+    Input weights may have any positive finite normalization; the returned
+    object always sums to one.
+
+    Parameters
+    ----------
+    radius : float or array_like
+        Positive radius or radial bound in one consistent length unit. Pericenter and
+        apocenter bound the allowed radial motion.
+    weight : array_like
+        Nonnegative shell probabilities or unnormalized shell weights, aligned with radius
+        nodes.
+
+    Returns
+    -------
+    RadialMeasure
+        Validated radius nodes and nonnegative shell weights normalized to unit sum.
+
+    Notes
+    -----
+    Weights denote shell probabilities whose sum is one, not density per unit volume. A
+    radial density must be integrated with the appropriate coordinate measure before
+    multiplying a population abundance.
+    """
+    values = np.asarray(weight, dtype=float)
+    if not np.all(np.isfinite(values)) or np.any(values < 0.0):
+        raise ValueError("Radial weights must be finite and nonnegative.")
+    total = float(np.sum(values))
+    if total <= 0.0:
+        raise ValueError("Radial weights must have positive total measure.")
+    return RadialMeasure(radius=np.asarray(radius, dtype=float), weight=values / total)
+
+
+__all__ = [
+    "RadialMeasure",
+    "normalize_radial_pdf",
+    "radial_measure",
+    "shell_probabilities",
+]

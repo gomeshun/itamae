@@ -20,6 +20,12 @@ def gauss_hermite_lognormal(median, sigma_log10: float, order: int = 5):
     -------
     nodes, weights
         Arrays with the quadrature axis prepended to the input shape.
+
+    Notes
+    -----
+    Gauss-Hermite weights integrate a normalized Gaussian in log10 of the variable.
+    Concentration scatter is an independent population factor and must not be multiplied
+    twice into the accretion abundance.
     """
     if order < 1:
         raise ValueError("Quadrature order must be positive.")
