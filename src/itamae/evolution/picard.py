@@ -885,7 +885,26 @@ def endpoint_mass(
                 if solver.domain is None
                 else min(solver.z_max, solver.domain.redshift[1])
             )
-            zmax = max(float(upper) + 32 * np.finfo(float).eps, float(np.max(a[inside])))
+            # Keep callback sampling inside the declared extent. The table's
+            # last linspace node is exactly zmax, so no roundoff padding is
+            # needed to include a query at the upper endpoint.
+            zmax = max(float(upper), float(np.max(a[inside])))
+            if np.any(np.diff(np.linspace(target, zmax, n_z_acc)) <= 0):
+                # An interval near the last representable epoch may not have
+                # enough distinct coordinates for this interpolation grid.
+                # Integrate its actual duration rather than extending the
+                # callback domain or treating the interval as zero.
+                for start in np.unique(a[inside]):
+                    use = inside & (a == start)
+                    selected_output[use] = _fallback(
+                        solver,
+                        m[use],
+                        start,
+                        target,
+                        "insufficient representable redshift nodes for Picard table",
+                    )
+                output[selected] = selected_output
+                continue
             key = (
                 float(target),
                 zmax,

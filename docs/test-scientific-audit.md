@@ -1573,3 +1573,46 @@ The current `ColossusCosmology.rho_crit` and `rho_m` multiply Colossus density o
 **Fail.** Any stated comparison/identity mismatch, missing expected exception/warning, or unexpected calculation error fails the case.
 **Necessity / proposal.** The generic library must not impose monotonic CDM-like behavior on every supplied physical model.
 **Limit.** This controlled calculation does not calibrate a subhalo population against simulations or observations.
+
+## Endpoint-boundary regression follow-up — 2026-10-22
+
+This follow-up reviews two new definitions (ten parametrized cases) against
+review head `b7a9fde9d6d8b380c94512337c806851ac5c78f7`. The 145-definition
+inventory and validation counts above remain the historical October 14 audit.
+No existing test body, assertion, tolerance or historical numerical artifact is
+changed or weakened by this follow-up.
+
+### `test_endpoint_respects_bounded_callback_extent`
+
+[Source](../tests/test_picard.py#L371) · **Retain** · Role: numerical-domain guard.
+
+**Purpose.** Permit valid in-domain tidal calculations when all coefficient
+callbacks reject extrapolation. The six cases distinguish absent versus explicit
+validation domains, a domain smaller than the solver extent, linear versus cubic
+tables, and interior/exact-upper/preceding-float accretion queries.
+**Pass.** Endpoint, history and direct results reproduce the independent
+constant-rate analytic solution at `rtol=5e-13`, without extending the sampled
+table or taking a fallback. The six cases fail on the prior unconditional
+upper-bound padding.
+**Necessity / proposal.** Existing analytic tests have unbounded callbacks and
+cannot detect accidental sampling beyond a model's supported redshift range.
+Retain these range-rejecting callbacks alongside the analytic controls.
+**Limit.** This detects unsupported callback evaluation; it does not establish
+quadrature accuracy or physical calibration for varying model coefficients.
+
+### `test_endpoint_integrates_interval_without_distinct_table_nodes`
+
+[Source](../tests/test_picard.py#L434) · **Retain** · Role: representability guard.
+
+**Purpose.** Handle adjacent floating-point epochs when the requested table grid
+cannot contain enough distinct redshifts. Four cases cover different floating
+spacings and bounded versus extrapolating coefficient callbacks.
+**Pass.** A counted and warned direct-ODE fallback preserves the requested
+duration, both input masses and agreement with the analytic/history/direct
+solutions at `rtol=5e-14`; no degenerate table is cached.
+**Necessity / proposal.** Upper-domain padding previously hid this degenerate
+grid for permissive callbacks. Removing the padding must preserve their valid
+near-zero-duration queries without evaluating bounded callbacks out of range
+or silently replacing a nonzero interval with zero evolution.
+**Limit.** This protects safe numerical routing and diagnostics, not a
+finite-time accuracy or physical-model calibration claim.

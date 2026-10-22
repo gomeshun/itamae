@@ -4,6 +4,7 @@ import json
 
 import numpy as np
 import pytest
+from scipy.interpolate import interp1d
 
 from itamae.evolution import PicardDomain, PicardFallbackWarning, PicardMassLossSolver
 
@@ -362,4 +363,121 @@ def test_mass_unit_rescaling_preserves_fractional_evolution():
         changed.endpoint(mass * 1e-30, 3.0, 0.0) / 1e-30,
         reference.endpoint(mass, 3.0, 0.0),
         rtol=5e-14,
+    )
+
+
+@pytest.mark.parametrize("declared_upper", [None, 7.0, 4.25])
+@pytest.mark.parametrize("n_z_acc", [2, 48])
+def test_endpoint_respects_bounded_callback_extent(declared_upper, n_z_acc):
+    """Integrate valid tidal queries without sampling beyond the model's redshift extent.
+
+    Parameters
+    ----------
+    declared_upper : float or None
+        Upper redshift of an explicit validation domain; None uses the solver's
+        z_max=7 declaration alone. The smaller 4.25 domain tests that callbacks
+        need not be defined up to z_max outside their validated range.
+    n_z_acc : int
+        Two nodes select linear interpolation; 48 nodes exercise the default
+        cubic endpoint table and its upper boundary.
+
+    Notes
+    -----
+    Setup: all three callbacks are bounded interpolants of constant rate 0.3,
+    zero exponent and host mass 1e12 in the same arbitrary mass unit as the
+    subhalo masses. Any out-of-range callback evaluation raises immediately.
+    Queries include an interior accretion epoch, the upper endpoint, and its
+    immediately preceding representable float.
+
+    Pass criteria: endpoint, history and direct masses agree with the independent
+    solution ma*exp[0.3*(z-z_acc)] to rtol=5e-13. The cached table includes the
+    exact upper epoch without extending its callback samples beyond that bound;
+    no fallback is needed. Any range error, mass mismatch or fallback fails.
+    The tolerance checks numerical integration and interpolation of this simple
+    law, not calibration or accuracy for a time-dependent physical model.
+    """
+    upper = 7.0 if declared_upper is None else declared_upper
+    domain = (
+        None
+        if declared_upper is None
+        else PicardDomain((0.0, declared_upper), (-12.0, 0.0))
+    )
+    solver = PicardMassLossSolver(
+        interp1d([0.0, upper], [0.3, 0.3], bounds_error=True),
+        interp1d([0.0, upper], [0.0, 0.0], bounds_error=True),
+        interp1d([0.0, upper], [1e12, 1e12], bounds_error=True),
+        z_min=0.0,
+        z_max=7.0,
+        state_key=lambda: (0.3, 0.0, 1e12, upper),
+        domain=domain,
+    )
+    masses = np.array([[1e6], [1e8]])
+    accretion = np.array([upper / 2, np.nextafter(upper, -np.inf), upper])
+    expected = masses * np.exp(-0.3 * accretion)
+    np.testing.assert_allclose(
+        solver.endpoint(masses, accretion, 0.0, n_z_acc=n_z_acc),
+        expected,
+        rtol=5e-13,
+    )
+    for start in accretion:
+        redshifts = np.array([start, start / 2, 0.0])
+        analytic = masses[None, ...] * np.exp(0.3 * (redshifts - start))[:, None, None]
+        np.testing.assert_allclose(solver.history(masses, start, redshifts), analytic, rtol=5e-13)
+        np.testing.assert_allclose(solver.direct(masses, start, redshifts), analytic, rtol=5e-13)
+    diagnostics = solver.diagnostics()
+    assert diagnostics["tables"][0]["z_acc_max"] == upper
+    assert diagnostics["fallback_calls"] == 0
+
+
+@pytest.mark.parametrize("upper", [0.1, 7.0])
+@pytest.mark.parametrize("bounded", [False, True])
+def test_endpoint_integrates_interval_without_distinct_table_nodes(upper, bounded):
+    """Retain physical evolution when adjacent floating-point epochs cannot form a table.
+
+    Parameters
+    ----------
+    upper : float
+        Accretion redshift and callback-domain upper bound; 0.1 and 7 exercise
+        different floating-point spacings.
+    bounded : bool
+        Whether the coefficient interpolants reject evaluation outside [0,upper]
+        or permit extrapolation. Both callback contracts must remain usable.
+
+    Notes
+    -----
+    Setup: accretion is at upper and the final epoch is its immediately preceding
+    representable float. The default 48-node table cannot have distinct coordinates
+    over that interval. Constant rate 0.3, zero exponent and host mass 1e12 give
+    the independent solution ma*exp[0.3*(z-z_acc)].
+
+    Pass criteria: the endpoint emits one explicit representability fallback,
+    records both input masses, builds no degenerate table, and agrees with the
+    analytic solution, history and direct integration to rtol=5e-14. Invalid
+    callback evaluation or an interpolation exception fails. This roundoff-scale
+    test establishes safe numerical routing, not scientific convergence for
+    finite-time mass loss.
+    """
+    fill_value = np.nan if bounded else "extrapolate"
+    solver = PicardMassLossSolver(
+        interp1d([0.0, upper], [0.3, 0.3], bounds_error=bounded, fill_value=fill_value),
+        interp1d([0.0, upper], [0.0, 0.0], bounds_error=bounded, fill_value=fill_value),
+        interp1d([0.0, upper], [1e12, 1e12], bounds_error=bounded, fill_value=fill_value),
+        z_min=0.0,
+        z_max=upper,
+        state_key=lambda: (0.3, 0.0, 1e12, upper),
+    )
+    masses = np.array([1e8, 1e10])
+    final = np.nextafter(upper, -np.inf)
+    expected = masses * np.exp(0.3 * (final - upper))
+    with pytest.warns(PicardFallbackWarning, match="representable redshift nodes"):
+        endpoint = solver.endpoint(masses, upper, final)
+    np.testing.assert_allclose(endpoint, expected, rtol=5e-14)
+    np.testing.assert_allclose(solver.history(masses, upper, final), expected, rtol=5e-14)
+    np.testing.assert_allclose(solver.direct(masses, upper, final), expected, rtol=5e-14)
+    diagnostics = solver.diagnostics()
+    assert diagnostics["tables"] == []
+    assert diagnostics["fallback_calls"] == 1
+    assert diagnostics["fallback_mass_count"] == 2
+    assert diagnostics["fallback_events"][0]["reason"] == (
+        "insufficient representable redshift nodes for Picard table"
     )
