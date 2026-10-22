@@ -13,6 +13,19 @@ from itamae.variance import (
 
 
 def test_callable_variance_model_satisfies_protocol():
+    """Expose a model-supplied density variance and its mass derivative consistently.
+
+    Notes
+    -----
+    Pass criteria: For sigma=M**(-1/4)/(1+z), variance equals sigma squared and its analytic
+    derivative is returned correctly.
+
+    Failure criteria: any mismatch with the stated value, shape or identity requirements
+    fails the test.
+
+    Scope: This controlled calculation does not calibrate a subhalo population against
+    simulations or observations.
+    """
     model = CallableVarianceModel(
         identifier="power-law-test",
         sigma_function=lambda mass, z: np.asarray(mass) ** -0.25 / (1.0 + np.asarray(z)),
@@ -34,6 +47,19 @@ def test_callable_variance_model_satisfies_protocol():
 
 
 def test_integrated_sharp_k_variance_matches_analytic_power_law():
+    """Recover the sharp-k integral and growth scaling for a constant spectrum.
+
+    Notes
+    -----
+    Pass criteria: At M=1, variance equals (1-1e-9)/(6*pi**2), derivative is -1/(6*pi**2),
+    and both scale as D(z)**2.
+
+    Failure criteria: any mismatch with the stated value, shape or identity requirements
+    fails the test.
+
+    Scope: This controlled calculation does not calibrate a subhalo population against
+    simulations or observations.
+    """
     k = np.logspace(-3, 3, 6001)
     power = TabulatedPowerSpectrum(k, np.ones_like(k), identifier="constant-power")
     model = IntegratedVarianceModel(
@@ -66,7 +92,19 @@ def test_integrated_sharp_k_variance_matches_analytic_power_law():
 
 
 def test_sharp_k_variance_and_derivative_are_continuous_between_grid_nodes():
-    """A moving cutoff must not create zero derivatives or grid-boundary spikes."""
+    """Avoid artificial steps or zero derivatives as the smoothing cutoff moves.
+
+    Notes
+    -----
+    Pass criteria: For P(k)=k**(-2), off-grid variance and derivative follow their analytic
+    expressions and the derivative remains negative.
+
+    Failure criteria: any mismatch with the stated value, shape or identity requirements
+    fails the test.
+
+    Scope: This controlled calculation does not calibrate a subhalo population against
+    simulations or observations.
+    """
     k = np.geomspace(1.0e-6, 1.0e6, 301)
     power = TabulatedPowerSpectrum(k, k**-2, identifier="inverse-square-power")
     model = IntegratedVarianceModel(
@@ -98,7 +136,19 @@ def test_sharp_k_variance_and_derivative_are_continuous_between_grid_nodes():
 
 
 def test_sharp_k_truncated_domain_has_zero_boundary_derivative():
-    """The configured finite power domain should define constant end regimes."""
+    """Respect the explicitly finite power-spectrum integration domain.
+
+    Notes
+    -----
+    Pass criteria: Cutoffs above k_max give a positive constant variance with zero
+    derivative; cutoffs below k_min give zero variance and derivative.
+
+    Failure criteria: any mismatch with the stated value, shape or identity requirements
+    fails the test.
+
+    Scope: This controlled calculation does not calibrate a subhalo population against
+    simulations or observations.
+    """
     k = np.geomspace(1.0e-2, 1.0e2, 101)
     power = TabulatedPowerSpectrum(k, np.ones_like(k))
     model = IntegratedVarianceModel(
@@ -117,6 +167,19 @@ def test_sharp_k_truncated_domain_has_zero_boundary_derivative():
 
 
 def test_integrator_preserves_strict_tabulated_endpoints():
+    """Keep quadrature endpoints inside a non-extrapolating input spectrum.
+
+    Notes
+    -----
+    Pass criteria: Integrating a strictly bounded constant-power table returns a finite
+    variance.
+
+    Failure criteria: any mismatch with the stated value, shape or identity requirements
+    fails the test.
+
+    Scope: This controlled calculation does not calibrate a subhalo population against
+    simulations or observations.
+    """
     k = np.logspace(-2, 2, 101)
     power = TabulatedPowerSpectrum(k, np.ones_like(k))
     model = IntegratedVarianceModel(
@@ -131,6 +194,24 @@ def test_integrator_preserves_strict_tabulated_endpoints():
 
 
 def test_variance_cache_is_content_addressed_and_round_trips(tmp_path):
+    """Tie saved variance data to the filter settings used to compute them.
+
+    Parameters
+    ----------
+    tmp_path : pathlib.Path
+        Isolated directory for the test catalogue, cache or provenance files.
+
+    Notes
+    -----
+    Pass criteria: Changing filter-scale settings changes the key; saved masses and
+    variances reload exactly; a mismatched key is rejected.
+
+    Failure criteria: a stated numerical/identity mismatch, a missing required exception or
+    warning, or an unexpected calculation failure fails the test.
+
+    Scope: This controlled calculation does not calibrate a subhalo population against
+    simulations or observations.
+    """
     mass = np.logspace(4, 8, 9)
     variance = mass**-0.3
     key = variance_cache_key(

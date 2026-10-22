@@ -40,6 +40,12 @@ def canonical_unit(physical_type: str) -> str:
     ------
     KeyError
         If ``physical_type`` is not part of the public schema.
+
+    Notes
+    -----
+    Canonical values use Msun, Mpc, km/s, Gyr, Msun/Mpc^3 and cm^2/g. Native numeric values
+    are assumed to already use that schema; only the quantity-aware backend performs
+    dimensional conversion.
     """
     try:
         return CANONICAL_UNITS[physical_type]

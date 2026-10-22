@@ -21,7 +21,26 @@ from itamae.provenance import (
     ["src/itamae/provenance.py", "src/sashimi_c/__init__.py", "src/sashimi_f/_physics.py"],
 )
 def test_src_package_provenance_uses_its_own_repository(tmp_path, module_path):
-    """Both the core and variant src packages identify the owning checkout."""
+    """Locate the source checkout that actually owns a core or variant calculation.
+
+    Parameters
+    ----------
+    tmp_path : pathlib.Path
+        Isolated directory for the test catalogue, cache or provenance files.
+    module_path : str
+        Representative package path inside a source checkout.
+
+    Notes
+    -----
+    Pass criteria: Each supported src-layout module resolves to its own temporary project
+    root.
+
+    Failure criteria: any mismatch with the stated value, shape or identity requirements
+    fails the test.
+
+    Scope: Source attribution and format compatibility do not validate the physical
+    prescription or numerical accuracy.
+    """
     subprocess.run(["git", "init", "--quiet", str(tmp_path)], check=True)
     (tmp_path / "pyproject.toml").write_text('[project]\nname="example"\nversion="1.0"\n')
     module = tmp_path / module_path
@@ -31,7 +50,24 @@ def test_src_package_provenance_uses_its_own_repository(tmp_path, module_path):
 
 
 def test_src_export_does_not_inherit_an_unrelated_parent_repository(tmp_path):
-    """A src layout inside an unpacked archive does not turn its parent into provenance."""
+    """Avoid attributing an unpacked scientific package to an unrelated enclosing project.
+
+    Parameters
+    ----------
+    tmp_path : pathlib.Path
+        Isolated directory for the test catalogue, cache or provenance files.
+
+    Notes
+    -----
+    Pass criteria: An exported src-layout package under another Git repository has no
+    source-checkout root.
+
+    Failure criteria: any mismatch with the stated value, shape or identity requirements
+    fails the test.
+
+    Scope: Source attribution and format compatibility do not validate the physical
+    prescription or numerical accuracy.
+    """
     subprocess.run(["git", "init", "--quiet", str(tmp_path)], check=True)
     exported = tmp_path / "unpacked"
     module = exported / "src" / "sashimi_c" / "__init__.py"
@@ -42,7 +78,26 @@ def test_src_export_does_not_inherit_an_unrelated_parent_repository(tmp_path):
 
 
 def test_build_migration_metadata_includes_standard_keys(monkeypatch) -> None:
-    """The builder records every shared field and preserves variant extras."""
+    """Record the sources and physical prescription needed to interpret a historical migration
+    result.
+
+    Parameters
+    ----------
+    monkeypatch : pytest.MonkeyPatch
+        Scoped replacement of the particular physical provider or environment under test;
+        restored after the case.
+
+    Notes
+    -----
+    Pass criteria: Metadata contain all shared keys, exact resolved source SHAs, schema
+    identity and the supplied extra parameter.
+
+    Failure criteria: any mismatch with the stated value, shape or identity requirements
+    fails the test.
+
+    Scope: Source attribution and format compatibility do not validate the physical
+    prescription or numerical accuracy.
+    """
     monkeypatch.delenv("ITAMAE_SOURCE_REVISION", raising=False)
 
     metadata = build_migration_metadata(
@@ -70,7 +125,19 @@ def test_build_migration_metadata_includes_standard_keys(monkeypatch) -> None:
 
 
 def test_build_migration_metadata_rejects_standard_field_override() -> None:
-    """Variant-specific extras may not silently redefine shared fields."""
+    """Prevent variant extras from changing the stated historical physical mode.
+
+    Notes
+    -----
+    Pass criteria: An extra physics_mode conflicting with the declared mode raises
+    ValueError.
+
+    Failure criteria: a stated numerical/identity mismatch, a missing required exception or
+    warning, or an unexpected calculation failure fails the test.
+
+    Scope: Source attribution and format compatibility do not validate the physical
+    prescription or numerical accuracy.
+    """
     with pytest.raises(ValueError, match="conflicting standard fields"):
         build_migration_metadata(
             variant="test-model",
@@ -88,10 +155,49 @@ def test_build_migration_metadata_rejects_standard_field_override() -> None:
 
 
 def test_logical_itamae_name_resolves_renamed_distribution(monkeypatch) -> None:
-    """The stable logical component name resolves the collision-free distribution."""
+    """Resolve the core's logical name to the installed distribution used for provenance.
+
+    Parameters
+    ----------
+    monkeypatch : pytest.MonkeyPatch
+        Scoped replacement of the particular physical provider or environment under test;
+        restored after the case.
+
+    Notes
+    -----
+    Pass criteria: Version lookup for itamae queries sashimi-itamae and returns the supplied
+    version.
+
+    Failure criteria: any mismatch with the stated value, shape or identity requirements
+    fails the test.
+
+    Scope: Source attribution and format compatibility do not validate the physical
+    prescription or numerical accuracy.
+    """
     seen = []
 
     def fake_version(name: str) -> str:
+        """Record the distribution name requested by a controlled version lookup.
+
+        Parameters
+        ----------
+        name : str
+            Name of the quantity or component included in an error or provenance record so an
+            invalid scientific input can be located.
+
+        Returns
+        -------
+        str
+            Known toy version, allowing the test to assert the exact lookup identity.
+
+        Notes
+        -----
+        Resolve the core's logical name to the installed distribution used for provenance. Pass
+        criteria: Version lookup for itamae queries sashimi-itamae and returns the supplied
+        version. Failure occurs when the stated comparison or expected rejection is not met.
+        Source attribution and format compatibility do not validate the physical prescription or
+        numerical accuracy.
+        """
         seen.append(name)
         return "9.9.9"
 
@@ -107,10 +213,51 @@ def test_logical_itamae_name_resolves_renamed_distribution(monkeypatch) -> None:
 def test_distribution_alias_normalization_for_version_lookup(
     monkeypatch, package_name: str
 ) -> None:
-    """Equivalent normalized distribution spellings resolve the public distribution."""
+    """Treat supported distribution-name spellings as one installed core version.
+
+    Parameters
+    ----------
+    monkeypatch : pytest.MonkeyPatch
+        Scoped replacement of the particular physical provider or environment under test;
+        restored after the case.
+    package_name : str
+        Supported logical or distribution-name spelling used for source/version attribution.
+
+    Notes
+    -----
+    Pass criteria: Case, hyphen, underscore and dot spellings all query the canonical
+    distribution and return one version.
+
+    Failure criteria: any mismatch with the stated value, shape or identity requirements
+    fails the test.
+
+    Scope: Source attribution and format compatibility do not validate the physical
+    prescription or numerical accuracy.
+    """
     seen = []
 
     def fake_version(name: str) -> str:
+        """Record the distribution name requested by a controlled version lookup.
+
+        Parameters
+        ----------
+        name : str
+            Name of the quantity or component included in an error or provenance record so an
+            invalid scientific input can be located.
+
+        Returns
+        -------
+        str
+            Known toy version, allowing the test to assert the exact lookup identity.
+
+        Notes
+        -----
+        Treat supported distribution-name spellings as one installed core version. Pass
+        criteria: Case, hyphen, underscore and dot spellings all query the canonical
+        distribution and return one version. Failure occurs when the stated comparison or
+        expected rejection is not met. Source attribution and format compatibility do not
+        validate the physical prescription or numerical accuracy.
+        """
         seen.append(name)
         return "9.9.9"
 
@@ -120,7 +267,24 @@ def test_distribution_alias_normalization_for_version_lookup(
 
 
 def test_distribution_name_alias_uses_itamae_embedded_provenance(monkeypatch) -> None:
-    """Both public distribution and logical component names share one provenance source."""
+    """Use the same embedded scientific source for logical and distribution names.
+
+    Parameters
+    ----------
+    monkeypatch : pytest.MonkeyPatch
+        Scoped replacement of the particular physical provider or environment under test;
+        restored after the case.
+
+    Notes
+    -----
+    Pass criteria: The public distribution alias resolves to the expected embedded SHA.
+
+    Failure criteria: any mismatch with the stated value, shape or identity requirements
+    fails the test.
+
+    Scope: Source attribution and format compatibility do not validate the physical
+    prescription or numerical accuracy.
+    """
     expected = "a" * 40
     monkeypatch.setattr(provenance, "_source_checkout_root", lambda module_file: None)
     monkeypatch.setattr(provenance, "_embedded_source_revision", lambda package_name: expected)
@@ -134,11 +298,49 @@ def test_distribution_name_alias_uses_itamae_embedded_provenance(monkeypatch) ->
 def test_distribution_alias_normalization_for_embedded_provenance(
     monkeypatch, package_name: str
 ) -> None:
-    """Equivalent distribution spellings use the ITAMAE embedded provenance module."""
+    """Keep source identity stable under supported package-name spellings.
+
+    Parameters
+    ----------
+    monkeypatch : pytest.MonkeyPatch
+        Scoped replacement of the particular physical provider or environment under test;
+        restored after the case.
+    package_name : str
+        Supported logical or distribution-name spelling used for source/version attribution.
+
+    Notes
+    -----
+    Pass criteria: All aliases load itamae._build_provenance and return the expected SHA.
+
+    Failure criteria: any mismatch with the stated value, shape or identity requirements
+    fails the test.
+
+    Scope: Source attribution and format compatibility do not validate the physical
+    prescription or numerical accuracy.
+    """
     expected = "a" * 40
     imported = []
 
     def fake_import_module(module_name: str):
+        """Record a controlled import of embedded scientific source attribution.
+
+        Parameters
+        ----------
+        module_name : str
+            Name of the embedded attribution module expected by the controlled import lookup.
+
+        Returns
+        -------
+        types.SimpleNamespace
+            Known SOURCE_REVISION descriptor.
+
+        Notes
+        -----
+        Keep source identity stable under supported package-name spellings. Pass criteria: All
+        aliases load itamae._build_provenance and return the expected SHA. Failure occurs when
+        the stated comparison or expected rejection is not met. Source attribution and format
+        compatibility do not validate the physical prescription or numerical accuracy.
+        """
         imported.append(module_name)
         return SimpleNamespace(SOURCE_REVISION=expected)
 
@@ -149,7 +351,25 @@ def test_distribution_alias_normalization_for_embedded_provenance(
 
 
 def test_embedded_revision_takes_precedence_over_ambient_environment(monkeypatch) -> None:
-    """Installed-wheel metadata cannot be changed by an environment variable."""
+    """Protect installed scientific provenance from unrelated shell settings.
+
+    Parameters
+    ----------
+    monkeypatch : pytest.MonkeyPatch
+        Scoped replacement of the particular physical provider or environment under test;
+        restored after the case.
+
+    Notes
+    -----
+    Pass criteria: A conflicting environment SHA cannot replace the wheel's embedded source
+    SHA.
+
+    Failure criteria: any mismatch with the stated value, shape or identity requirements
+    fails the test.
+
+    Scope: Source attribution and format compatibility do not validate the physical
+    prescription or numerical accuracy.
+    """
     expected = "a" * 40
     monkeypatch.setenv("ITAMAE_SOURCE_REVISION", "b" * 40)
     monkeypatch.setattr(provenance, "_source_checkout_root", lambda module_file: None)
@@ -158,7 +378,25 @@ def test_embedded_revision_takes_precedence_over_ambient_environment(monkeypatch
 
 
 def test_recognized_distribution_cannot_finish_with_unknown_revision(monkeypatch) -> None:
-    """Durable provenance is mandatory for recognized family distributions."""
+    """Refuse to record an unidentified installed family calculation as reproducible.
+
+    Parameters
+    ----------
+    monkeypatch : pytest.MonkeyPatch
+        Scoped replacement of the particular physical provider or environment under test;
+        restored after the case.
+
+    Notes
+    -----
+    Pass criteria: Recognized core aliases raise RuntimeError when no durable source
+    revision is available.
+
+    Failure criteria: a stated numerical/identity mismatch, a missing required exception or
+    warning, or an unexpected calculation failure fails the test.
+
+    Scope: Source attribution and format compatibility do not validate the physical
+    prescription or numerical accuracy.
+    """
     monkeypatch.setattr(provenance, "_source_checkout_root", lambda module_file: None)
     monkeypatch.setattr(provenance, "_embedded_source_revision", lambda package_name: None)
     monkeypatch.setattr(provenance, "_direct_url_revision", lambda package_name: None)
@@ -173,7 +411,27 @@ def test_recognized_distribution_cannot_finish_with_unknown_revision(monkeypatch
 def test_source_revision_does_not_walk_into_an_outer_repository_from_venv(
     tmp_path: Path, monkeypatch
 ) -> None:
-    """A package under another repo's .venv must not inherit that repo's HEAD."""
+    """Avoid assigning an application's revision to a dependency installed in its environment.
+
+    Parameters
+    ----------
+    tmp_path : pathlib.Path
+        Isolated directory for the test catalogue, cache or provenance files.
+    monkeypatch : pytest.MonkeyPatch
+        Scoped replacement of the particular physical provider or environment under test;
+        restored after the case.
+
+    Notes
+    -----
+    Pass criteria: An unidentified package inside another project's virtual environment
+    returns unknown without invoking ambient Git.
+
+    Failure criteria: any mismatch with the stated value, shape or identity requirements
+    fails the test.
+
+    Scope: Source attribution and format compatibility do not validate the physical
+    prescription or numerical accuracy.
+    """
     outer = tmp_path / "other-repository"
     module_file = outer / ".venv/lib/python3.11/site-packages/fake.py"
     module_file.parent.mkdir(parents=True)
@@ -182,6 +440,25 @@ def test_source_revision_does_not_walk_into_an_outer_repository_from_venv(
     (outer / "pyproject.toml").write_text("[project]\nversion = '0.0.0'\n")
 
     def unexpected_git(*args, **kwargs):
+        """Fail if an installed package tries to borrow an enclosing repository revision.
+
+        Parameters
+        ----------
+        *args : tuple
+            Additional positional parameters forwarded unchanged to the supplied numerical or
+            physical callback.
+        **kwargs : dict
+            Additional keyword options forwarded to the called routine; reserved scientific
+            controls remain owned by that routine.
+
+        Notes
+        -----
+        Avoid assigning an application's revision to a dependency installed in its environment.
+        Pass criteria: An unidentified package inside another project's virtual environment
+        returns unknown without invoking ambient Git. Failure occurs when the stated comparison
+        or expected rejection is not met. Source attribution and format compatibility do not
+        validate the physical prescription or numerical accuracy.
+        """
         raise AssertionError("ambient repository Git lookup")
 
     monkeypatch.setattr(provenance.subprocess, "run", unexpected_git)

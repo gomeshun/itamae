@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "sashimi-itamae"
-version = "0.2.0rc1"
+version = "0.2.0rc2"
 description = "Integrated Toolkit for Analytical Merger-tree And Evolution"
 readme = "README.md"
 requires-python = ">=3.11"

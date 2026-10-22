@@ -39,6 +39,12 @@ def build_accretion_batch(
     -------
     AccretionBatch
         Flattened, aligned arrays with validated nonnegative weights.
+
+    Notes
+    -----
+    The expected count is the product of the independently supplied factors. ITAMAE
+    broadcasts and validates those inputs without identifying M200 with virial mass or
+    inferring quadrature factors from coordinates.
     """
     values = [m200_acc, z_acc, concentration_acc, weight_base, weight_concentration]
     values.append(mvir_acc)

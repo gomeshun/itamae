@@ -18,7 +18,29 @@ from .radial import RadialMeasure
 
 
 def _validate_orbit(energy: float, angular_momentum: float) -> tuple[float, float]:
-    """Return finite scalar orbit invariants."""
+    """Return finite scalar orbit invariants.
+
+    Parameters
+    ----------
+    energy : float or array_like
+        Specific orbital energy, in the same velocity-squared units as the supplied
+        potential.
+    angular_momentum : float or array_like
+        Nonnegative specific angular momentum, in length times velocity units consistent
+        with the potential.
+
+    Returns
+    -------
+    tuple of float
+        Finite specific energy and nonnegative specific angular momentum.
+
+    Notes
+    -----
+    These kernels assume a time-independent spherical potential and a bound orbit with two
+    resolved turning points. Units remain caller-consistent: if radius is Mpc and velocity
+    km/s, a returned period is Mpc/(km/s), requiring conversion before interpretation in
+    Gyr.
+    """
     energy = float(energy)
     angular_momentum = float(angular_momentum)
     if not np.isfinite(energy):
@@ -34,7 +56,36 @@ def radial_velocity_squared(
     energy: float,
     angular_momentum: float,
 ) -> np.ndarray:
-    r"""Return :math:`v_r^2=2(E-\Phi)-L^2/r^2` in consistent units."""
+    r"""Return :math:`v_r^2=2(E-\Phi)-L^2/r^2` in consistent units.
+
+    Parameters
+    ----------
+    radius : float or array_like
+        Positive radius or radial bound in one consistent length unit. Pericenter and
+        apocenter bound the allowed radial motion.
+    potential : callable
+        Spherical potential Phi(r) with the same energy zero and velocity-squared units as
+        energy; accepts the supplied radius shape.
+    energy : float or array_like
+        Specific orbital energy, in the same velocity-squared units as the supplied
+        potential.
+    angular_momentum : float or array_like
+        Nonnegative specific angular momentum, in length times velocity units consistent
+        with the potential.
+
+    Returns
+    -------
+    numpy.ndarray
+        v_r**2 in the potential velocity-squared unit; negative values mark inaccessible
+        radii.
+
+    Notes
+    -----
+    These kernels assume a time-independent spherical potential and a bound orbit with two
+    resolved turning points. Units remain caller-consistent: if radius is Mpc and velocity
+    km/s, a returned period is Mpc/(km/s), requiring conversion before interpretation in
+    Gyr.
+    """
     energy, angular_momentum = _validate_orbit(energy, angular_momentum)
     radius = np.asarray(radius, dtype=float)
     if not np.all(np.isfinite(radius)) or np.any(radius <= 0.0):
@@ -58,7 +109,42 @@ def turning_points(
     *,
     n_scan: int = 2049,
 ) -> tuple[float, float]:
-    """Bracket and solve the pericenter and apocenter of a bound orbit."""
+    """Bracket and solve the pericenter and apocenter of a bound orbit.
+
+    Parameters
+    ----------
+    potential : callable
+        Spherical potential Phi(r) with the same energy zero and velocity-squared units as
+        energy; accepts the supplied radius shape.
+    energy : float or array_like
+        Specific orbital energy, in the same velocity-squared units as the supplied
+        potential.
+    angular_momentum : float or array_like
+        Nonnegative specific angular momentum, in length times velocity units consistent
+        with the potential.
+    r_min : float or array_like
+        Positive radius or radial bound in one consistent length unit. Pericenter and
+        apocenter bound the allowed radial motion.
+    r_max : float or array_like
+        Positive radius or radial bound in one consistent length unit. Pericenter and
+        apocenter bound the allowed radial motion.
+    n_scan : int
+        Number of logarithmic scan points used to bracket turning points. Very narrow
+        allowed intervals require a refined scan.
+
+    Returns
+    -------
+    tuple of float
+        Pericenter and apocenter in the input radius unit; unresolved two-root intervals
+        raise ValueError.
+
+    Notes
+    -----
+    These kernels assume a time-independent spherical potential and a bound orbit with two
+    resolved turning points. Units remain caller-consistent: if radius is Mpc and velocity
+    km/s, a returned period is Mpc/(km/s), requiring conversion before interpretation in
+    Gyr.
+    """
     energy, angular_momentum = _validate_orbit(energy, angular_momentum)
     r_min = float(r_min)
     r_max = float(r_max)
@@ -106,7 +192,39 @@ def radial_period(
     pericenter: float,
     apocenter: float,
 ) -> float:
-    """Return the complete radial period between supplied turning points."""
+    """Return the complete radial period between supplied turning points.
+
+    Parameters
+    ----------
+    potential : callable
+        Spherical potential Phi(r) with the same energy zero and velocity-squared units as
+        energy; accepts the supplied radius shape.
+    energy : float or array_like
+        Specific orbital energy, in the same velocity-squared units as the supplied
+        potential.
+    angular_momentum : float or array_like
+        Nonnegative specific angular momentum, in length times velocity units consistent
+        with the potential.
+    pericenter : float or array_like
+        Positive radius or radial bound in one consistent length unit. Pericenter and
+        apocenter bound the allowed radial motion.
+    apocenter : float or array_like
+        Positive radius or radial bound in one consistent length unit. Pericenter and
+        apocenter bound the allowed radial motion.
+
+    Returns
+    -------
+    float
+        Full radial oscillation period, twice the integral dr/|v_r|, in consistent
+        length/velocity units.
+
+    Notes
+    -----
+    These kernels assume a time-independent spherical potential and a bound orbit with two
+    resolved turning points. Units remain caller-consistent: if radius is Mpc and velocity
+    km/s, a returned period is Mpc/(km/s), requiring conversion before interpretation in
+    Gyr.
+    """
     energy, angular_momentum = _validate_orbit(energy, angular_momentum)
     pericenter = float(pericenter)
     apocenter = float(apocenter)
@@ -121,6 +239,26 @@ def radial_period(
     half_width = 0.5 * (apocenter - pericenter)
 
     def transformed_integrand(theta: float) -> float:
+        """Remove the simple turning-point endpoint singularity from the radial time integral.
+
+        Parameters
+        ----------
+        theta : float
+            Dimensionless integration angle in [0, pi] mapping the two radial turning points to
+            regular endpoints.
+
+        Returns
+        -------
+        float
+            One-way time element after r=midpoint-half_width*cos(theta).
+
+        Notes
+        -----
+        These kernels assume a time-independent spherical potential and a bound orbit with two
+        resolved turning points. Units remain caller-consistent: if radius is Mpc and velocity
+        km/s, a returned period is Mpc/(km/s), requiring conversion before interpretation in
+        Gyr.
+        """
         radius = midpoint - half_width * np.cos(theta)
         velocity_squared = float(
             radial_velocity_squared(radius, potential, energy, angular_momentum)
@@ -156,7 +294,45 @@ def radial_shell_pdf(
     *,
     period: float | None = None,
 ) -> np.ndarray:
-    """Return the time-averaged probability density per unit radius."""
+    """Return the time-averaged probability density per unit radius.
+
+    Parameters
+    ----------
+    radius : float or array_like
+        Positive radius or radial bound in one consistent length unit. Pericenter and
+        apocenter bound the allowed radial motion.
+    potential : callable
+        Spherical potential Phi(r) with the same energy zero and velocity-squared units as
+        energy; accepts the supplied radius shape.
+    energy : float or array_like
+        Specific orbital energy, in the same velocity-squared units as the supplied
+        potential.
+    angular_momentum : float or array_like
+        Nonnegative specific angular momentum, in length times velocity units consistent
+        with the potential.
+    pericenter : float or array_like
+        Positive radius or radial bound in one consistent length unit. Pericenter and
+        apocenter bound the allowed radial motion.
+    apocenter : float or array_like
+        Positive radius or radial bound in one consistent length unit. Pericenter and
+        apocenter bound the allowed radial motion.
+    period : float, optional
+        Full radial period, in length/velocity units consistent with the potential. If
+        omitted it is integrated from the supplied turning points.
+
+    Returns
+    -------
+    numpy.ndarray
+        Probability per unit radius, 2/(T_r*|v_r|) strictly inside the turning points and
+        zero elsewhere.
+
+    Notes
+    -----
+    These kernels assume a time-independent spherical potential and a bound orbit with two
+    resolved turning points. Units remain caller-consistent: if radius is Mpc and velocity
+    km/s, a returned period is Mpc/(km/s), requiring conversion before interpretation in
+    Gyr.
+    """
     radius = np.asarray(radius, dtype=float)
     if not np.all(np.isfinite(radius)) or np.any(radius <= 0.0):
         raise ValueError("Radii must be finite and positive.")
@@ -182,7 +358,41 @@ def orbit_radial_measure(
     pericenter: float,
     apocenter: float,
 ) -> RadialMeasure:
-    """Integrate normalized time fractions over radial shell edges."""
+    """Integrate normalized time fractions over radial shell edges.
+
+    Parameters
+    ----------
+    radius_edges : float or array_like
+        Positive radius or radial bound in one consistent length unit. Pericenter and
+        apocenter bound the allowed radial motion.
+    potential : callable
+        Spherical potential Phi(r) with the same energy zero and velocity-squared units as
+        energy; accepts the supplied radius shape.
+    energy : float or array_like
+        Specific orbital energy, in the same velocity-squared units as the supplied
+        potential.
+    angular_momentum : float or array_like
+        Nonnegative specific angular momentum, in length times velocity units consistent
+        with the potential.
+    pericenter : float or array_like
+        Positive radius or radial bound in one consistent length unit. Pericenter and
+        apocenter bound the allowed radial motion.
+    apocenter : float or array_like
+        Positive radius or radial bound in one consistent length unit. Pericenter and
+        apocenter bound the allowed radial motion.
+
+    Returns
+    -------
+    RadialMeasure
+        Shell-center nodes and integrated, normalized orbital time fractions.
+
+    Notes
+    -----
+    These kernels assume a time-independent spherical potential and a bound orbit with two
+    resolved turning points. Units remain caller-consistent: if radius is Mpc and velocity
+    km/s, a returned period is Mpc/(km/s), requiring conversion before interpretation in
+    Gyr.
+    """
     edges = np.asarray(radius_edges, dtype=float)
     if (
         edges.ndim != 1
@@ -198,10 +408,50 @@ def orbit_radial_measure(
     half_width = 0.5 * (apocenter - pericenter)
 
     def theta(radius: float) -> float:
+        """Map a shell boundary to the angle used for regularized orbit integration.
+
+        Parameters
+        ----------
+        radius : float or array_like
+            Positive radius or radial bound in one consistent length unit. Pericenter and
+            apocenter bound the allowed radial motion.
+
+        Returns
+        -------
+        float
+            Angle in [0,pi] corresponding to the supplied radius.
+
+        Notes
+        -----
+        These kernels assume a time-independent spherical potential and a bound orbit with two
+        resolved turning points. Units remain caller-consistent: if radius is Mpc and velocity
+        km/s, a returned period is Mpc/(km/s), requiring conversion before interpretation in
+        Gyr.
+        """
         argument = np.clip((midpoint - radius) / half_width, -1.0, 1.0)
         return float(np.arccos(argument))
 
     def transformed_density(angle: float) -> float:
+        """Integrate orbital time fraction with the transformed radial Jacobian.
+
+        Parameters
+        ----------
+        angle : float
+            Dimensionless integration angle in [0, pi] mapping the two radial turning points to
+            regular endpoints.
+
+        Returns
+        -------
+        float
+            Orbital probability per unit angle, including the radial Jacobian.
+
+        Notes
+        -----
+        These kernels assume a time-independent spherical potential and a bound orbit with two
+        resolved turning points. Units remain caller-consistent: if radius is Mpc and velocity
+        km/s, a returned period is Mpc/(km/s), requiring conversion before interpretation in
+        Gyr.
+        """
         radius = midpoint - half_width * np.cos(angle)
         velocity_squared = float(
             radial_velocity_squared(radius, potential, energy, angular_momentum)

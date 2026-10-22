@@ -5,6 +5,19 @@ from itamae.units import NativeUnits
 
 
 def test_native_units_reject_nonfinite():
+    """Keep canonical units explicit when accepting or returning physical values.
+
+    Notes
+    -----
+    Pass criteria: NaN mass, unknown physical dimensions, and an unsupported output-unit
+    string are rejected.
+
+    Failure criteria: a stated numerical/identity mismatch, a missing required exception or
+    warning, or an unexpected calculation failure fails the test.
+
+    Scope: This controlled calculation does not calibrate a subhalo population against
+    simulations or observations.
+    """
     with pytest.raises(ValueError):
         NativeUnits().validate([1.0, np.nan], "mass")
     with pytest.raises(KeyError):
@@ -14,6 +27,19 @@ def test_native_units_reject_nonfinite():
 
 
 def test_astropy_units_roundtrip():
+    """Convert physical lengths without losing the factor between kpc and Mpc.
+
+    Notes
+    -----
+    Pass criteria: 2000 kpc becomes 2 Mpc and converts back; dimensionless arrays are
+    unchanged; seconds cannot be converted to mass.
+
+    Failure criteria: any mismatch with the stated value, shape or identity requirements
+    fails the test.
+
+    Scope: This controlled calculation does not calibrate a subhalo population against
+    simulations or observations.
+    """
     u = pytest.importorskip("astropy.units")
     from itamae.units.astropy import AstropyUnits
 
