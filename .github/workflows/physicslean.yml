@@ -4,6 +4,8 @@ on:
   push:
     paths:
       - 'prototypes/physicslean/**'
+      - 'src/itamae/cosmology/certified.py'
+      - 'tests/test_certified_cosmology.py'
       - '.github/workflows/physicslean.yml'
   workflow_dispatch:
 
@@ -30,10 +32,21 @@ jobs:
         run: python3 scripts/fetch_mathlib_cache.py HzAudit
       - name: Build and check proofs
         run: ./run_demo.sh
+      - name: Kernel replay on published FDM knots and the independent CAMB cusp fixture
+        run: |
+          python3 scripts/table_window.py tests/data/fdm-camb-three-knots.dat --format camb --h .674 --model fdm --radius-lower 1 --radius-upper 1.001 --bits 64 --degree 8 --tolerance 1 --replay
+          python3 scripts/cusp_moments.py tests/data/camb_cdm31.csv --edges inside --k-max .15 --redshift 0 --depth 6 --bits 48 --degree 15 --tolerance .25 --quantities radius gamma --certificate "$RUNNER_TEMP/CuspInput.lean"
       - name: Verify all five benchmark cases and reject a corrupted certificate
         run: python3 scripts/benchmark.py --repeats 1 --output "$RUNNER_TEMP/benchmarks.json"
+      - name: Verify spectra from the SASHIMI family revisions
+        run: |
+          curl -fLsS --retry 3 'https://raw.githubusercontent.com/gomeshun/sashimi-w/d234ae250f4343e465be483c5a960d12ea5d3dbf/WMAP7_camb_matterpower_z0_extrapolated.dat' -o "$RUNNER_TEMP/w.dat"
+          curl -fLsS --retry 3 'https://raw.githubusercontent.com/gomeshun/sashimi-f/fc4cd832acf4b4ae4b7ff02691d326e63945dc6d/data/Planck2018_CAMB_extrap.dat' -o "$RUNNER_TEMP/f.dat"
+          python3 scripts/verify_sashimi_tables.py "$RUNNER_TEMP/w.dat" "$RUNNER_TEMP/f.dat" --output "$RUNNER_TEMP/sashimi-tables.json"
       - name: Save measurements
         uses: actions/upload-artifact@v4
         with:
           name: physicslean-benchmarks
-          path: ${{ runner.temp }}/benchmarks.json
+          path: |
+            ${{ runner.temp }}/benchmarks.json
+            ${{ runner.temp }}/sashimi-tables.json

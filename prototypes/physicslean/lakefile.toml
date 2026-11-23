@@ -1,6 +1,6 @@
 name = "physlib-hz-prototype"
 version = "0.1.0"
-defaultTargets = ["HzCertificate", "HzExample", "HzAudit"]
+defaultTargets = ["HzCertificate", "HzExample", "HzAudit", "Sashimi"]
 
 [[require]]
 name = "Physlib"
@@ -47,3 +47,40 @@ srcDir = "src"
 [[lean_lib]]
 name = "HzExceptional"
 srcDir = "src"
+
+[[lean_lib]]
+name = "Sashimi"
+srcDir = "src"
+roots = [
+  "Sashimi",
+  "SashimiBackground",
+  "SashimiCusp",
+  "SashimiDerived",
+  "SashimiErf",
+  "SashimiGrowth",
+  "SashimiGrowthVariance",
+  "SashimiHalo",
+  "SashimiHaloRoots",
+  "SashimiHaloWarm",
+  "SashimiIntegrable",
+  "SashimiMassCalculus",
+  "SashimiMassVariance",
+  "SashimiNormalization",
+  "SashimiNumerics",
+  "SashimiSpectrum",
+  "SashimiSpectrumCases",
+  "SashimiSpectrumExpr",
+  "SashimiSpectrumFdmWindow",
+  "SashimiSpectrumFit",
+  "SashimiSpectrumScalar",
+  "SashimiSpectrumSlope",
+  "SashimiSpectrumSlopeCore",
+  "SashimiSpectrumVariance",
+  "SashimiSpectrumWindow",
+  "SashimiTable",
+  "SashimiTableRequest",
+  "SashimiTableWindow",
+  "SashimiThermal",
+  "SashimiTime",
+  "SashimiWdm",
+]

@@ -1,3 +1,4 @@
+import Sashimi
 import HzExample
 import HzExceptional
 import HzFriedmann
@@ -15,7 +16,8 @@ run_cmd
   let mut checked : Nat := 0
   for (name, _) in env.constants do
     let some idx := env.getModuleIdxFor? name | continue
-    unless env.header.moduleNames[idx.toNat]!.toString.startsWith "Hz" do continue
+    let mod := env.header.moduleNames[idx.toNat]!.toString
+    unless mod.startsWith "Hz" || mod.startsWith "Sashimi" do continue
     for ax in ← collectAxioms name do
       unless #[``propext, ``Classical.choice, ``Quot.sound].contains ax do
         throwError "{name} depends on the unexpected axiom {ax}"

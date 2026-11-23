@@ -1,0 +1,107 @@
+{
+  "source": "https://github.com/gomeshun/sashimi-w/blob/d234ae250f4343e465be483c5a960d12ea5d3dbf/WMAP7_camb_matterpower_z0_extrapolated.dat",
+  "results": [
+    {
+      "table": {
+        "sha256": "417a0e8e9feafae8c6afb4b89e63aef80718c9641ae95994d25a6cd97438f8c9",
+        "format": "wmap7",
+        "header": {
+          "omega_b": "469/10000",
+          "omega_m": "27/100",
+          "h": "7/10",
+          "ns": "19/20",
+          "sigma8": "41/50"
+        },
+        "h": "7/10",
+        "rows": 3001,
+        "domain_Mpc_inverse": [
+          "7/10000000000000",
+          "699998922000000000"
+        ]
+      },
+      "quantity": "power",
+      "interpolation": "linear",
+      "placement": "continuous",
+      "power_transfer": "wdm-q5",
+      "parameter": "9/200",
+      "k_band_Mpc_inverse": [
+        "1/10",
+        "1/10"
+      ],
+      "radius_Mpc": "0",
+      "moment_order": 0,
+      "unit": "Mpc^3",
+      "absolute_width_budget": "5000",
+      "bits": 112,
+      "degree": 18,
+      "depth": 0,
+      "kernel_replayed": false,
+      "normalization": {
+        "target_sigma": "41/50",
+        "radius_Mpc": "80/7",
+        "window": "top-hat",
+        "band_Mpc_inverse": [
+          "7/10000000000000",
+          "699998922000000000"
+        ],
+        "full_table": true,
+        "depth": 1
+      },
+      "status": "enclosed",
+      "lower": "57586997901046045856408607507701710866355000000000000000/6451970192361065460052701940259610570729849146008149",
+      "upper": "1289948752986017704857948484609810819409728000000000000000/121745917419764903015834016246976593177627913071494417",
+      "width": "1311729013026186463550896129717667349254519188507183947482190238760976877813778157852042233437000000000000000/785501030233974951588637650711112117501848486600298846566668763740340051246547867267984617054837490004133"
+    },
+    {
+      "table": {
+        "sha256": "417a0e8e9feafae8c6afb4b89e63aef80718c9641ae95994d25a6cd97438f8c9",
+        "format": "wmap7",
+        "header": {
+          "omega_b": "469/10000",
+          "omega_m": "27/100",
+          "h": "7/10",
+          "ns": "19/20",
+          "sigma8": "41/50"
+        },
+        "h": "7/10",
+        "rows": 3001,
+        "domain_Mpc_inverse": [
+          "7/10000000000000",
+          "699998922000000000"
+        ]
+      },
+      "quantity": "power",
+      "interpolation": "linear",
+      "placement": "continuous",
+      "power_transfer": "wdm-q10",
+      "parameter": "9/200",
+      "k_band_Mpc_inverse": [
+        "1/10",
+        "1/10"
+      ],
+      "radius_Mpc": "0",
+      "moment_order": 0,
+      "unit": "Mpc^3",
+      "absolute_width_budget": "5000",
+      "bits": 112,
+      "degree": 18,
+      "depth": 0,
+      "kernel_replayed": false,
+      "normalization": {
+        "target_sigma": "41/50",
+        "radius_Mpc": "80/7",
+        "window": "top-hat",
+        "band_Mpc_inverse": [
+          "7/10000000000000",
+          "699998922000000000"
+        ],
+        "full_table": true,
+        "depth": 1
+      },
+      "status": "enclosed",
+      "lower": "403099022908109305599886552180680615921325000000000000000/45160514687963940878403249224298987449952543648945793",
+      "upper": "429972291103707401811455253619331488640560000000000000000/40579215957599975136519764799160108638560217566746139",
+      "width": "437189666417254051119002595182910863253381400005452751216045132696516047227294510960118521415000000000000000/261796896897036344499817105205956286651075348732092923828896565762346566909607864438357320798011514720461"
+    }
+  ]
+}

@@ -15,6 +15,10 @@ subhalo catalogs.
 > The package foundation is implemented, but the public API remains
 > provisional while SASHIMI variants are migrated through regression tests.
 
+## Certified cosmology
+
+The Lean library computes rational enclosures for background quantities, growth, tabulated linear power, mass variance and halo inputs used by SASHIMI. It connects the background model to Physlib and supports explicit historical and current WDM transfer conventions. The Python entry point is `itamae.cosmology.certified`. [Library and examples](prototypes/physicslean/SASHIMI.md)
+
 ## Motivation
 
 Several SASHIMI variants share substantial computational infrastructure,

@@ -1,0 +1,5 @@
+# z=31 delta_cdm, k [1/Mpc], dimensionless k^3 P_cdm/(2 pi^2).
+# CAMB 1.6.4 independent finite-band example. See CUSP.md for generation.
+0.1,8.91483981358671e-04
+0.125,1.17889332652601e-03
+0.15,1.45378736763518e-03

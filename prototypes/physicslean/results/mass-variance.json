@@ -1,0 +1,176 @@
+[
+  {
+    "table": {
+      "sha256": "417a0e8e9feafae8c6afb4b89e63aef80718c9641ae95994d25a6cd97438f8c9",
+      "format": "wmap7",
+      "header": {
+        "omega_b": "469/10000",
+        "omega_m": "27/100",
+        "h": "7/10",
+        "ns": "19/20",
+        "sigma8": "41/50"
+      },
+      "h": "7/10",
+      "rows": 3001,
+      "domain_Mpc_inverse": [
+        "7/10000000000000",
+        "699998922000000000"
+      ]
+    },
+    "quantity": "sharp",
+    "unit": "1",
+    "mass_Msun": "100000000000000",
+    "density_Msun_per_Mpc3": "36700000000",
+    "growth_factor": "1",
+    "growth_power": 2,
+    "k_band_Mpc_inverse": [
+      "173/250",
+      "177/250"
+    ],
+    "tail_model": "none; finite band",
+    "normalization": "as supplied",
+    "calibration": "sashimi-w",
+    "interpolation": "linear",
+    "placement": "continuous",
+    "transfer": "wdm-q5",
+    "parameter": "3/2",
+    "omega_wdm": "2231/10000",
+    "thermal_h": "7/10",
+    "bits": 64,
+    "depth": 0,
+    "degree": 12,
+    "tolerance": "3/200",
+    "verification": "proved evaluator; Lean runtime execution",
+    "status": "enclosed",
+    "lower": "424282442831068263/18446744073709551616",
+    "upper": "440511002919112879/18446744073709551616",
+    "width": "2028570011005577/2305843009213693952"
+  },
+  {
+    "table": {
+      "sha256": "417a0e8e9feafae8c6afb4b89e63aef80718c9641ae95994d25a6cd97438f8c9",
+      "format": "wmap7",
+      "header": {
+        "omega_b": "469/10000",
+        "omega_m": "27/100",
+        "h": "7/10",
+        "ns": "19/20",
+        "sigma8": "41/50"
+      },
+      "h": "7/10",
+      "rows": 3001,
+      "domain_Mpc_inverse": [
+        "7/10000000000000",
+        "699998922000000000"
+      ]
+    },
+    "quantity": "sharp-derivative",
+    "unit": "1/Msun",
+    "mass_Msun": "100000000000000",
+    "density_Msun_per_Mpc3": "36700000000",
+    "growth_factor": "1",
+    "growth_power": 2,
+    "k_band_Mpc_inverse": [
+      "173/250",
+      "177/250"
+    ],
+    "tail_model": "none; finite band",
+    "normalization": "as supplied",
+    "calibration": "sashimi-w",
+    "interpolation": "linear",
+    "placement": "continuous",
+    "transfer": "wdm-q5",
+    "parameter": "3/2",
+    "omega_wdm": "2231/10000",
+    "thermal_h": "7/10",
+    "bits": 64,
+    "depth": 0,
+    "degree": 12,
+    "tolerance": "1/10000000000000000",
+    "verification": "proved evaluator; Lean runtime execution",
+    "status": "enclosed",
+    "lower": "-177269/18446744073709551616",
+    "upper": "-88627/9223372036854775808",
+    "width": "15/18446744073709551616"
+  },
+  {
+    "table": {
+      "sha256": "91269da31616bf5f8d506ad138f157c8eceb284d4cd328cd99e730b882a8dd61",
+      "format": "camb",
+      "h": "337/500",
+      "rows": 3000,
+      "domain_Mpc_inverse": [
+        "337/500000000000000",
+        "674000000000000000"
+      ]
+    },
+    "quantity": "top-hat",
+    "unit": "1",
+    "mass_Msun": "500000000000",
+    "density_Msun_per_Mpc3": "39700000000",
+    "growth_factor": "1",
+    "growth_power": 2,
+    "k_band_Mpc_inverse": [
+      "69/100",
+      "353/500"
+    ],
+    "tail_model": "none; finite band",
+    "normalization": "as supplied",
+    "calibration": "1",
+    "interpolation": "log-log",
+    "placement": "at-knots",
+    "transfer": "fdm",
+    "parameter": "1",
+    "omega_wdm": null,
+    "thermal_h": null,
+    "bits": 60,
+    "depth": 1,
+    "degree": 12,
+    "tolerance": "1/50",
+    "verification": "proved evaluator; Lean runtime execution",
+    "status": "enclosed",
+    "lower": "69291799627005007/1152921504606846976",
+    "upper": "163142610790584793/2305843009213693952",
+    "width": "24559011536574779/2305843009213693952"
+  },
+  {
+    "table": {
+      "sha256": "91269da31616bf5f8d506ad138f157c8eceb284d4cd328cd99e730b882a8dd61",
+      "format": "camb",
+      "h": "337/500",
+      "rows": 3000,
+      "domain_Mpc_inverse": [
+        "337/500000000000000",
+        "674000000000000000"
+      ]
+    },
+    "quantity": "top-hat-derivative",
+    "unit": "1/Msun",
+    "mass_Msun": "500000000000",
+    "density_Msun_per_Mpc3": "39700000000",
+    "growth_factor": "1",
+    "growth_power": 2,
+    "k_band_Mpc_inverse": [
+      "69/100",
+      "353/500"
+    ],
+    "tail_model": "none; finite band",
+    "normalization": "as supplied",
+    "calibration": "1",
+    "interpolation": "log-log",
+    "placement": "at-knots",
+    "transfer": "fdm",
+    "parameter": "1",
+    "omega_wdm": null,
+    "thermal_h": null,
+    "bits": 60,
+    "depth": 4,
+    "degree": 12,
+    "tolerance": "1/100000000000000",
+    "verification": "proved evaluator; Lean runtime execution",
+    "status": "enclosed",
+    "lower": "-385029/18446744073709551616",
+    "upper": "-286893/18446744073709551616",
+    "width": "12267/2305843009213693952"
+  }
+]

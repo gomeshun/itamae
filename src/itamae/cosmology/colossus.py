@@ -46,12 +46,13 @@ class ColossusCosmology:
     def rho_crit(self, z):
         """Return critical density in Msun Mpc^-3."""
         with self._active() as cosmo:
-            return np.asarray(cosmo.rho_c(z)) * 1.0e9
+            # Colossus reports Msun h² / kpc³.
+            return np.asarray(cosmo.rho_c(z)) * (cosmo.h**2 * 1.0e9)
 
     def rho_m(self, z):
         """Return matter density in Msun Mpc^-3."""
         with self._active() as cosmo:
-            return np.asarray(cosmo.rho_m(z)) * 1.0e9
+            return np.asarray(cosmo.rho_m(z)) * (cosmo.h**2 * 1.0e9)
 
     def omega_m(self, z):
         """Return the matter density fraction."""

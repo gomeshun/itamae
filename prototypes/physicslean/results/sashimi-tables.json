@@ -1,0 +1,152 @@
+[
+  {
+    "seconds": 9.024,
+    "table": {
+      "sha256": "417a0e8e9feafae8c6afb4b89e63aef80718c9641ae95994d25a6cd97438f8c9",
+      "format": "wmap7",
+      "header": {
+        "omega_b": "469/10000",
+        "omega_m": "27/100",
+        "h": "7/10",
+        "ns": "19/20",
+        "sigma8": "41/50"
+      },
+      "h": "7/10",
+      "rows": 3001,
+      "domain_Mpc_inverse": [
+        "7/10000000000000",
+        "699998922000000000"
+      ]
+    },
+    "quantity": "moment",
+    "interpolation": "linear",
+    "placement": "continuous",
+    "power_transfer": "wdm-q5",
+    "parameter": "7/100",
+    "k_band_Mpc_inverse": [
+      "7/10000000000000",
+      "7"
+    ],
+    "radius_Mpc": "0",
+    "moment_order": 0,
+    "unit": "1",
+    "absolute_width_budget": "9/10",
+    "bits": 100,
+    "degree": 16,
+    "depth": 1,
+    "kernel_replayed": false,
+    "status": "enclosed",
+    "lower": "681893130633308973460908374439858999209078696973633/50706024009129176059868128215040000000000000000000",
+    "upper": "3599696228108690508423741795740573735866402571202251/253530120045645880299340641075200000000000000000000",
+    "width": "95115287471072820559599961770639369910504543167043/126765060022822940149670320537600000000000000000000"
+  },
+  {
+    "seconds": 7.938,
+    "table": {
+      "sha256": "417a0e8e9feafae8c6afb4b89e63aef80718c9641ae95994d25a6cd97438f8c9",
+      "format": "wmap7",
+      "header": {
+        "omega_b": "469/10000",
+        "omega_m": "27/100",
+        "h": "7/10",
+        "ns": "19/20",
+        "sigma8": "41/50"
+      },
+      "h": "7/10",
+      "rows": 3001,
+      "domain_Mpc_inverse": [
+        "7/10000000000000",
+        "699998922000000000"
+      ]
+    },
+    "quantity": "moment",
+    "interpolation": "linear",
+    "placement": "continuous",
+    "power_transfer": "wdm-q10",
+    "parameter": "7/100",
+    "k_band_Mpc_inverse": [
+      "7/10000000000000",
+      "7"
+    ],
+    "radius_Mpc": "0",
+    "moment_order": 0,
+    "unit": "1",
+    "absolute_width_budget": "9/10",
+    "bits": 100,
+    "degree": 16,
+    "depth": 1,
+    "kernel_replayed": false,
+    "status": "enclosed",
+    "lower": "603740923790231232987602257716279781088056716513633/50706024009129176059868128215040000000000000000000",
+    "upper": "3192392492755417376937463295689864750919836629102251/253530120045645880299340641075200000000000000000000",
+    "width": "86843936902130605999726003554232922739776523267043/126765060022822940149670320537600000000000000000000"
+  },
+  {
+    "seconds": 3.129,
+    "table": {
+      "sha256": "91269da31616bf5f8d506ad138f157c8eceb284d4cd328cd99e730b882a8dd61",
+      "format": "camb",
+      "h": "337/500",
+      "rows": 3000,
+      "domain_Mpc_inverse": [
+        "337/500000000000000",
+        "674000000000000000"
+      ]
+    },
+    "quantity": "power",
+    "interpolation": "log-log",
+    "placement": "at-knots",
+    "power_transfer": "cdm",
+    "parameter": null,
+    "k_band_Mpc_inverse": [
+      "337/500",
+      "337/500"
+    ],
+    "radius_Mpc": "0",
+    "moment_order": 0,
+    "unit": "Mpc^3",
+    "absolute_width_budget": "1/100000",
+    "bits": 80,
+    "degree": 20,
+    "depth": 1,
+    "kernel_replayed": false,
+    "status": "enclosed",
+    "lower": "266278677193990319236792429/1208925819614629174706176",
+    "upper": "266278678266635858434535579/1208925819614629174706176",
+    "width": "536322769598871575/604462909807314587353088"
+  },
+  {
+    "seconds": 3.0,
+    "table": {
+      "sha256": "91269da31616bf5f8d506ad138f157c8eceb284d4cd328cd99e730b882a8dd61",
+      "format": "camb",
+      "h": "337/500",
+      "rows": 3000,
+      "domain_Mpc_inverse": [
+        "337/500000000000000",
+        "674000000000000000"
+      ]
+    },
+    "quantity": "power",
+    "interpolation": "log-log",
+    "placement": "at-knots",
+    "power_transfer": "fdm",
+    "parameter": "1",
+    "k_band_Mpc_inverse": [
+      "337/500",
+      "337/500"
+    ],
+    "radius_Mpc": "0",
+    "moment_order": 0,
+    "unit": "Mpc^3",
+    "absolute_width_budget": "1/100000",
+    "bits": 80,
+    "degree": 20,
+    "depth": 1,
+    "kernel_replayed": false,
+    "status": "enclosed",
+    "lower": "66526920555800077711532845/302231454903657293676544",
+    "upper": "266107690012064783579073143/1208925819614629174706176",
+    "width": "7788864472732941763/1208925819614629174706176"
+  }
+]
