@@ -1,0 +1,12 @@
+{
+  "date": "2026-11-23",
+  "physlib_ref": "db96e88549c3ed2b1211fe34cd751f30847e5386",
+  "lean_version_target": "v4.36.0",
+  "python_unit_tests": {"total": 8, "passed": 8},
+  "additional_rational_certificates": {"total": 250, "passed": 250},
+  "exact_rational_certificate": "passed",
+  "lean_compiler_available_in_execution_environment": false,
+  "lean_kernel_check": "not run",
+  "scope": "flat matter+Lambda FLRW H(z) for exact rational H0, Omega_m and z",
+  "not_certified": ["instrument measurements", "input parameter uncertainties", "detailed FLRW solution existence", "Lean proof syntax and kernel verification until lake build succeeds"]
+}

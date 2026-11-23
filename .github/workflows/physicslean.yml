@@ -1,0 +1,32 @@
+name: PhysicsLean
+
+on:
+  push:
+    paths:
+      - 'prototypes/physicslean/**'
+      - '.github/workflows/physicslean.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: prototypes/physicslean
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Lean and Lake
+        run: |
+          cd "$RUNNER_TEMP"
+          curl -fsSL --retry 3 -o lean.tar.zst https://github.com/leanprover/lean4/releases/download/v4.36.0/lean-4.36.0-linux.tar.zst
+          echo "2b7ab1ed8b92d2e6abfaf41344823b510064dbc9c0260cac73eb496ab2dea6eb  lean.tar.zst" | sha256sum -c
+          tar -xf lean.tar.zst
+          rm lean.tar.zst
+          echo "$RUNNER_TEMP/lean-4.36.0-linux/bin" >> "$GITHUB_PATH"
+      - name: Fetch locked dependencies and mathlib cache
+        run: python3 scripts/fetch_mathlib_cache.py HzExample
+      - name: Build and check proofs
+        run: ./run_demo.sh
