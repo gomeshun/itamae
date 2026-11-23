@@ -6,7 +6,7 @@ ITAMAE の物理単位で赤方偏移、粒子質量、ハロー質量やパワ�
 
 | 対象 | 証明・入力モデル |
 |---|---|
-| FLRW 背景 | Physlib の `reducedHubble`、膨張解に対する Friedmann 方程式、赤方偏移とスケール因子を接続した。放射・曲率を含む背景の評価、臨界密度、物質密度が使える。平坦な物質＋Λの年齢は赤方偏移から無限までの積分に対する証明を持つ。純Λでは有限の時間差を扱う。[背景](src/SashimiBackground.lean)・[時間](src/SashimiTime.lean) |
+| FLRW 背景 | Physlib の `reducedHubble`、膨張解に対する Friedmann 方程式、赤方偏移とスケール因子を接続した。放射・曲率を含む背景の評価、臨界密度、物質密度が使える。`friedmann_hubble_enclosure` は、2時刻の物質と放射のスケーリング則と基準時の係数・単位の一致から、数値区間を膨張解の $H(t)$ に移す。平坦な物質＋Λの年齢は赤方偏移から無限までの積分に対する証明を持つ。純Λでは有限の時間差を扱う。[背景](src/SashimiBackground.lean)・[時間](src/SashimiTime.lean) |
 | 成長と構造形成 | 規格化 CPT 成長率、解析微分、崩壊しきい値、Ludlow 分散フィット、NFW の質量・濃度変換と逆変換、Correa の濃度と質量集積、W の Jeans 障壁を計算する。W のグリッド濃度は選択したビンの分散差の区間を受け取る。較正した経験式のモデル誤差は呼び出し側が与える。[成長](src/SashimiGrowth.lean)・[ハロー](src/SashimiHalo.lean)・[W の濃度](src/SashimiHaloWarm.lean) |
 | 線形パワーと質量分散 | 指定した表と補間規則、転送規約、窓、積分帯域に対する積分を評価する。物理単位は k が Mpc⁻¹、P が Mpc³。全セルで関数値を囲い、積分誤差を合計する。赤方偏移ゼロのパワーを前提に成長を掛ける場合、σには D、S には D² が掛かる。[表と積分](src/SashimiTable.lean)・[dk と d ln k の同値性・帯域外の仮定](src/SashimiSpectrumVariance.lean) |
 | Prompt cusp と熱史 | C の z=31 入力は無次元の Δ²。指定された表から σ₀、σ₁、σ₂、R*、γ を計算する。熱史には Saikawa–Shirai の中心フィットと表の誤差を採用でき、物理的な真値との関係は定理の仮定 `SaikawaShiraiDoF` に現れる。[C の表と検証範囲](CUSP.md)・[熱史・誤差の伝播](THERMAL.md) |
@@ -19,7 +19,7 @@ Viel ほか (2005) の式 (4),(6) では $F=[1+(\alpha k)^{2\nu}]^{-5/\nu}$ は�
 
 ## 公開表での実測
 
-以下は公開表から読み込んだ**同じ参照パワー**と、指定した十進有理数に対する結果。区間の十進端は外側へ丸めた。W の2行は規約差を調べる共通の未規格化の計算条件。モデル固有の σ₈ 規格化を採用する場合は、同じ転送規則を適用した表からアンカー分散も計算する。[WMAP7 入力](https://github.com/gomeshun/sashimi-w/blob/d234ae250f4343e465be483c5a960d12ea5d3dbf/WMAP7_camb_matterpower_z0_extrapolated.dat)・[Planck 入力](https://github.com/gomeshun/sashimi-f/blob/fc4cd832acf4b4ae4b7ff02691d326e63945dc6d/data/Planck2018_CAMB_extrap.dat)
+以下は公開表から読み込んだ**同じ参照パワー**と、指定した十進有理数に対する結果。区間の十進端は外側へ丸めた。W の2行は規約差を調べる共通の未規格化の計算条件。ここでの上端 7 Mpc⁻¹ は $h=0.7$ で 10 $h$/Mpc に当たり、Viel (2005) が $\nu=1.12$ について述べた $k<5\,h/\mathrm{Mpc}$ を越える。数値はこの帯域へ指定通り延長した式の積分である。モデル固有の σ₈ 規格化を採用する場合は、同じ転送規則を適用した表からアンカー分散も計算する。[WMAP7 入力](https://github.com/gomeshun/sashimi-w/blob/d234ae250f4343e465be483c5a960d12ea5d3dbf/WMAP7_camb_matterpower_z0_extrapolated.dat)・[Planck 入力](https://github.com/gomeshun/sashimi-f/blob/fc4cd832acf4b4ae4b7ff02691d326e63945dc6d/data/Planck2018_CAMB_extrap.dat)
 
 | データと条件 | 量 | 包含区間 |
 |---|---|---|
@@ -30,7 +30,11 @@ Viel ほか (2005) の式 (4),(6) では $F=[1+(\alpha k)^{2\nu}]^{-5/\nu}$ は�
 
 `scripts/verify_sashimi_tables.py WMAP7.dat Planck.dat` で表の SHA-256 を確認し、4件の有理数端点と測定時間を出力できる。時間には入力処理と Lean の起動を含む。長波長・短波長端も含めてトップハットで積分する場合は、安定な小引数評価と振動尾部の上界を備えた `scripts/table_window.py` が使える。[回帰計算](scripts/verify_sashimi_tables.py)・[実測ログ](results/sashimi-tables.json)
 
-質量を入力する `scripts/mass_variance.py` は窓の半径や sharp-k の積分端を有理数に丸めずに評価する。WMAP7 の q5、粒子質量 1.5 keV、ハロー質量 $10^{14} M_\odot$ の例では、0.692〜0.708 Mpc⁻¹ の寄与が $S\in[0.02300039,0.02388015]$、その質量微分が $[-9.609772,-9.608958]\times10^{-15} M_\odot^{-1}$ になった。Planck 表全域、FDM の $m_{22}=1$、$R\in[1,1.001]$ Mpc ではトップハット分散が [7.6474,8.4980] に入る。[質量入力と厳密な端点](results/mass-variance.json)・[smooth/sharp-k の微分定理](src/SashimiMassCalculus.lean)・[W の規格化試験](results/sashimi-w-normalization.json)
+質量を入力する `scripts/mass_variance.py` は窓の半径や sharp-k の積分端を有理数に丸めずに評価する。WMAP7 の q5、粒子質量 1.5 keV、ハロー質量 $10^{14} M_\odot$ の例では、0.692〜0.708 Mpc⁻¹ の寄与が $S\in[0.02300039,0.02388015]$、その質量微分が $[-9.609772,-9.608958]\times10^{-15} M_\odot^{-1}$ になった。Planck 表全域、FDM の $m_{22}=1$、$R\in[1,1.001]$ Mpc ではトップハット分散が [7.6474,8.4980] に入る。[質量入力と厳密な端点](results/mass-variance.json)・[smooth/sharp-k の微分定理](src/SashimiMassCalculus.lean)・[W の規格化試験](results/sashimi-w-normalization.json)・[F の全表および部分表の検査記録](results/sashimi-table-window.json)
+
+F の全表について、粗い分割でも実行結果と同じ有理数端点にカーネルが到達することを確認した。3,000 行の単位換算と順序、2,999 セルの積分を188個の部分証明にまとめると、検査は 140.15 秒、区間は [7.24975,9.39316]。各セルを8分割した細かい計算では 23,992 部分区間に対し、証明書付きの計算に 19.95 秒、端点のカーネル再検査に 296.40 秒を要した。前段の [7.6474,8.4980] は、この再検査にも成功した区間を外側へ丸めた値である。継続的テストでは粗い分割の全表検査を行い、厳密な端点・入力ハッシュ・所要時間を `fdm-kernel.json` に保存する。[全表再検査の実測](results/sashimi-table-window.json)
+
+SASHIMI-W の sharp-k 質量較正も別々に指定する。$R$ を同じ物理的トップハット半径とすると、family 固定版は $k_c=(5/2)(9\pi/2)^{1/3}/R$、公開 main は $k_c=(5/2)/R$ になる。[名前付き較正と出典](SCALARS.md)
 
 同一の Planck 表、$m_{22}=1$、$M=5\times10^{11} M_\odot$、$k=0.690$〜$0.706$ Mpc⁻¹ の例を $z=2$ へ進めると、規格化 CPT 成長と積分の両方の誤差を含めて $S\in[0.0109226,0.0118522]$、$\sigma\in[0.1045113,0.1088677]$ になる。`--derivative-growth legacy-f-linear` は旧 F が返す単一の $D$ 倍を選ぶ。同じ $S=D^2S_0$ の数学的な質量微分には $D^2$ を用いる。[赤方偏移の合成定理](src/SashimiGrowthVariance.lean)・[実表入力の個別証明](tests/SashimiGrowthVarianceCases.lean)
 

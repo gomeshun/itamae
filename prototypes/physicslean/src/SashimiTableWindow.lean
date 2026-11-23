@@ -302,6 +302,23 @@ theorem integrate_of_parts {j mode power rows radius a b tol depth bits degree S
   rw [ha]
   simpa [hs] using hI
 
+/-- A proof assembled from explicit consecutive cells has the same continuous
+integral guarantee as the single-call checker. -/
+theorem finished_sum_sound {j mode power cs radius a b tol depth bits degree S I} {Y : Knot → ℝ} {v : ℝ}
+    (hR : radius.Contains v) (hp : ∀ k B, power k = some B → 0 ≤ Y k ∧ B.Contains (Y k))
+    (hS : sumCells? j mode power radius a b depth bits degree cs = some S)
+    (hrest : finish? S tol bits degree = some I) :
+    I.Contains (sumCells j mode Y v a b cs / (2*π^2)) ∧ I.hi - I.lo ≤ tol := by
+  unfold finish? at hrest
+  obtain ⟨J, hJ, hw⟩ := Option.bind_eq_some_iff.mp hrest
+  obtain ⟨rfl,hw'⟩ := SashimiNumerics.within_sound hw
+  have hs := sumCells_sound hR hp hS
+  have hj := Expr.contains_gridEnclosureWith? (values := fun _ => sumCells j mode Y v a b cs)
+    (h := hJ) (by intro i U hU; cases i <;> simp_all)
+  change J.Contains (_ / (2 * (4 * arctan 1)^2)) at hj
+  rw [arctan_one, show 4*(π/4)=π by ring] at hj
+  exact ⟨hj, hw'⟩
+
 theorem integrate_sound {j mode power rows radius a b tol depth bits degree I} {Y : Knot → ℝ} {v : ℝ}
     (hR : radius.Contains v) (hp : ∀ k B, power k = some B → 0 ≤ Y k ∧ B.Contains (Y k))
     (h : integrate? j mode power rows radius a b tol depth bits degree = some I) :
@@ -309,15 +326,7 @@ theorem integrate_sound {j mode power rows radius a b tol depth bits degree I} {
   unfold integrate? at h
   obtain ⟨_, _, hrest⟩ := Option.bind_eq_some_iff.mp h
   obtain ⟨S, hS, hrest⟩ := Option.bind_eq_some_iff.mp hrest
-  unfold finish? at hrest
-  obtain ⟨J, hJ, hw⟩ := Option.bind_eq_some_iff.mp hrest
-  obtain ⟨rfl,hw'⟩ := SashimiNumerics.within_sound hw
-  have hs := sumCells_sound hR hp hS
-  have hj := Expr.contains_gridEnclosureWith? (values := fun _ => sumCells j mode Y v a b (cells rows))
-    (h := hJ) (by intro i U hU; cases i <;> simp_all)
-  change J.Contains (_ / (2 * (4 * arctan 1)^2)) at hj
-  rw [arctan_one, show 4*(π/4)=π by ring] at hj
-  exact ⟨hj, hw'⟩
+  exact finished_sum_sound hR hp hS hrest
 
 /-- Positive observed ordinates with an independently verified nonnegative transfer. -/
 def weighted? (ratio : ℚ → Option RationalInterval) (k : Knot) : Option RationalInterval :=

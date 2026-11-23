@@ -255,6 +255,36 @@ def test_mass_variance_derivative_carries_growth_convention(tmp_path):
         evaluate_mass("p.dat", **options, growth=".5")
 
 
+def test_mass_preserves_w_calibration_and_particle_units(tmp_path):
+    project = mock_project(tmp_path)
+    options = dict(
+        project=project,
+        layout="canonical",
+        quantity="sharp",
+        interpolation="linear",
+        placement="continuous",
+        transfer="wdm-q5",
+        density="3e10",
+        mass="1e14",
+        k_min=".6",
+        k_max="1.1",
+        tolerance=".01",
+        growth=1,
+        omega_wdm=".2231",
+        thermal_h=".7",
+    )
+    data = {"status": "unresolved", "unit": "1", "tolerance": "1/100"}
+    with patch("itamae.cosmology.certified.subprocess.run", return_value=reply(data, 2)) as run:
+        for calibration in ("w-family-legacy", "w-main", "sashimi-w", 1):
+            evaluate_mass("p.dat", **options, calibration=calibration, wdm_mass_kev="1.5")
+            argv = run.call_args.args[0]
+            assert argv[argv.index("--calibration") + 1] == str(calibration)
+            assert argv[argv.index("--wdm-mass-kev") + 1] == "3/2" and "--parameter" not in argv
+        with pytest.raises(ValueError, match="wdm_mass_kev"):
+            evaluate_mass("p.dat", **options, parameter=".045")
+        assert run.call_count == 4
+
+
 def test_explicit_missing_project_and_inexact_inputs(tmp_path):
     with pytest.raises(FileNotFoundError, match="project="):
         evaluate_scalar("growth", {"z": 0}, project=tmp_path)

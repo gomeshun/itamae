@@ -23,6 +23,7 @@ import SashimiSpectrumSlopeCore
 import SashimiSpectrumVariance
 import SashimiSpectrumWindow
 import SashimiTable
+import SashimiTableJoin
 import SashimiTableRequest
 import SashimiTableWindow
 import SashimiThermal

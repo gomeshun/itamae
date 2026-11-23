@@ -43,6 +43,9 @@ jobs:
           curl -fLsS --retry 3 'https://raw.githubusercontent.com/gomeshun/sashimi-w/d234ae250f4343e465be483c5a960d12ea5d3dbf/WMAP7_camb_matterpower_z0_extrapolated.dat' -o "$RUNNER_TEMP/w.dat"
           curl -fLsS --retry 3 'https://raw.githubusercontent.com/gomeshun/sashimi-f/fc4cd832acf4b4ae4b7ff02691d326e63945dc6d/data/Planck2018_CAMB_extrap.dat' -o "$RUNNER_TEMP/f.dat"
           python3 scripts/verify_sashimi_tables.py "$RUNNER_TEMP/w.dat" "$RUNNER_TEMP/f.dat" --output "$RUNNER_TEMP/sashimi-tables.json"
+      - name: Replay the complete 3000-row FDM spectrum with the kernel
+        run: |
+          python3 scripts/table_window.py "$RUNNER_TEMP/f.dat" --format camb --h .674 --model fdm --radius-lower 1 --radius-upper 1.001 --tolerance 3 --depth 0 --bits 80 --degree 8 --replay --replay-chunk-cells 16 --replay-jobs 2 > "$RUNNER_TEMP/fdm-kernel.json"
       - name: Save measurements
         uses: actions/upload-artifact@v4
         with:
@@ -50,3 +53,4 @@ jobs:
           path: |
             ${{ runner.temp }}/benchmarks.json
             ${{ runner.temp }}/sashimi-tables.json
+            ${{ runner.temp }}/fdm-kernel.json

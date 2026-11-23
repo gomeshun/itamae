@@ -1,0 +1,209 @@
+{
+  "source": "https://github.com/gomeshun/sashimi-f/blob/f4893a3c24a7b6d3c34983cbc5099148ce770d91/data/Planck2018_CAMB_extrap.dat",
+  "target": "S0(R) = integral of k^2 times the log-log interpolant of the FDM-modified knot powers times topHat(kR)^2, divided by 2*pi^2, over the indicated band. Interpolation uses Mathlib real log, including its total convention at zero. Each enclosure applies simultaneously to all R in the stated interval.",
+  "full_domain": [
+    {
+      "table": {
+        "sha256": "91269da31616bf5f8d506ad138f157c8eceb284d4cd328cd99e730b882a8dd61",
+        "format": "camb",
+        "h": "337/500",
+        "rows": 3000,
+        "domain_Mpc_inverse": [
+          "337/500000000000000",
+          "674000000000000000"
+        ]
+      },
+      "power_transfer": "fdm",
+      "interpolation": "log-log",
+      "transfer_placement": "at-knots",
+      "radius_Mpc": [
+        "1",
+        "1001/1000"
+      ],
+      "k_band_Mpc_inverse": [
+        "337/500000000000000",
+        "674000000000000000"
+      ],
+      "unit": "1",
+      "absolute_width_budget": "3",
+      "bits": 80,
+      "degree": 8,
+      "depth": 0,
+      "runtime_seconds": 22.581098845999804,
+      "m22": "1",
+      "kernel_replay": "passed",
+      "replayed_chunks": 188,
+      "replay_seconds": 140.14930660400023,
+      "status": "enclosed",
+      "lower": "273888142806467883974871/37778931862957161709568",
+      "upper": "5677810974970468756688657/604462909807314587353088",
+      "width": "1295600690066982613090721/604462909807314587353088"
+    },
+    {
+      "table": {
+        "sha256": "91269da31616bf5f8d506ad138f157c8eceb284d4cd328cd99e730b882a8dd61",
+        "format": "camb",
+        "h": "337/500",
+        "rows": 3000,
+        "domain_Mpc_inverse": [
+          "337/500000000000000",
+          "674000000000000000"
+        ]
+      },
+      "power_transfer": "fdm",
+      "interpolation": "log-log",
+      "transfer_placement": "at-knots",
+      "radius_Mpc": [
+        "1",
+        "1001/1000"
+      ],
+      "k_band_Mpc_inverse": [
+        "337/500000000000000",
+        "674000000000000000"
+      ],
+      "unit": "1",
+      "absolute_width_budget": "1",
+      "bits": 80,
+      "degree": 12,
+      "depth": 3,
+      "runtime_seconds": 19.9532351809994,
+      "m22": "1",
+      "kernel_replay": "passed",
+      "replayed_chunks": 375,
+      "replay_seconds": 296.3992326289999,
+      "status": "enclosed",
+      "lower": "1155643887562255296546675/151115727451828646838272",
+      "upper": "10273444545880941563037545/1208925819614629174706176",
+      "width": "1028293445382899190664145/1208925819614629174706176"
+    }
+  ],
+  "fine_runtime_same_endpoints_seconds": 11.370561224000085,
+  "floating_simpson_reference": {
+    "radii_Mpc": [
+      1,
+      1.0005,
+      1.001
+    ],
+    "native_knot_samples": [
+      7.962529210194262,
+      7.959782391412143,
+      7.957037248442322
+    ],
+    "description": "Approximate Simpson rule on the source log-k grid; no kernel replay of native floating arithmetic."
+  },
+  "kernel_replay_fixture": {
+    "path": "tests/data/fdm-camb-three-knots.dat",
+    "source_knots": "Original file lines 992–994 inclusive; one leading provenance comment",
+    "result": {
+      "table": {
+        "sha256": "c015fd3f911f76d23290e2657338d4970c1b7fcf3b0bbad435589f01c4136fc5",
+        "format": "camb",
+        "h": "337/500",
+        "rows": 3,
+        "domain_Mpc_inverse": [
+          "269731093/50000000000",
+          "282447451/50000000000"
+        ]
+      },
+      "power_transfer": "fdm",
+      "interpolation": "log-log",
+      "transfer_placement": "at-knots",
+      "radius_Mpc": [
+        "1",
+        "1001/1000"
+      ],
+      "k_band_Mpc_inverse": [
+        "269731093/50000000000",
+        "282447451/50000000000"
+      ],
+      "unit": "1",
+      "absolute_width_budget": "1/500000",
+      "bits": 64,
+      "degree": 8,
+      "depth": 0,
+      "runtime_seconds": 8.530802152999968,
+      "m22": "1",
+      "kernel_replay": "passed",
+      "replayed_chunks": 2,
+      "replay_seconds": 6.242263332999755,
+      "status": "enclosed",
+      "lower": "459666719806783/18446744073709551616",
+      "upper": "243393154924911/9223372036854775808",
+      "width": "27119590043039/18446744073709551616"
+    },
+    "forged_zero_cell_sums": "rejected by the kernel"
+  },
+  "reproduction": [
+    "python scripts/table_window.py Planck2018_CAMB_extrap.dat --format camb --h 0.674 --model fdm --m22 1 --radius-lower 1 --radius-upper 1.001 --tolerance 3 --depth 0 --bits 80 --degree 8",
+    "python scripts/table_window.py Planck2018_CAMB_extrap.dat --format camb --h 0.674 --model fdm --m22 1 --radius-lower 1 --radius-upper 1.001 --tolerance 1 --depth 3 --bits 80 --degree 12",
+    "python scripts/table_window.py tests/data/fdm-camb-three-knots.dat --format camb --h 0.674 --model fdm --m22 1 --radius-lower 1 --radius-upper 1.001 --tolerance 0.000002 --depth 0 --bits 64 --degree 8 --replay --replay-chunk-cells 1",
+    "python scripts/table_window.py Planck2018_CAMB_extrap.dat --format camb --h 0.674 --model fdm --m22 1 --radius-lower 1 --radius-upper 1.001 --tolerance 3 --depth 0 --bits 80 --degree 8 --replay --replay-chunk-cells 16 --replay-jobs 2",
+    "python scripts/table_window.py Planck2018_CAMB_extrap.dat --format camb --h 0.674 --model fdm --m22 1 --radius-lower 1 --radius-upper 1.001 --tolerance 1 --depth 3 --bits 80 --degree 12 --replay --replay-chunk-cells 8 --replay-jobs 2"
+  ],
+  "trust": "fdm_integrate_sound and integrate_sound depend on propext, Classical.choice and Quot.sound. Without concrete kernel replay, the reported endpoints additionally rely on the Lean runtime and the canonical table sent by the parser. Concrete replay checks the conversion from the tabulated decimals interpreted as exact rationals and every accepted panel in the Lean kernel. Reading the named source file remains an external input.",
+  "full_domain_coarse_integral_proof": {
+    "goal": "For every r in [1,1001/1000], the normalized sum of the exact clipped integrals on all original consecutive table cells belongs to the reported interval.",
+    "numerical_proof_modules": 47,
+    "generated_root_sha256": "1165a091ae845d4a149ed897ebe5810452f614d1c7238883ed3b96fbf361113b",
+    "result": {
+      "table": {
+        "sha256": "91269da31616bf5f8d506ad138f157c8eceb284d4cd328cd99e730b882a8dd61",
+        "format": "camb",
+        "h": "337/500",
+        "rows": 3000,
+        "domain_Mpc_inverse": [
+          "337/500000000000000",
+          "674000000000000000"
+        ]
+      },
+      "power_transfer": "fdm",
+      "interpolation": "log-log",
+      "transfer_placement": "at-knots",
+      "radius_Mpc": [
+        "1",
+        "1001/1000"
+      ],
+      "k_band_Mpc_inverse": [
+        "337/500000000000000",
+        "674000000000000000"
+      ],
+      "unit": "1",
+      "absolute_width_budget": "3",
+      "bits": 80,
+      "degree": 8,
+      "depth": 0,
+      "runtime_seconds": 16.265951310000673,
+      "m22": "1",
+      "kernel_replay": "passed",
+      "replayed_chunks": 375,
+      "replay_seconds": 161.0664303679996,
+      "status": "enclosed",
+      "lower": "273888142806467883974871/37778931862957161709568",
+      "upper": "5677810974970468756688657/604462909807314587353088",
+      "width": "1295600690066982613090721/604462909807314587353088"
+    },
+    "axioms": [
+      "propext",
+      "Classical.choice",
+      "Quot.sound"
+    ]
+  },
+  "candidate_only_runtime_seconds_at_depth_zero": 9.2862653279999,
+  "full_domain_coarse_exact_call": {
+    "goal": "integrate? 0 .logLog power rows radius a b tol depth bits degree = some ⟨lower,upper⟩",
+    "numerical_proof_modules": 24,
+    "source_rows": 3000,
+    "adjacent_cells": 2999,
+    "generated_root_sha256": "f68bb682b6452d2d6865ef1f205ca2646a6970326a2b0727c19da1be9b62a8ce",
+    "audit": "propext, Classical.choice, Quot.sound"
+  },
+  "full_domain_fine_exact_call": {
+    "goal": "integrate? 0 .logLog power rows radius a b tol depth bits degree = some ⟨lower,upper⟩",
+    "numerical_proof_modules": 47,
+    "source_rows": 3000,
+    "adjacent_cells": 2999,
+    "subpanels": 23992,
+    "generated_root_sha256": "df6c1af3cf88dd7e5890a16a9131009302866c0d14c16cf4394dae8cbab76dc5",
+    "audit": "propext, Classical.choice, Quot.sound"
+  }
+}

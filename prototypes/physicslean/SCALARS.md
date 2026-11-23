@@ -89,6 +89,16 @@ print(slope.status, slope.unit)  # dS/dM [1/Msun]
 
 `evaluate_mass` の `quantity` は `sharp` / `top-hat` で S、末尾の `-sigma` で √S、`-derivative` で dS/dM を指定する。質量は Msun、平均密度は Msun/Mpc³。`growth` に表の基準時からの成長比を与える方法と、`redshift`、`omega_m`（必要なら `omega_lambda`）で z=0 の表からの CPT 成長を評価する方法がある。標準の dS/dM は D² に比例する。歴史的な F の一次成長係数による微分式を照合する場合は `derivative_growth="legacy-f-linear"` を選ぶ。物理的 WDM を指定するには `wdm_mass_kev` [keV]、`omega_wdm`、`thermal_h` を渡す。既知の α [Mpc] は粒子入力を省いて `parameter` に渡す。この指定は `evaluate_mass` と `evaluate_table` で共通する。質量クエリの規格化は入力表の値に従う。
 
+W の sharp-k 質量割当てでは $R_{\rm th}=(3M/(4\pi\bar\rho))^{1/3}$、$k_{\max}=c/R_{\rm th}$ とする。`evaluate_mass` の `calibration` と `mass_variance.py --calibration` は次の選択を受け付ける。
+
+| 指定 | $c$ | 出典 |
+|---|---|---|
+| `w-family-legacy` | $(5/2)(9\pi/2)^{1/3}$ | [family 固定版、d234ae2](https://github.com/gomeshun/sashimi-w/blob/d234ae250f4343e465be483c5a960d12ea5d3dbf/sashimi_w.py#L95-L100) |
+| `w-main` | $5/2$ | [公開 main 固定版、5b845b5](https://github.com/gomeshun/sashimi-w/blob/5b845b52080b30ab16e29a2de93da7ec347682e0/sashimi_w_numerics.py#L153-L179) |
+| 正の有理数 | 指定値（既定 1） | 指定した半径規約 |
+
+`sashimi-w` は `w-family-legacy` の旧名。出力の `calibration` は採用した規約、`requested_calibration` は入力を記録する。W の q5/q10 に与える粒子質量は CLI の `--wdm-mass-kev` で指定する。CAMB・WMAP7 表の場合はその h を粒子フィットにも使い、canonical 表の場合は `--thermal-h` を指定する。
+
 `scale-factor`、`omega-lambda-flat`、`rho-cdm-flat`、`dt-dz-flat` は平坦背景の派生量で、`dt-dz-flat` は負の dt/dz [Gyr/赤方偏移]。剥離モデルの `stripping-*-csf` と `stripping-*-w` は各系列の係数と年の長さを用いる。入力の E は H(z)/(100h)、Δは臨界密度基準の過密度、`mvir` は Msun である。
 
 ## Colossus・CAMB との照合

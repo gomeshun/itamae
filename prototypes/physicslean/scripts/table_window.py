@@ -1,10 +1,14 @@
 """Variance of a tabulated (optionally FDM-modified) spectrum for an interval of radii."""
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from fractions import Fraction
 import json
+import os
+import re
 from pathlib import Path
 import subprocess
+import tempfile
 import time
 
 if __package__:
@@ -13,6 +17,75 @@ if __package__:
 else:
     from spectrum_table import PROJECT, _read_table, number
     from table_replay import check_proof, literal
+
+
+def check_modules(header, leaf_blocks, assembly, memory_mb, timeout, jobs):
+    """Compile disjoint proof groups in fresh kernels, then link and audit the root."""
+    deadline = time.monotonic() + timeout
+    package_path = subprocess.check_output(
+        ["lake", "env", "printenv", "LEAN_PATH"], cwd=PROJECT, text=True
+    ).strip()
+    options = [
+        line for line in header if line.startswith("open ") or line.startswith("set_option ")
+    ]
+    with tempfile.TemporaryDirectory() as directory:
+        base = Path(directory)
+        env = dict(os.environ, LEAN_PATH=directory + os.pathsep + package_path)
+
+        def compile_module(name, lines):
+            source = base / f"{name}.lean"
+            source.write_text("\n".join(lines) + "\n", encoding="utf-8")
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise RuntimeError(f"kernel replay timed out before {name}")
+            run = subprocess.run(
+                [
+                    "lean",
+                    "-j1",
+                    f"-M{memory_mb}",
+                    "-R",
+                    directory,
+                    "-o",
+                    str(base / f"{name}.olean"),
+                    str(source),
+                ],
+                cwd=PROJECT,
+                env=env,
+                capture_output=True,
+                text=True,
+                timeout=remaining,
+            )
+            if run.returncode:
+                raise RuntimeError(
+                    f"kernel replay failed in {name}\n{(run.stdout + run.stderr)[-2400:]}"
+                )
+            return run.stdout
+
+        compile_module("WindowBase", [line.replace("private def ", "def ") for line in header])
+        groups = [leaf_blocks[i : i + 8] for i in range(0, len(leaf_blocks), 8)]
+
+        def compile_group(item):
+            idx, blocks = item
+            source = ["import WindowBase", *options]
+            source.extend(line.removeprefix("private ") for block in blocks for line in block)
+            compile_module(f"WindowGroup{idx}", source)
+
+        pool = ThreadPoolExecutor(max_workers=jobs)
+        try:
+            futures = [pool.submit(compile_group, item) for item in enumerate(groups)]
+            for future in as_completed(futures):
+                future.result()
+        finally:
+            pool.shutdown(wait=True, cancel_futures=True)
+        root = [f"import WindowGroup{i}" for i in range(len(groups))]
+        output = compile_module("WindowCertificate", [*root, *options, *assembly])
+        for line in output.splitlines():
+            audit = re.fullmatch(r"'concrete' depends on axioms: \[(.*?)\]", line)
+            if audit and set(audit[1].split(", ")) <= {"propext", "Classical.choice", "Quot.sound"}:
+                return
+            if line == "'concrete' does not depend on any axioms":
+                return
+        raise RuntimeError("missing or unexpected final kernel axiom audit")
 
 
 def replay_window(
@@ -34,6 +107,7 @@ def replay_window(
     chunk_size,
     memory_mb,
     timeout,
+    jobs,
 ):
     """Check independent cell sums, then certify their sum and the reported endpoints."""
 
@@ -50,8 +124,8 @@ def replay_window(
     lines = [
         "import SashimiTableWindow",
         "import SashimiTableRequest",
+        "import SashimiTableJoin",
         "open FloatLib.Numerics SashimiTable SashimiTableWindow",
-        "deriving instance DecidableEq for Cell",
         "set_option Elab.async false",
         "set_option maxRecDepth 100000",
         "set_option maxHeartbeats 8000000",
@@ -59,35 +133,49 @@ def replay_window(
         f"private def radius : RationalInterval := {box(*radius)}",
         f"private def part := sumCells? 0 {mode} power radius {a} {b} {depth} {bits} {degree}",
     ]
+    header = lines.copy()
+    leaves = []
     nodes = []
-    chunks = []
+    bounds = {}
     for idx, start in enumerate(range(0, len(raw_rows) - 1, chunk_size)):
         if idx >= len(segments) or segments[idx][0] != start:
             raise RuntimeError("missing or unordered quadrature certificate")
         _, lower, upper = segments[idx]
         knots = ", ".join(box(k, y) for k, y in raw_rows[start : start + chunk_size + 1])
         name = f"N{idx}"
-        chunks.append(name)
-        lines.extend(
-            [
-                f"private def rows{name} : List Knot :=",
-                f'  (SashimiTableRequest.canonicalRows "{layout}" {literal(h)} [{knots}]).getD []',
-                f"private def cells{name} := cells rows{name}",
-                f"private theorem cert{name} : part cells{name} = some {box(lower, upper)} := by decide +kernel",
-            ]
-        )
+        left_k, left_p = raw_rows[start]
+        right_k, right_p = raw_rows[min(start + chunk_size, len(raw_rows) - 1)]
+        if layout == "wmap7":
+            left_k, left_p, right_k, right_p = left_p, left_k, right_p, right_k
+        first, last = box(left_k * h, left_p / h**3), box(right_k * h, right_p / h**3)
+        bounds[name] = first, last
+        block = [
+            f"private def rows{name} : List Knot :=",
+            f'  (SashimiTableRequest.canonicalRows "{layout}" {literal(h)} [{knots}]).getD []',
+            f"private def cells{name} := cells rows{name}",
+            f"private theorem cert{name} : part cells{name} = some {box(lower, upper)} := by decide +kernel",
+            f"private theorem table{name} : Block {mode} rows{name} cells{name} {first} {last} := by",
+            "  constructor <;> first | rfl | decide +kernel",
+        ]
+        leaves.append(block)
+        lines.extend(block)
         nodes.append((name, lower, upper))
-    if len(segments) != len(chunks):
+    if len(segments) != len(leaves):
         raise RuntimeError("extra quadrature certificates")
+    assembly_start = len(lines)
     while len(nodes) > 1:
         nxt = []
         for idx in range(0, len(nodes) - 1, 2):
             (x, xl, xu), (y, yl, yu) = nodes[idx : idx + 2]
             name = f"B{len(lines)}"
             lower, upper = xl + yl, xu + yu
+            first, last = bounds[x][0], bounds[y][1]
+            bounds[name] = first, last
             lines.extend(
                 [
                     f"private def cells{name} := cells{x} ++ cells{y}",
+                    f"private def rows{name} := rows{x} ++ rows{y}.tail",
+                    f"private theorem table{name} : Block {mode} rows{name} cells{name} {first} {last} := table{x}.join table{y}",
                     f"private theorem cert{name} : part cells{name} = some {box(lower, upper)} :=",
                     f"  (sumCells?_append_of cert{x} cert{y}).trans (by decide +kernel)",
                 ]
@@ -97,23 +185,22 @@ def replay_window(
             nxt.append(nodes[-1])
         nodes = nxt
     name, _, _ = nodes[0]
-    # Each pair of chunks shares precisely its boundary knot. The definitionally
-    # equal cell lists in the 'hs' proof below bind every pair to the raw rows.
-    lines.append(
-        "private def knots := "
-        + " ++ ".join([f"rows{chunks[0]}"] + [f"rows{c}.tail" for c in chunks[1:]])
-    )
     lines.extend(
         [
-            f"theorem concrete : integrate? 0 {mode} power knots radius",
+            f"theorem concrete : integrate? 0 {mode} power rows{name} radius",
             f"    {a} {b} {literal(tol)} {depth} {bits} {degree} = some {box(lo, hi)} := by",
-            "  apply integrate_of_parts (by decide +kernel)",
-            f"  · rw [show cells knots = cells{name} by first | rfl | decide +kernel]",
+            "  apply integrate_of_parts",
+            f"  · rw [table{name}.accepts (a := {a}) (b := {b}) (by decide +kernel)]",
+            "    decide +kernel",
+            f"  · rw [table{name}.adjacent]",
             f"    exact cert{name}",
             "  · decide +kernel",
             "#print axioms concrete",
         ]
     )
+    if len(leaves) > 8:
+        check_modules(header, leaves, lines[assembly_start:], memory_mb, timeout, jobs)
+        return
     check_proof("\n".join(lines) + "\n", PROJECT, max_memory_mb=memory_mb, timeout_seconds=timeout)
 
 
@@ -137,15 +224,24 @@ def evaluate_window(
     replay_memory_mb=4096,
     replay_chunk_cells=16,
     replay_timeout=1800,
+    replay_jobs=1,
 ):
     if model not in ("cdm", "fdm") or interpolation not in ("log-log", "linear"):
         raise ValueError("unknown transfer or interpolation")
     if (
         any(
             type(i) is not int
-            for i in (bits, degree, depth, replay_memory_mb, replay_chunk_cells, replay_timeout)
+            for i in (
+                bits,
+                degree,
+                depth,
+                replay_memory_mb,
+                replay_chunk_cells,
+                replay_timeout,
+                replay_jobs,
+            )
         )
-        or min(replay_memory_mb, replay_chunk_cells, replay_timeout) <= 0
+        or min(replay_memory_mb, replay_chunk_cells, replay_timeout, replay_jobs) <= 0
     ):
         raise ValueError(
             "depth, bits, degree and replay memory must be integers with positive replay memory"
@@ -238,6 +334,7 @@ def evaluate_window(
             replay_chunk_cells,
             replay_memory_mb,
             replay_timeout,
+            replay_jobs,
         )
         result.update(
             kernel_replay="passed",
@@ -272,6 +369,12 @@ if __name__ == "__main__":
     ap.add_argument("--replay-chunk-cells", type=int, default=16)
     ap.add_argument(
         "--replay-timeout", type=int, default=1800, help="total kernel replay budget in seconds"
+    )
+    ap.add_argument(
+        "--replay-jobs",
+        type=int,
+        default=1,
+        help="concurrent kernel processes for independent proof groups",
     )
     result = evaluate_window(**vars(ap.parse_args()))
     print(json.dumps(result, indent=2))

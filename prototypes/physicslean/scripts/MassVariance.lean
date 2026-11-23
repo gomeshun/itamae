@@ -42,10 +42,13 @@ def main (args : List String) : IO Unit := do
     | "wdm-q5" => pure (SashimiSpectrum.wdmPowerExpr .publishedQ5 ax)
     | "wdm-q10" => pure (SashimiSpectrum.wdmPowerExpr .standardT2Q10 ax)
     | _ => throw (IO.userError "unknown transfer")
-  let cal ← if scale = "sashimi-w" then pure Calibration.sashimiW else do
-    let c ← rat scale
-    if c ≤ 0 then throw (IO.userError "positive mass calibration required")
-    pure (Calibration.fixed c)
+  let cal ← match scale with
+    | "sashimi-w" | "w-family-legacy" => pure Calibration.wFamilyLegacy
+    | "w-main" => pure Calibration.wMain
+    | _ => do
+      let c ← rat scale
+      if c ≤ 0 then throw (IO.userError "positive mass calibration required")
+      pure (Calibration.fixed c)
   let rho ← rat rho
   let mass ← rat mass
   let growth ← rat growth

@@ -298,8 +298,10 @@ def evaluate_mass(
     The mass is in Msun, density in Msun/Mpc³, and both wavenumbers in 1/Mpc.
     Supply an exact growth factor or a redshift and matter fraction for the
     normalized CPT growth fit. The historical F derivative convention uses
-    one factor of growth. Sharp-k calibration accepts a positive rational c
-    or "sashimi-w" for the W radius prescription. The spectrum normalization
+    one factor of growth. Sharp-k calibration accepts a positive rational c,
+    "w-main" (c=2.5) or "w-family-legacy" (also called "sashimi-w").
+    For thermal WDM supply wdm_mass_kev and omega_wdm, with thermal_h for
+    canonical tables. A WDM parameter given alone is alpha in Mpc. The spectrum normalization
     is the supplied table's own. Results record the numerical policy used.
     """
     if (growth is None) == (redshift is None):
@@ -308,12 +310,8 @@ def evaluate_mass(
         raise ValueError("redshift growth requires omega_m")
     if growth is not None and (omega_m is not None or omega_lambda is not None):
         raise ValueError("omega_m and omega_lambda parameterize redshift growth")
-    if wdm_mass_kev is not None:
-        if transfer not in ("wdm-q5", "wdm-q10") or parameter is not None:
-            raise ValueError("wdm_mass_kev requires a WDM transfer and replaces parameter")
-        if omega_wdm is None or thermal_h is None:
-            raise ValueError("wdm_mass_kev requires omega_wdm and thermal_h")
-        parameter = wdm_mass_kev
+    if parameter is not None and any(v is not None for v in (wdm_mass_kev, omega_wdm, thermal_h)):
+        raise ValueError("WDM particle inputs replace parameter; use wdm_mass_kev for keV")
     budget = _number(tolerance)
     args = [
         str(Path(table).expanduser().resolve()),
@@ -338,7 +336,9 @@ def evaluate_mass(
         "--tolerance",
         str(budget),
         "--calibration",
-        "sashimi-w" if calibration == "sashimi-w" else str(_number(calibration)),
+        str(calibration)
+        if calibration in ("w-family-legacy", "sashimi-w", "w-main")
+        else str(_number(calibration)),
         "--depth",
         _natural("depth", depth),
         "--bits",
@@ -357,6 +357,7 @@ def evaluate_mass(
         ("--growth-tolerance", growth_tolerance),
         ("--raw-tolerance", raw_tolerance),
         ("--parameter", parameter),
+        ("--wdm-mass-kev", wdm_mass_kev),
         ("--omega-wdm", omega_wdm),
         ("--thermal-h", thermal_h),
     ]:

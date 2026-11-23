@@ -31,6 +31,7 @@ def evaluate_mass(
     tolerance,
     growth=None,
     parameter=None,
+    wdm_mass_kev=None,
     omega_wdm=None,
     thermal_h=None,
     calibration=1,
@@ -96,18 +97,29 @@ def evaluate_mass(
         raise ValueError("depth, bits, degree must be nonnegative integers")
     if transfer == "cdm" and parameter is not None:
         raise ValueError("CDM takes no parameter")
-    if transfer != "cdm" and (parameter is None or number(parameter) <= 0):
-        raise ValueError("positive transfer parameter required")
-    p = number(parameter) if parameter is not None else 0
-    if omega_wdm is not None or thermal_h is not None:
-        if not transfer.startswith("wdm-") or omega_wdm is None or thermal_h is None:
-            raise ValueError("thermal WDM requires particle mass, Omega_WDM, and h")
-        omega, hh = map(number, (omega_wdm, thermal_h))
-        if min(omega, hh) <= 0:
-            raise ValueError("thermal Omega_WDM and h must be positive")
+    if any(v is not None for v in (wdm_mass_kev, omega_wdm, thermal_h)):
+        if transfer not in ("wdm-q5", "wdm-q10") or parameter is not None:
+            raise ValueError("WDM particle inputs replace --parameter, the transfer scale in Mpc")
+        if wdm_mass_kev is None or omega_wdm is None:
+            raise ValueError("thermal WDM requires --wdm-mass-kev and --omega-wdm")
+        if layout == "canonical" and thermal_h is None:
+            raise ValueError("canonical particle inputs require --thermal-h")
+        table_h = number(source["h"])
+        hh = table_h if thermal_h is None else number(thermal_h)
+        if layout != "canonical" and hh != table_h:
+            raise ValueError("thermal h disagrees with the table unit conversion")
+        p, omega = map(number, (wdm_mass_kev, omega_wdm))
+        if min(p, omega, hh) <= 0:
+            raise ValueError("thermal WDM mass, Omega_WDM and h must be positive")
     else:
+        if transfer != "cdm" and (parameter is None or number(parameter) <= 0):
+            raise ValueError("positive transfer parameter required")
+        p = number(parameter) if parameter is not None else 0
         omega, hh = 0, 0
-    if calibration != "sashimi-w":
+    supplied_calibration = str(calibration)
+    if calibration == "sashimi-w":
+        calibration = "w-family-legacy"
+    elif calibration not in ("w-family-legacy", "w-main"):
         calibration = number(calibration)
         if calibration <= 0:
             raise ValueError("positive sharp-k calibration required")
@@ -175,10 +187,12 @@ def evaluate_mass(
         tail_model="none; finite band",
         normalization="as supplied",
         calibration=str(calibration),
+        requested_calibration=supplied_calibration,
         interpolation=interpolation,
         placement=placement,
         transfer=transfer,
-        parameter=None if transfer == "cdm" else str(p),
+        parameter=None if parameter is None else str(p),
+        wdm_mass_kev=str(p) if omega else None,
         omega_wdm=str(omega) if omega else None,
         thermal_h=str(hh) if hh else None,
         bits=bits,
@@ -222,12 +236,15 @@ def main():
     parser.add_argument(
         "--parameter",
         type=number,
-        help="WDM alpha [Mpc] or particle keV with --omega-wdm and --thermal-h; FDM m22",
+        help="WDM alpha [Mpc] or FDM m22",
     )
+    parser.add_argument("--wdm-mass-kev", type=number, help="thermal WDM particle mass in keV")
     parser.add_argument("--omega-wdm", type=number)
     parser.add_argument("--thermal-h", type=number)
     parser.add_argument(
-        "--calibration", default="1", help="sharp-k c or sashimi-w for (5/2)(9π/2)^(1/3)"
+        "--calibration",
+        default="1",
+        help="positive sharp-k c, w-main (5/2), or w-family-legacy ((5/2)(9π/2)^(1/3)); sashimi-w aliases w-family-legacy",
     )
     epoch = parser.add_mutually_exclusive_group(required=True)
     epoch.add_argument(

@@ -95,7 +95,7 @@ A・Bの主張は実数上の予測に関する。Cで小さい絶対誤差を�
 
 ## ビルドと公理監査
 
-`./run_demo.sh` はPythonの10テストを通過し、`lake build` は148宣言の推移的公理監査を通過した。主要定理の出力はすべて `[propext, Classical.choice, Quot.sound]`。Leanソースに `sorry`、`admit`、独自の公理宣言はない。追加で `leanchecker` を使い、コンパイル済みの10個の具体的なbinary64誤差定理と入力復号定理を含むモジュールを、インポートした環境内で再検査した。
+`./run_demo.sh` はHubble 基盤のみの検証時には Python の10テストを通過し、`lake build` は148宣言の推移的公理監査を通過した。主要定理の出力はすべて `[propext, Classical.choice, Quot.sound]`。Leanソースに `sorry`、`admit`、独自の公理宣言はない。追加で `leanchecker` を使い、コンパイル済みの10個の具体的なbinary64誤差定理と入力復号定理を含むモジュールを、インポートした環境内で再検査した。
 
 | 測定段階 | 実時間 |
 |---|---:|

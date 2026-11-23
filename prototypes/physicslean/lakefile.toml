@@ -78,6 +78,7 @@ roots = [
   "SashimiSpectrumVariance",
   "SashimiSpectrumWindow",
   "SashimiTable",
+  "SashimiTableJoin",
   "SashimiTableRequest",
   "SashimiTableWindow",
   "SashimiThermal",

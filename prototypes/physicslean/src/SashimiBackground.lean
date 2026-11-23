@@ -1,4 +1,5 @@
 import HzCertificate
+import Physlib.Cosmology.FLRW.Distances
 import SashimiNumerics
 
 /-! FLRW background functions used by the SASHIMI clients. The four density
@@ -121,6 +122,34 @@ theorem enclose_sound {q d h₀ G z tol bits degree I}
   · exact expression_value q d h₀ G z ▸ SashimiNumerics.closed_sound h
   · contradiction
 
+open Cosmology Cosmology.FLRW in
+/-- Transport the accepted numerical interval to a Friedmann solution with matter,
+radiation, curvature and Λ. Input matching includes the reference epoch and units. -/
+theorem friedmann_hubble_enclosure {U : FLRW} {F Fm Fr : CosmicFluid} {Λ : ℝ}
+    {c : SpeedOfLight} {d : Densities} {h₀ G z tol : ℚ} {bits degree : Nat}
+    {I : RationalInterval} {t t₀ : Time} (sol : U.FriedmannSolution F Λ G c)
+    (splitDensity : ∀ s, F.ρ s = Fm.ρ s + Fr.ρ s)
+    (ht : t ∈ U.I) (ht₀ : t₀ ∈ U.I)
+    (expanding₀ : 0 < hubbleConstant U.a t₀) (expanding : 0 ≤ hubbleConstant U.a t)
+    (matter : Fm.ρ t = Fm.ρ t₀ * (U.a t₀ / U.a t)^3)
+    (radiation : Fr.ρ t = Fr.ρ t₀ * (U.a t₀ / U.a t)^4)
+    (refH : hubbleConstant U.a t₀ = h₀) (redshift : U.redshift t₀ t = z)
+    (hΛ : U.lambdaDensityParameter Λ c t₀ = d.lambda)
+    (hm : U.densityParameter Fm G t₀ = d.matter)
+    (hr : U.densityParameter Fr G t₀ = d.radiation)
+    (hk : U.curvatureDensityParameter c t₀ = d.curvature)
+    (cert : enclose .hubble d h₀ G z tol bits degree = some I) :
+    I.Contains (hubbleConstant U.a t) ∧ I.hi - I.lo ≤ tol := by
+  have solH := sol.hubbleConstant_eq_reducedHubble splitDensity ht ht₀ expanding₀
+    expanding matter radiation
+  have scale : 1 / (1 + (z : ℝ)) = U.a t / U.a t₀ := by
+    rw [← redshift, U.one_add_redshift, one_div, inv_div]
+  have h : hubbleConstant U.a t = value .hubble d h₀ G z := by
+    simpa only [value, refH, hΛ, hm, hr, hk, scale] using solH
+  rw [h]
+  exact enclose_sound cert
+
+#print axioms friedmann_hubble_enclosure
 #print axioms criticalDensity_eq_physlib
 #print axioms reducedHubble_eq
 #print axioms enclose_sound

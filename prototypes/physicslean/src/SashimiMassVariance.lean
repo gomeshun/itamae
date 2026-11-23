@@ -15,6 +15,12 @@ inductive Calibration where
   | sashimiW
 deriving DecidableEq
 
+/-- Legacy family cutoff coefficient; includes the extra factor (9π/2)^(1/3). -/
+abbrev Calibration.wFamilyLegacy : Calibration := .sashimiW
+
+/-- Public W main uses the Schneider coefficient c=2.5 in k_max=c/R_th. -/
+abbrev Calibration.wMain : Calibration := .fixed (5/2)
+
 def Calibration.expression : Calibration → Expr
   | .fixed c => .const c
   | .sashimiW => .const (5/2) * positivePowExpr (.const (9/2) * piExpr) (.const (1/3))

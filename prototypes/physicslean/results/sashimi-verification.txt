@@ -7,31 +7,41 @@ Builds use lake-manifest.json; test measurements below have an existing package 
 
 $ cd prototypes/physicslean
 $ lake build
-info: src/HzAudit.lean:14:0: PhysicsLean axiom audit passed on 1687 declarations
-Build completed successfully (8435 jobs).
-real	0m3.847s
+info: src/HzAudit.lean:14:0: PhysicsLean axiom audit passed on 1711 declarations
+Build completed successfully (8437 jobs).
+real	0m5.659s
 
 $ ./run_demo.sh
-Ran 31 tests in 58.678s
+Ran 31 tests in 59.131s
 OK
 'SashimiBackgroundCases.growth_sample' depends on axioms: [propext, Classical.choice, Quot.sound]
 'SashimiBackgroundCases.density_sample' depends on axioms: [propext, Classical.choice, Quot.sound]
 'SashimiGrowthVarianceCases.accepted_raw' depends on axioms: [propext, Classical.choice, Quot.sound]
 'SashimiGrowthVarianceCases.cpt_z2' depends on axioms: [propext, Classical.choice, Quot.sound]
 'checked_mass_cell' depends on axioms: [propext, Classical.choice, Quot.sound]
-real	1m31.196s
+'checked_w_main_mass_cell' depends on axioms: [propext, Classical.choice, Quot.sound]
+real	1m57.841s
 
 $ cd ../.. && PYTHONPATH=src python -m pytest -q
-39 passed in 1.61s
+40 passed in 1.54s
 $ mypy src/itamae --ignore-missing-imports
 Success: no issues found in 31 source files
+
+Fresh GitHub Ubuntu runner for commit 77ced5f44fcdfe05c24a82c3a0a3c629d68d11a8
+https://github.com/gomeshun/itamae/actions/runs/45216269010
+Install pinned Lean and Lake: 13s
+Fetch locked dependencies and official mathlib cache: 60s
+Build and check proofs (run_demo.sh, includes regression tests): 702s
+FDM three-knot and CAMB cusp fixture kernel replay: 15s
+The runner fetched precompiled mathlib artifacts and compiled missing dependencies.
 
 Selected #print axioms from the Lake build
 src/SashimiNumerics.lean:124:0: 'SashimiNumerics.integral_grid_bounds' depends on axioms: [propext, Classical.choice, Quot.sound]
 src/SashimiNumerics.lean:125:0: 'SashimiNumerics.integrate_sound' depends on axioms: [propext, Classical.choice, Quot.sound]
-src/SashimiBackground.lean:124:0: 'SashimiBackground.criticalDensity_eq_physlib' depends on axioms: [propext, Classical.choice, Quot.sound]
-src/SashimiBackground.lean:125:0: 'SashimiBackground.reducedHubble_eq' depends on axioms: [propext, Classical.choice, Quot.sound]
-src/SashimiBackground.lean:126:0: 'SashimiBackground.enclose_sound' depends on axioms: [propext, Classical.choice, Quot.sound]
+src/SashimiBackground.lean:152:0: 'SashimiBackground.friedmann_hubble_enclosure' depends on axioms: [propext, Classical.choice, Quot.sound]
+src/SashimiBackground.lean:153:0: 'SashimiBackground.criticalDensity_eq_physlib' depends on axioms: [propext, Classical.choice, Quot.sound]
+src/SashimiBackground.lean:154:0: 'SashimiBackground.reducedHubble_eq' depends on axioms: [propext, Classical.choice, Quot.sound]
+src/SashimiBackground.lean:155:0: 'SashimiBackground.enclose_sound' depends on axioms: [propext, Classical.choice, Quot.sound]
 src/SashimiIntegrable.lean:71:0: 'SashimiNumerics.integrate_sound_auto' depends on axioms: [propext, Classical.choice, Quot.sound]
 src/SashimiTable.lean:199:0: 'SashimiTable.integrate_sound' depends on axioms: [propext, Classical.choice, Quot.sound]
 src/SashimiCusp.lean:196:0: 'SashimiCusp.peak_sound' depends on axioms: [propext, Classical.choice, Quot.sound]
@@ -48,8 +58,8 @@ src/SashimiDerived.lean:144:0: 'SashimiDerived.evaluate_sound' depends on axioms
 src/SashimiDerived.lean:145:0: 'SashimiDerived.signedTime_age' depends on axioms: [propext, Classical.choice, Quot.sound]
 src/SashimiDerived.lean:146:0: 'SashimiDerived.scaleFactor_of_redshift' depends on axioms: [propext, Classical.choice, Quot.sound]
 src/SashimiErf.lean:181:0: 'SashimiErf.erf_sound' depends on axioms: [propext, Classical.choice, Quot.sound]
-src/SashimiMassVariance.lean:285:0: 'SashimiMassVariance.evaluate_sound' depends on axioms: [propext, Classical.choice, Quot.sound]
-src/SashimiMassVariance.lean:286:0: 'SashimiMassVariance.sharpDerivative_sound' depends on axioms: [propext, Classical.choice, Quot.sound]
+src/SashimiMassVariance.lean:291:0: 'SashimiMassVariance.evaluate_sound' depends on axioms: [propext, Classical.choice, Quot.sound]
+src/SashimiMassVariance.lean:292:0: 'SashimiMassVariance.sharpDerivative_sound' depends on axioms: [propext, Classical.choice, Quot.sound]
 src/SashimiGrowthVariance.lean:88:0: 'SashimiGrowthVariance.atRedshift_sound' depends on axioms: [propext, Classical.choice, Quot.sound]
 src/SashimiGrowthVariance.lean:89:0: 'SashimiGrowthVariance.integral_atRedshift_sound' depends on axioms: [propext, Classical.choice, Quot.sound]
 src/SashimiGrowthVariance.lean:90:0: 'SashimiGrowthVariance.variance_derivative' depends on axioms: [propext, Classical.choice, Quot.sound]
@@ -60,7 +70,9 @@ src/SashimiMassCalculus.lean:182:0: 'SashimiMassVariance.sharpBand_hasDerivAt' d
 src/SashimiMassCalculus.lean:183:0: 'SashimiMassVariance.sharpCell_hasDerivAt' depends on axioms: [propext, Classical.choice, Quot.sound]
 src/SashimiMassCalculus.lean:184:0: 'SashimiMassVariance.topHatBand_hasDerivAt' depends on axioms: [propext, Classical.choice, Quot.sound]
 src/SashimiNormalization.lean:129:0: 'SashimiNormalization.normalized_sound' depends on axioms: [propext, Classical.choice, Quot.sound]
-src/SashimiTableWindow.lean:347:0: 'SashimiTableWindow.fdm_integrate_sound' depends on axioms: [propext, Classical.choice, Quot.sound]
-src/SashimiTableWindow.lean:348:0: 'SashimiTableWindow.integrate_sound' depends on axioms: [propext, Classical.choice, Quot.sound]
+src/SashimiTableJoin.lean:62:0: 'SashimiTable.Block.join' depends on axioms: [propext, Quot.sound]
+src/SashimiTableJoin.lean:63:0: 'SashimiTable.Block.accepts' depends on axioms: [propext, Quot.sound]
+src/SashimiTableWindow.lean:356:0: 'SashimiTableWindow.fdm_integrate_sound' depends on axioms: [propext, Classical.choice, Quot.sound]
+src/SashimiTableWindow.lean:357:0: 'SashimiTableWindow.integrate_sound' depends on axioms: [propext, Classical.choice, Quot.sound]
 src/SashimiWdm.lean:48:0: 'SashimiSpectrum.integrated_q10_le_q5' depends on axioms: [propext, Classical.choice, Quot.sound]
 src/SashimiWdm.lean:49:0: 'SashimiSpectrum.physical_power_bounds' depends on axioms: [propext, Classical.choice, Quot.sound]
