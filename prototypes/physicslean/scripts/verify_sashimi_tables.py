@@ -1,6 +1,6 @@
-"""Run published W and F table regressions, recording exact enclosures and elapsed times.
+"""Run W and FDM table regressions, recording exact enclosures and elapsed times.
 
-The caller supplies the original files. Their content hashes also pin the h
+Choose the family or the independently generated z=0 CDM input explicitly. Their content hashes also pin the h
 convention, tabulated ordinates and extrapolation already present in the data.
 """
 
@@ -25,8 +25,12 @@ def measure(path, **params):
     return {"seconds": round(time.monotonic() - start, 3), **row}
 
 
-def verify(w, f):
-    for path, expected in ((w, WMAP_HASH), (f, PLANCK_HASH)):
+def verify(w, f, reference="family"):
+    f_hash = {
+        "family": PLANCK_HASH,
+        "independent-camb": "457dfc7caa0a4310f90aa0036a2a02d6ebd50ec62fbd15e94504cb0d06bcf84f",
+    }[reference]
+    for path, expected in ((w, WMAP_HASH), (f, f_hash)):
         if hashlib.sha256(path.read_bytes()).hexdigest() != expected:
             raise ValueError(f"unexpected source table {path}")
     wparams = dict(
@@ -69,9 +73,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("wmap7", type=Path)
     parser.add_argument("planck", type=Path)
+    parser.add_argument("--reference", choices=["family", "independent-camb"], default="family")
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
-    report = json.dumps(verify(args.wmap7, args.planck), indent=2) + "\n"
+    report = json.dumps(verify(args.wmap7, args.planck, args.reference), indent=2) + "\n"
     if args.output:
         args.output.write_text(report)
     else:

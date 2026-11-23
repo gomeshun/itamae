@@ -17,9 +17,9 @@ ITAMAE の物理単位で赤方偏移、粒子質量、ハロー質量やパワ�
 
 Viel ほか (2005) の式 (4),(6) では $F=[1+(\alpha k)^{2\nu}]^{-5/\nu}$ は振幅であり、パワー比は $F^2$。Viel ほか (2012) の式 (1)、Dekker ほかの式 (2) には同じ指数がパワー比として現れる。ライブラリは `wdm-q10` と `wdm-q5` を明示して呼ぶ。同じ $\alpha$、$\nu=1.12$ なら振幅半値点で前者のパワー比は 1/4、後者は 1/2。この等式は Lean が検査する。物理的なパワーへの適用範囲と誤差は `WdmFitAgreement` の引数に現れる。論文が報告した質量制限への影響について、指数だけから数値を導くことはできない。[一次文献・該当式・後続研究](SASHIMI-COVERAGE.md)・[半値の定理](src/SashimiSpectrum.lean)・[同一規格化での積分の順序と物理的仮定](src/SashimiWdm.lean)
 
-## 公開表での実測
+## SASHIMI の入力表での実測
 
-以下は公開表から読み込んだ**同じ参照パワー**と、指定した十進有理数に対する結果。区間の十進端は外側へ丸めた。W の2行は規約差を調べる共通の未規格化の計算条件。ここでの上端 7 Mpc⁻¹ は $h=0.7$ で 10 $h$/Mpc に当たり、Viel (2005) が $\nu=1.12$ について述べた $k<5\,h/\mathrm{Mpc}$ を越える。数値はこの帯域へ指定通り延長した式の積分である。モデル固有の σ₈ 規格化を採用する場合は、同じ転送規則を適用した表からアンカー分散も計算する。[WMAP7 入力](https://github.com/gomeshun/sashimi-w/blob/d234ae250f4343e465be483c5a960d12ea5d3dbf/WMAP7_camb_matterpower_z0_extrapolated.dat)・[Planck 入力](https://github.com/gomeshun/sashimi-f/blob/fc4cd832acf4b4ae4b7ff02691d326e63945dc6d/data/Planck2018_CAMB_extrap.dat)
+以下は検査対象の表から読み込んだ**同じ参照パワー**と、指定した十進有理数に対する結果。区間の十進端は外側へ丸めた。W の2行は規約差を調べる共通の未規格化の計算条件。ここでの上端 7 Mpc⁻¹ は $h=0.7$ で 10 $h$/Mpc に当たり、Viel (2005) が $\nu=1.12$ について述べた $k<5\,h/\mathrm{Mpc}$ を越える。数値はこの帯域へ指定通り延長した式の積分である。モデル固有の σ₈ 規格化を採用する場合は、同じ転送規則を適用した表からアンカー分散も計算する。[WMAP7 入力](https://github.com/gomeshun/sashimi-w/blob/d234ae250f4343e465be483c5a960d12ea5d3dbf/WMAP7_camb_matterpower_z0_extrapolated.dat)・[Planck 入力](https://github.com/gomeshun/sashimi-f/blob/fc4cd832acf4b4ae4b7ff02691d326e63945dc6d/data/Planck2018_CAMB_extrap.dat)
 
 | データと条件 | 量 | 包含区間 |
 |---|---|---|
@@ -32,7 +32,7 @@ Viel ほか (2005) の式 (4),(6) では $F=[1+(\alpha k)^{2\nu}]^{-5/\nu}$ は�
 
 質量を入力する `scripts/mass_variance.py` は窓の半径や sharp-k の積分端を有理数に丸めずに評価する。WMAP7 の q5、粒子質量 1.5 keV、ハロー質量 $10^{14} M_\odot$ の例では、0.692〜0.708 Mpc⁻¹ の寄与が $S\in[0.02300039,0.02388015]$、その質量微分が $[-9.609772,-9.608958]\times10^{-15} M_\odot^{-1}$ になった。Planck 表全域、FDM の $m_{22}=1$、$R\in[1,1.001]$ Mpc ではトップハット分散が [7.6474,8.4980] に入る。[質量入力と厳密な端点](results/mass-variance.json)・[smooth/sharp-k の微分定理](src/SashimiMassCalculus.lean)・[W の規格化試験](results/sashimi-w-normalization.json)・[F の全表および部分表の検査記録](results/sashimi-table-window.json)
 
-F の全表について、粗い分割でも実行結果と同じ有理数端点にカーネルが到達することを確認した。3,000 行の単位換算と順序、2,999 セルの積分を188個の部分証明にまとめると、検査は 140.15 秒、区間は [7.24975,9.39316]。各セルを8分割した細かい計算では 23,992 部分区間に対し、証明書付きの計算に 19.95 秒、端点のカーネル再検査に 296.40 秒を要した。前段の [7.6474,8.4980] は、この再検査にも成功した区間を外側へ丸めた値である。継続的テストでは粗い分割の全表検査を行い、厳密な端点・入力ハッシュ・所要時間を `fdm-kernel.json` に保存する。[全表再検査の実測](results/sashimi-table-window.json)
+F の全表について、粗い分割でも実行結果と同じ有理数端点にカーネルが到達することを確認した。3,000 行の単位換算と順序、2,999 セルの積分を188個の部分証明にまとめると、検査は 140.15 秒、区間は [7.24975,9.39316]。各セルを8分割した細かい計算では 23,992 部分区間に対し、証明書付きの計算に 19.95 秒、端点のカーネル再検査に 296.40 秒を要した。前段の [7.6474,8.4980] は、この再検査にも成功した区間を外側へ丸めた値である。元の F 表はアクセス権のあるチェックアウトから同じ SHA-256 を照合できる。公開 CI では、同梱の独立した CAMB 1.6.4 の3,000行でも粗い分割の全表検査を行い、厳密な端点・入力ハッシュ・所要時間を `fdm-kernel.json` に保存する。[全表再検査の実測](results/sashimi-table-window.json)
 
 SASHIMI-W の sharp-k 質量較正も別々に指定する。$R$ を同じ物理的トップハット半径とすると、family 固定版は $k_c=(5/2)(9\pi/2)^{1/3}/R$、公開 main は $k_c=(5/2)/R$ になる。[名前付き較正と出典](SCALARS.md)
 
@@ -63,3 +63,5 @@ python3 scripts/sashimi.py growth-derivative z=2 --replay
 - CAMB などが作った表を真値の近似と解釈する場合、生成時の宇宙論・モデル・離散化誤差が加わる。有限表を越える分散は上下の尾部の仮定を要する。Colossus の補間や経験式の物理精度を含めるには、その処方と誤差の入力が別途必要になる。[外部バックエンドとの比較](SCALARS.md)・[尾部の定理](src/SashimiSpectrumVariance.lean)
 
 [総合ビルド、テスト、主要定理の検査ログ](results/sashimi-verification.txt)
+
+公開 CI が使う WMAP7 表、独立した CAMB 表の生成設定と出典は[回帰テスト用データ](tests/data/README.md)に記録した。
