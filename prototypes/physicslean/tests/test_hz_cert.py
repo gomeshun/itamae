@@ -50,6 +50,26 @@ class CertificateTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             verify_certificate(broken)
 
+    def test_reject_mislabeled_model(self):
+        c = make_certificate(Fraction(70), Fraction(3, 10), Fraction(1), 8)
+        for field, bad_value in (
+            ("physical_units", "s^-1"),
+            ("cosmology", "matter and radiation"),
+            ("source", "some other function"),
+            ("certificate_rule", "accept estimate"),
+            ("assumptions", ["z<0"]),
+        ):
+            with self.subTest(field=field), self.assertRaisesRegex(ValueError, field):
+                verify_certificate({**c, field: bad_value})
+
+    def test_reject_boolean_precision(self):
+        h, om, z = Fraction(70), Fraction(3, 10), Fraction(1)
+        c = make_certificate(h, om, z, 1)
+        with self.assertRaises(ValueError):
+            verify_certificate({**c, "decimal_digits": True})
+        with self.assertRaises(ValueError):
+            make_certificate(h, om, z, True)
+
     def test_lean_contains_physlib_bridge(self):
         c = make_certificate(Fraction(70), Fraction(3,10), Fraction(1), 8)
         source = render_lean(c)

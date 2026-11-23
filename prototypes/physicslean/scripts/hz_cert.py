@@ -15,6 +15,21 @@ from math import isqrt
 from pathlib import Path
 
 
+SCHEMA = "physlib-hz-interval-v1"
+MODEL_FIELDS = {
+    "cosmology": "flat ΛCDM: Omega_Lambda = 1 - Omega_m, Omega_r = Omega_K = 0",
+    "physical_units": "H0 and H(z) in km s^-1 Mpc^-1; z and Omega_m dimensionless",
+    "source": "Physlib.Cosmology.FLRW.FriedmannEquation.reducedHubble",
+    "certificate_rule": "0<=lower<=upper and lower^2<=h_squared<=upper^2",
+}
+ASSUMPTIONS = ("H0>0", "0<=Omega_m<=1", "z>=0", "matter+Lambda, flat geometry, radiation neglected")
+
+
+def valid_precision(digits: object) -> bool:
+    # bool is a subclass of int, but is not a JSON integer precision.
+    return type(digits) is int and 0 <= digits <= 100
+
+
 def fraction(value: str | int | Fraction) -> Fraction:
     return Fraction(value)
 
@@ -30,7 +45,7 @@ def make_certificate(h0: Fraction, omega_m: Fraction, z: Fraction, digits: int) 
         raise ValueError("require 0 <= Omega_m <= 1 (flat matter + Lambda)")
     if z < 0:
         raise ValueError("require z >= 0")
-    if not (0 <= digits <= 100):
+    if not valid_precision(digits):
         raise ValueError("digits must be between 0 and 100")
     radicand = (1 - omega_m) + omega_m * (1 + z) ** 3
     squared = h0 * h0 * radicand
@@ -40,10 +55,8 @@ def make_certificate(h0: Fraction, omega_m: Fraction, z: Fraction, digits: int) 
     lower = Fraction(k, scale)
     upper = lower if lower * lower == squared else Fraction(k + 1, scale)
     result = {
-        "schema": "physlib-hz-interval-v1",
-        "cosmology": "flat ΛCDM: Omega_Lambda = 1 - Omega_m, Omega_r = Omega_K = 0",
-        "physical_units": "H0 and H(z) in km s^-1 Mpc^-1; z and Omega_m dimensionless",
-        "source": "Physlib.Cosmology.FLRW.FriedmannEquation.reducedHubble",
+        "schema": SCHEMA,
+        **MODEL_FIELDS,
         "h0": as_str(h0),
         "omega_m": as_str(omega_m),
         "z": as_str(z),
@@ -53,19 +66,23 @@ def make_certificate(h0: Fraction, omega_m: Fraction, z: Fraction, digits: int) 
         "lower": as_str(lower),
         "upper": as_str(upper),
         "guaranteed_width_at_most": as_str(Fraction(1, scale)),
-        "certificate_rule": "0<=lower<=upper and lower^2<=h_squared<=upper^2",
-        "assumptions": ["H0>0", "0<=Omega_m<=1", "z>=0", "matter+Lambda, flat geometry, radiation neglected"],
+        "assumptions": list(ASSUMPTIONS),
     }
     verify_certificate(result)
     return result
 
 
 def verify_certificate(c: dict) -> bool:
-    if c["schema"] != "physlib-hz-interval-v1":
+    if c.get("schema") != SCHEMA:
         raise ValueError("unsupported certificate schema")
+    for field, expected in MODEL_FIELDS.items():
+        if c.get(field) != expected:
+            raise ValueError(f"incorrect certificate {field}")
+    if c.get("assumptions") != list(ASSUMPTIONS):
+        raise ValueError("incorrect certificate assumptions")
     h0, om, z = (fraction(c[key]) for key in ("h0", "omega_m", "z"))
     digits = c["decimal_digits"]
-    if not (isinstance(digits, int) and 0 <= digits <= 100):
+    if not valid_precision(digits):
         raise ValueError("bad decimal_digits")
     if not (h0 > 0 and 0 <= om <= 1 and z >= 0):
         raise ValueError("input assumptions do not hold")

@@ -1,6 +1,6 @@
 name = "physlib-hz-prototype"
 version = "0.1.0"
-defaultTargets = ["HzCertificate", "HzExample"]
+defaultTargets = ["HzCertificate", "HzExample", "HzAudit"]
 
 [[require]]
 name = "Physlib"
@@ -14,3 +14,7 @@ srcDir = "src"
 [[lean_lib]]
 name = "HzExample"
 srcDir = "generated"
+
+[[lean_lib]]
+name = "HzAudit"
+srcDir = "src"

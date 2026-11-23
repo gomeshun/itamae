@@ -3,6 +3,7 @@
   "cosmology": "flat ΛCDM: Omega_Lambda = 1 - Omega_m, Omega_r = Omega_K = 0",
   "physical_units": "H0 and H(z) in km s^-1 Mpc^-1; z and Omega_m dimensionless",
   "source": "Physlib.Cosmology.FLRW.FriedmannEquation.reducedHubble",
+  "certificate_rule": "0<=lower<=upper and lower^2<=h_squared<=upper^2",
   "h0": "70",
   "omega_m": "3/10",
   "z": "1",
@@ -12,7 +13,6 @@
   "lower": "12324771803/100000000",
   "upper": "3081192951/25000000",
   "guaranteed_width_at_most": "1/100000000",
-  "certificate_rule": "0<=lower<=upper and lower^2<=h_squared<=upper^2",
   "assumptions": [
     "H0>0",
     "0<=Omega_m<=1",

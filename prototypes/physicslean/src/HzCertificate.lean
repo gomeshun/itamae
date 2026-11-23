@@ -54,7 +54,7 @@ theorem modelH_pos (H₀ Ωm z : ℝ) (hH : 0 < H₀) (hΩ : 0 ≤ Ωm) (hz : 0 
   calc
     (0 : ℝ) < 1 := zero_lt_one
     _ = (1 - Ωm) + Ωm * 1 := by simp
-    _ ≤ _ := add_le_add_left (mul_le_mul_of_nonneg_left hc hΩ) _
+    _ ≤ _ := add_le_add le_rfl (mul_le_mul_of_nonneg_left hc hΩ)
 
 /-- The square of H(z) is a polynomial expression over the input reals. -/
 theorem modelH_sq (H₀ Ωm z : ℝ) (hz : 0 ≤ z)
