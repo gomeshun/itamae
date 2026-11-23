@@ -1,112 +1,142 @@
-# Physlib → Certified H(z): 最小試作
+# PhysicsLean — 平坦ΛCDMのHubble関数をLeanで検査する
 
-## 状態（2026-11-23）
+観測から与えた入力 `H₀, Ωm, z` について、Physlibの実数値関数の包含区間と、binary64で同じ式を計算した場合の誤差を検証する。基本条件は `H₀ > 0`、`0 ≤ Ωm ≤ 1`、`z ≥ 0`。入力は十進文字列または分数から**厳密な有理数**として読み込む。観測誤差・パラメータの統計的不確かさは別の入力モデルを必要とする。
 
-- **実行確認済み**: Python標準ライブラリによる証明書生成、独立した厳密有理数による証明書検査、8件の単体テスト。
-- **ソース確認済み**: Physlibの`reducedHubble`定義と`FriedmannSolution.hubbleConstant_eq_reducedHubble`定理（以下のコミット）。
-- **Leanソース生成済み／未コンパイル**: `src/HzCertificate.lean`と`generated/HzExample.lean`。この制作環境にはLean/Lakeがなく、外部ダウンロードも制限されているため、**Leanのカーネルによる証明検査は未実施**。コンパイルの結果を偽って報告していない。実際のLean検査を完了するには、下記手順に従って`lake build`を実行する。
+## 検査した値
 
-## 想定する物理モデル
+| H₀ | Ωm | z | A・Bが証明する十進区間 (km/s/Mpc) | 正確な H(z)² |
+|---:|---:|---:|---|---:|
+| 70 | 0.3 | 1 | [123.24771803, 123.24771804] | 15190 |
+| 67.4 | 0.315 | 2 | [204.32318615, 204.32318616] | 104369911/2500 |
+| 70 | 0 | 11 | [70, 70] | 4900 |
+| 70 | 1 | 3 | [560, 560] | 313600 |
+| 67.4 | 0.315 | 0 | [67.4, 67.4] | 113569/25 |
 
-平坦な物質＋宇宙定数（放射なし）のΛCDM：
+端点は十進で表した正確な有理数。最初の2行の区間幅は10⁻⁸、残りは0である。表示用の近似値は、それぞれ123.247718031613064… と204.323186153701117… になる。
 
-\[
-H(z) = H_0 E\left(\frac{1}{1+z}\right),\qquad
-E(x) = \sqrt{(1-\Omega_m) + \Omega_m x^{-3}},
-\]
+## モデルと仮定
 
-すなわち
-
-\[
-H(z)=H_0\sqrt{(1-\Omega_m)+\Omega_m(1+z)^3}.
-\]
-
-制約：`H0 > 0`, `0 ≤ Omega_m ≤ 1`, `z ≥ 0`。`H0`と`H(z)`の値の単位は`km s^-1 Mpc^-1`、赤方偏移と密度パラメータは無次元。観測誤差とパラメータ事後分布は今回の範囲外。
-
-Physlib（固定コミット`db96e88549c3ed2b1211fe34cd751f30847e5386`）の
-`Cosmology.FLRW.FriedmannEquation.reducedHubble`を`modelH`で**直接呼び出す**。
-Physlibの理論定理`FriedmannSolution.hubbleConstant_eq_reducedHubble`を元にしたモデルだが、今回の数値証明は`reducedHubble`の具体的なパラメータ指定に対するものであり、特定のFLRW時空を構成してその仮定を証明したものではない。
-
-## 例（H0=70, Omega_m=3/10, z=1）
-
-厳密な計算：
+`src/HzCertificate.lean` の `modelH` は `FriedmannEquation.reducedHubble` を直接使う。`modelH_eq` が、物理領域でスケール因子比の実数冪を自然数の三乗に変換する。
 
 \[
-H(1)^2 = 70^2\left(\frac{3}{10}\,2^3+\frac{7}{10}\right)
-=15190.
+H(z)=H_0 E(1/(1+z))=H_0\sqrt{(1-\Omega_m)+\Omega_m(1+z)^3}.
 \]
 
-`--digits 8` で得られる上下限（いずれも**正確な有理数**）：
+理論との接続は `src/HzFriedmann.lean` の `hubbleConstant_eq_modelH` に分離した。PhyslibのFriedmann解、平坦性、同じ解の区間内にある基準時と放射時、基準時の正の膨張率と放射時の非負の膨張率を仮定する。物質密度には2時刻間の `ρ(t) = ρ(t₀) (a₀/a)³` を仮定する。放射流体を空とすると、その密度と4乗のスケーリング条件が自動的に決まる。Physlibの閉包関係から `ΩΛ = 1 − Ωm` が出る。`Ωm` には基準時の `densityParameter`、赤方偏移には `1 + z = a₀/a` を満たす `redshift` を使う。この定理で書き換え、数値APIの密度・赤方偏移の範囲を確認すると、その入力での数値証明を解のHubble率に適用できる。個別の観測値に対応するFriedmann解の存在は別の問題である。
 
-\[
-\boxed{123.24771803 \leq H(1) \leq 123.24771804}
-\]
+`H₀` と `H(z)` は同じ逆時間の単位を使う。以下の数値では km/s/Mpc を採用した。数値APIの型はスカラーであり、単位換算・測定値の校正は呼び出し側が担う。
 
-検証器が正確な有理数演算だけで判定する条件：
+## 再現
 
-\[
-(123.24771803)^2 \leq 15190 \leq (123.24771804)^2.
-\]
-
-誤差区間幅は\(10^{-8}\)以下。参考表示値は約 `123.24771803161306`。
-
-## 再現方法
-
-### (A) Pythonだけで証明書を生成し、厳密な有理数計算で検査
-
-Python 3.10+、追加パッケージ不要：
+`lean-toolchain` のLean 4.36.0と同梱のLake、Python 3.10以上を使用する。以下は `prototypes/physicslean` で実行する。初回はソース取得と、公式Mathlibキャッシュに含まれない依存のコンパイルが入る。
 
 ```bash
-python3 scripts/hz_cert.py \
-  --h0 70 --omega-m 3/10 --z 1 --digits 8 \
-  --certificate generated/hz_z1.json --lean generated/HzExample.lean
-
-python3 scripts/hz_cert.py --verify generated/hz_z1.json
-python3 -m unittest discover -s tests -v
+python3 scripts/fetch_mathlib_cache.py HzAudit
+./run_demo.sh
 ```
 
-別の入力も指定可能：
+`run_demo.sh` はPythonの例を再生成し、追跡中のJSON・Leanファイルと照合してから単体テストと `lake build` を実行する。デフォルトビルドは `HzAudit` を含む。公理監査は、このプロトタイプの宣言が推移的に依存する公理を収集し、`propext`、`Classical.choice`、`Quot.sound` 以外を検出すると失敗する。個々の定理の出力には `#print axioms` を使用している。
+
+有理数方式だけを確認する場合は `python3 scripts/fetch_mathlib_cache.py HzExample` と `lake build HzExample` を使える。新しい入力を検査する例を示す。
 
 ```bash
-python3 scripts/hz_cert.py --h0 67.4 --omega-m 0.315 --z 2 --digits 10 \
-  --certificate generated/other.json --lean generated/HzExample.lean
+python3 scripts/hz_cert.py --h0 67.4 --omega-m 0.315 --z 2 --digits 8 \
+  --certificate /tmp/hz.json --lean /tmp/HzInput.lean
+python3 scripts/hz_cert.py --verify /tmp/hz.json
+lake env lean /tmp/HzInput.lean
 ```
 
-この操作で生成されたLeanファイルは、**入力値の変更後に別途Leanで検査**する。
+B・CのAPIはLeanから直接使える。以下をLeanファイルに保存し、依存のビルド後に `lake env lean` で実行する。最初の2行の `#eval` が候補値を表示し、その後の定理が同じ入力での誤差を証明する。
 
-### (B) Physlibに依存するLeanの証明を検査
+```lean
+import HzInterval
+import HzRoundoff
 
-Lean 4/Lake/Elanをインストールし、ネットワーク接続がある環境で、このディレクトリから：
+#eval (HzInterval.enclose 70 (3/10) 1 27).map (fun i => (i.lo, i.hi))
+#eval (HzRoundoff.evaluate 70 (3/10) 1).toRat?
 
-```bash
-lake update
-lake exe cache get    # Mathlibなどのキャッシュが利用できる場合
-lake build
+example : HzRoundoff.Accurate 70 (3/10) 1 (2/10^14) := by
+  certify_hz64 (8672787140647445/70368744177664)
+
+#check HzRoundoff.evaluate_roundoff
 ```
 
-`lakefile.toml`でPhyslibのコミットを固定し、`lean-toolchain`でLean `v4.36.0`を使用する。Physlibの依存先Mathlibも同じ系列を使用する。`src/HzCertificate.lean`は一般定理`modelH_bounds`を、`generated/HzExample.lean`はデータごとのインスタンス`certified_interval`と`certified_width`を宣言する。最後に`#print axioms`で定理の公理依存を出力する。
+実行環境のホームが読み取り専用の場合は、書き込み可能なディレクトリを `XDG_CACHE_HOME` に指定する。
 
-**重要**：この制作環境では`lake build`を実行できていないため、上記ファイルはLeanコードの*候補実装*である。型エラーなどが発生する場合はコンパイル出力を用いて修正する。Pythonによる有理数検査の成功を、Leanの形式検証完了と同一視しない。
+## 証明の読み方
 
-## 仕組み
+| 方式 | 計算・検査 | 何を保証するか |
+|---|---|---|
+| A 有理数証明書 | Pythonの `Fraction` と `isqrt` で十進格子の境界を提案し、Leanの `modelH_bounds` と `norm_num` で符号と平方不等式を再検査する。 | 正確な実数 `modelH` の包含と区間幅。平方値も独立の定理として出力する。 |
+| B FloatLib interval | タクティク `hz_interval` で `modelH_eq` により書き換え、実数不等式を証明する。`HzInterval.enclose` はFloatLibの有理平方根包囲から端点を計算する。 | 提案した境界の検査に加え、一般定理 `enclose_sound` が返却区間の包含と幅 `≤ 2⁻ᵇⁱᵗˢ` を保証する。 |
+| C FloatLib roundoff | `hubble64` は加減算、三乗のための乗算2回、平方根、最終積を順にbinary64で丸める。記号的な `roundoff` 定理と、具体的なプログラムの出力を復号する証明を用意した。 | 格納済み入力の定理に加え、`evaluate_roundoff` は有理数の入力変換も含め、`modelH` を参照値とする条件付き混合誤差定理を生成する。具体例では有理数入力を `ofRat` で丸めるところから実行し、復号値を元の有理数での `modelH` と比較する。 |
 
-1. 物理理論側：Physlibの`reducedHubble`を`ℝ`上の正確な関数として利用。
-2. 変形の数学的証明：`x=1/(1+z)`から`x^(-3)=(1+z)^3`を導出。
-3. データ専用の計算：Pythonの`fractions.Fraction`と`math.isqrt`で整数演算のみを使い、正確な上下限を生成。
-4. 証明書：`H0, Omega_m, z, L, U, H(z)^2`をJSON保存。
-5. Python検証器：入力から`H(z)^2`を再計算し`L^2 ≤ H(z)^2 ≤ U^2`と区間幅を検査。改変した証明書は拒否する。
-6. Lean定理案：条件が成立すれば`L ≤ modelH H0 Omega_m z ≤ U`とする一般定理を証明し、各インスタンスの前提を`norm_num`で処理。
+Bの基準例 `HzInterval.certified_interval` はPhyslibの定義を直接展開し、負の実数冪と除算を含む具体式のまま両辺を `interval` で検査する。5入力を共通に検査する `hz_interval` は、先に `modelH_eq` で書き換える。タクティクの端点精度は標準64ビット、区間生成器は27ビットで幅10⁻⁸を達成する。
 
-## 信頼境界と拡張
+A・Bの主張は実数上の予測に関する。Cで小さい絶対誤差を得るには、入力と丸め順序も指定する。例えば `Ωm = 3/10` をbinary64に変換したときの復号値は `5404319552844595 / 18014398509481984`。Cの具体例では出力が有限なことと、誤差上界を組にして証明する。
 
-- Pythonの整数演算・分数演算に基づく検算は実行確認済み。`math.isqrt`で候補境界を作るが、検証器は境界から**独立に平方不等式を再計算**する。
-- Leanカーネルで証明を確認したとき、Pythonの生成器を信頼する必要はない。生成されたLeanの全前提を確認する。
-- `Float`からの計算誤差を評価する実験ではなく、正確な入力有理数で定義された物理予測を有理数区間に包囲する試作である。
-- 実験装置の較正・測定誤差やモデルの物理的適用性は今回の保証対象外。
-- 次は`H(z)`の保証付き評価器を再利用し、距離積分`∫ dz/H(z)`の有理数区間証明書と、ガウス観測モデルの対数尤度へ接続する。
+### binary64の誤差と適用限界
 
-## 参照コード
+| H₀, Ωm, z | ソフトウェアbinary64の出力（正確な有理数） | 元の実数予測に対する絶対誤差の上界 |
+|---|---:|---:|
+| 70, 0.3, 1 | 8672787140647445 / 70368744177664 | 2 × 10⁻¹⁴ |
+| 67.4, 0.315, 2 | 1797245752001877 / 8796093022208 | 5 × 10⁻¹⁴ |
+| 70, 0, 11 | 70 | 0 |
+| 70, 1, 3 | 560 | 0 |
+| 67.4, 0.315, 0 | 2371426678787277 / 35184372088832 | 6 × 10⁻¹⁵ |
 
-- Physlib: https://github.com/leanprover-community/physlib
-- 対応する定義: https://github.com/leanprover-community/physlib/blob/db96e88549c3ed2b1211fe34cd751f30847e5386/Physlib/Cosmology/FLRW/ReducedHubble.lean
-- Physlibのツールチェーン: `leanprover/lean4:v4.36.0`
+例えば最終行では実数予測はちょうど67.4で、binary64の出力には入力の十進表現を丸めた差が残る。記号定理は `roundoff` と入力変換の丸め補題から導いた。この定理に5入力を個別に代入し、平方根に渡す丸め済みの値、全中間値の範囲、平方根の条件と伝播予算を検査した。順に 10⁻¹²、10⁻¹²、10⁻¹²、2 × 10⁻¹²、10⁻¹² の絶対誤差上界が得られた。具体例用の `certify_hz64_forward` は、有限範囲の条件を速く解くため中間の絶対値上界を10⁹で抑える。`evaluate_roundoff` 本体にはbinary64の形式上限が現れる。表のより狭い上界は、ソフトウェア演算を `float_decide` で正確に復号し、その両側の `q ± ε` を元の入力での `modelH` に対して検査した結果である。
+
+`HzExceptional` には、物理領域内でも有限性の仮定が必要になる例がある。`Ωm = 0` ならPhyslibの予測は常に `H₀`。ところが `H₀ = 1, z = 2⁴⁰⁰` は全入力をbinary64で正確に格納できても、中間の三乗がオーバーフローし、続く `0 × ∞` で最終結果がNaNになる。赤方偏移0で `H₀ = 2¹⁰²⁴` は正の無限大に、`H₀ = 2⁻¹⁰⁷⁵` は正のゼロに丸まり、`H₀ = 2⁻¹⁰⁷⁴` は最小の正の非正規数として残る。これらの出力もLeanで検査する。
+
+`HzNative.hubble_roundoff` は同じ演算順序でLean標準の `Float` を扱う。主要2例の十進リテラルからの出力ワードはそれぞれ `0x405ecfda9cbb1a15` と `0x40698a578a7d1554` で、論理モデル上で検査した。この環境で `lean --run` により観察した5例のワードもソフトウェアbinary64と一致した。
+
+## ビルドと公理監査
+
+`./run_demo.sh` はPythonの10テストを通過し、`lake build` は148宣言の推移的公理監査を通過した。主要定理の出力はすべて `[propext, Classical.choice, Quot.sound]`。Leanソースに `sorry`、`admit`、独自の公理宣言はない。追加で `leanchecker` を使い、コンパイル済みの10個の具体的なbinary64誤差定理と入力復号定理を含むモジュールを、インポートした環境内で再検査した。
+
+| 測定段階 | 実時間 |
+|---|---:|
+| A用の公式Mathlibキャッシュ（2,894ファイル）取得 | 28.912 s |
+| 既存Aのベースラインをビルド（書込先を修正した再実行） | 22.318 s |
+| B・Cに必要なFloatLibモジュール群の合同初回ソースビルド | 495.734 s |
+| 依存だけビルド済み、プロジェクト出力とLakeキャッシュを空にして全定理をビルド | 25.657 s |
+| 全成果物がそろった後の `lake build` | 2.075 s |
+| `lake env leanchecker -v HzRoundoffExamples` による再検査 | 4.663 s |
+
+Linux x86_64、AMD EPYC 9V74、CPU割当4コア・メモリ上限16 GiBで測定した。Mathlibには公式バイナリキャッシュを用いた。Aの最初の試行は読み取り専用のキャッシュへの書き込みで4.892秒後に失敗し、その途中の成果物を再試行に引き継いだ。B・Cの初回ビルドでは追加のMathlibキャッシュ450件を8.231秒で取得した。添付ZIPそのものを検査した際のエラー、使用コマンド、実行出力を保存した。[有理数ベースライン](results/baseline.txt) · [FloatLib初回ビルド](results/floatlib-build.txt) · [統合ビルドと公理監査](results/verification.txt)
+
+## 同じ入力での計算・検証時間
+
+`python3 scripts/benchmark.py --output results/benchmarks.json` で再測定できる。計算欄は A が自己検算付きのPython証明書生成、B が27ビットの区間生成、C が入力丸めと復号を含むソフトウェアbinary64実行（B・CはLeanインタープリタ）。検証欄はコンパイル済み依存のもと、各入力で `lake env lean` を新規起動した3回の中央値。プロセス起動、インポート、タクティクによる証明生成、カーネル検査、公理表示までを含む。
+
+| H₀, Ωm, z | 計算 A / B / C (µs) | 検証 A / B (s) | 検証 C 前進 / 復号 (s) |
+|---|---:|---:|---:|
+| 70, 0.3, 1 | 37.75 / 6.19 / 70.59 | 2.47 / 2.62 | 4.22 / 2.96 |
+| 67.4, 0.315, 2 | 35.02 / 6.82 / 73.26 | 2.32 / 2.56 | 4.14 / 2.93 |
+| 70, 0, 11 | 30.68 / 5.17 / 66.59 | 2.44 / 2.61 | 4.08 / 2.91 |
+| 70, 1, 3 | 29.62 / 4.61 / 60.84 | 2.34 / 2.57 | 4.24 / 2.88 |
+| 67.4, 0.315, 0 | 31.02 / 5.74 / 64.88 | 2.31 / 2.55 | 4.13 / 2.84 |
+
+AとBの検証は全5行で同一の十進端点・同一の命題を使用した。Bの計算欄の二進格子区間は別途 `enclose_sound` でも検査した。Cの検証欄では、前進誤差定理から導く数値上界と、具体的な復号値を使う狭い誤差上界を別々に測った。機械可読の結果には各反復の値、区間幅、符号付き誤差の検査、Aの独立検算時間、追加250組のPython有理数検算、改変した上限をLeanに拒否させた結果を含む。[全測定値](results/benchmarks.json) · [ベンチマーク実装](scripts/benchmark.py)
+
+## PhysicsLeanでの採用方針
+
+実数予測の標準APIにはFloatLibの `enclose` を使う。一般定理1つがすべての有効な有理数入力を扱え、平方根用の整数平方根計算と健全性証明を共用できる。十進の区間を交換する用途と回帰検査にはAを維持する。AとBの利用側の証明はいずれも短く、Bでは入力ごとに `interval` を適用できる。実装された演算順序や入力変換の影響を調べる用途にはCを使う。範囲条件と平方根の条件が増え、前進解析のための補助定理や計算時間が必要になる分、プログラム自体についての主張が得られる。再現用の参照実装にはソフトウェアbinary64を採用し、ネイティブ `Float` の利用時は対象環境での結果を別途照合する。
+
+## バージョンと信頼境界
+
+| 依存 | 固定版 |
+|---|---|
+| Lean / Lake | Lean 4.36.0、コミット `611c117bfaf7b7ae1cfcf246ce6fba31e8f509e9`、Lake 5.0.0-src+611c117 |
+| Physlib | `db96e88549c3ed2b1211fe34cd751f30847e5386` |
+| Mathlib | v4.36.0、`fc4f59e577feb1a4956671bc04ac18aaaf8cd842` |
+| FloatLib | v4.1.0、`d24844f039320a024c7548f992920562d9a71a60` |
+
+FloatLibの追加時に `lake update floatlib` を実行した。ロックファイル上の変更はFloatLibの追加とMathlibのURLの末尾 `.git` の正規化で、従来の依存のコミットはすべて一致した。
+
+- **A** — PythonとJSONは証明の候補を供給する。Leanが検証する命題には入力値、モデルと上下限が明示される。利用者にはその命題が意図した入力・単位に対応するかを確認する役割がある。
+- **B** — タクティクが生成する項と区間演算の健全性はLeanカーネルが検査する。平方根と有理数定数の除算は書き換え後の式で扱う。Physlibの実数冪を数値的に近似する必要はない。
+- **C** — 検証済みソフトウェア演算の丸め規則は最近接・同距離なら偶数。適用範囲は生成定理の前提で決まり、微小値にはアンダーフローに伴う絶対誤差項が入る。任意の物理入力に対するbinary64の有限性は自動的には従わない。具体例の復号成功はNaN・無限大を排除する。実機でコンパイル済みのコードを走らせた値の一致には、Lean/Cコンパイラと実行環境への信頼が加わる。標準の `Float.sqrt` を含む基本演算に関するFloatLibの橋渡しはLean上のネイティブ型の論理モデルに対するものである。外部の数値ライブラリやCPUの全入力に対する正しい丸めをここで検査してはいない。
+
+FloatLibの証明・実行・ネイティブFPUの境界、および丸め誤差定理の参照式に関する仮定は固定版の文書に従った。[FloatLib TRUST.md](https://github.com/lean-dojo/FloatLib/blob/d24844f039320a024c7548f992920562d9a71a60/TRUST.md) · [Physlib ReducedHubble.lean](https://github.com/leanprover-community/physlib/blob/db96e88549c3ed2b1211fe34cd751f30847e5386/Physlib/Cosmology/FLRW/ReducedHubble.lean)

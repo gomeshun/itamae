@@ -27,6 +27,13 @@ jobs:
           rm lean.tar.zst
           echo "$RUNNER_TEMP/lean-4.36.0-linux/bin" >> "$GITHUB_PATH"
       - name: Fetch locked dependencies and mathlib cache
-        run: python3 scripts/fetch_mathlib_cache.py HzExample
+        run: python3 scripts/fetch_mathlib_cache.py HzAudit
       - name: Build and check proofs
         run: ./run_demo.sh
+      - name: Verify all five benchmark cases and reject a corrupted certificate
+        run: python3 scripts/benchmark.py --repeats 1 --output "$RUNNER_TEMP/benchmarks.json"
+      - name: Save measurements
+        uses: actions/upload-artifact@v4
+        with:
+          name: physicslean-benchmarks
+          path: ${{ runner.temp }}/benchmarks.json

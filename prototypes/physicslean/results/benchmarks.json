@@ -1,0 +1,642 @@
+{
+  "units": "km s^-1 Mpc^-1",
+  "decimal_digits": 8,
+  "lean": "Lean (version 4.36.0, x86_64-unknown-linux-gnu, commit 611c117bfaf7b7ae1cfcf246ce6fba31e8f509e9, Release)",
+  "python": "3.12.14",
+  "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "pinned_revisions": {
+    "floatlib": "d24844f039320a024c7548f992920562d9a71a60",
+    "Physlib": "db96e88549c3ed2b1211fe34cd751f30847e5386",
+    "mathlib": "fc4f59e577feb1a4956671bc04ac18aaaf8cd842",
+    "plausible": "054b228ce0ac61d767c6e71ba73a24728f191b72",
+    "LeanSearchClient": "4fb58e749ef3fc0395fe274f6cab70c2ea85f1c9",
+    "importGraph": "8370c640afcd1cc3fb1cb9bf1560cc66eafee5e0",
+    "proofwidgets": "2f0f3520daeac2d9310ff25b7a877a0e5cdaa203",
+    "aesop": "66ff77cf0c4c898799e4b94d14db55f7a02d0c5a",
+    "Qq": "ff055a2fcc835935e0ae607339b455a5f5896b4b",
+    "batteries": "b4b25a3886a16daacaf6615c2eea7170a6e8f458",
+    "Cli": "50810f72af7618bee62fe9800dc26e806c188703"
+  },
+  "methodology": {
+    "proof_wall_time": "Fresh lake env lean process on standalone theorem, with compiled imports. Includes startup, imports, elaboration, kernel checking and #print axioms.",
+    "proof_repeats": 3,
+    "A_and_B": "Exactly the same decimal enclosure goal. B uses hz_interval (64 fractional bits). B also evaluates and kernel-checks an independently generated 27-bit enclosure.",
+    "C": "Proof of finiteness and absolute error against exact rational inputs. The tight posterior bound checks an exact decoded value. The forward bound applies evaluate_roundoff and discharges its range, sign and error-budget conditions. Signed error (software result minus modelH) uses a 20-place rational enclosure.",
+    "timers": "A Python timings are medians of seven 100-call batches. Candidate generation includes a self-check. B and C are medians of nine evaluations after one warm-up in the Lean interpreter, with inputs supplied at runtime. C includes input rounding and finite decoding."
+  },
+  "extra_certificates": {
+    "passed": 250,
+    "seed": 20261124,
+    "checker": "Python exact rational arithmetic"
+  },
+  "cases": [
+    {
+      "inputs": {
+        "h0": "70",
+        "omega_m": "3/10",
+        "z": "1"
+      },
+      "model_square_exact": "15190",
+      "decimal_estimate": "123.2477180316130640203845972354760550030866007636231778377015569128726",
+      "A": {
+        "lower": "12324771803/100000000",
+        "upper": "3081192951/25000000",
+        "width": "1/100000000",
+        "generate_including_self_check_median_us": 37.748,
+        "verify_only_median_us": 37.904,
+        "proof": {
+          "seconds": [
+            2.62128,
+            2.469354,
+            2.317578
+          ],
+          "median_seconds": 2.469354,
+          "axioms": [
+            "Classical.choice",
+            "Quot.sound",
+            "propext"
+          ],
+          "source_lines_including_import": 4
+        }
+      },
+      "B": {
+        "dyadic": {
+          "precision_bits": 27,
+          "runtime_median_us": 6.189,
+          "lower": "16542028695/134217728",
+          "upper": "2067753587/16777216",
+          "width": "1/134217728"
+        },
+        "dyadic_kernel_check": {
+          "seconds": [
+            2.618606
+          ],
+          "median_seconds": 2.618606,
+          "axioms": [
+            "Classical.choice",
+            "Quot.sound",
+            "propext"
+          ],
+          "source_lines_including_import": 8
+        },
+        "same_decimal_endpoints_as_A": {
+          "seconds": [
+            2.615216,
+            2.582764,
+            2.747549
+          ],
+          "median_seconds": 2.615216,
+          "axioms": [
+            "Classical.choice",
+            "Quot.sound",
+            "propext"
+          ],
+          "source_lines_including_import": 4
+        }
+      },
+      "C": {
+        "binary64_exact_rational": "8672787140647445/70368744177664",
+        "absolute_error_at_most": "1/50000000000000",
+        "symmetric_enclosure_lower": "52934491825240744583893533/429496729600000000000000",
+        "symmetric_enclosure_upper": "52934491825240761763762717/429496729600000000000000",
+        "symmetric_enclosure_width": "1/25000000000000",
+        "runtime_median_us": 70.594,
+        "proof": {
+          "seconds": [
+            2.857097,
+            2.964033,
+            3.064773
+          ],
+          "median_seconds": 2.964033,
+          "axioms": [
+            "Classical.choice",
+            "Quot.sound",
+            "propext"
+          ],
+          "source_lines_including_import": 4
+        },
+        "forward_roundoff": {
+          "rounded_radicand": "1745144855606067/562949953421312",
+          "absolute_error_at_most": "1/1000000000000",
+          "symmetric_enclosure_width": "1/500000000000",
+          "proof": {
+            "seconds": [
+              4.191197,
+              4.258065,
+              4.217637
+            ],
+            "median_seconds": 4.217637,
+            "axioms": [
+              "Classical.choice",
+              "Quot.sound",
+              "propext"
+            ],
+            "source_lines_including_import": 6
+          }
+        },
+        "signed_error_lower": "-113055700120571/6710886400000000000000000000",
+        "signed_error_upper": "-113055633011707/6710886400000000000000000000",
+        "signed_error_kernel_check": {
+          "seconds": [
+            3.114037
+          ],
+          "median_seconds": 3.114037,
+          "axioms": [
+            "Classical.choice",
+            "Quot.sound",
+            "propext"
+          ],
+          "source_lines_including_import": 12
+        }
+      }
+    },
+    {
+      "inputs": {
+        "h0": "337/5",
+        "omega_m": "63/200",
+        "z": "2"
+      },
+      "model_square_exact": "104369911/2500",
+      "decimal_estimate": "204.3231861537011173474359550319211499828319883737650059652474276430314",
+      "A": {
+        "lower": "4086463723/20000000",
+        "upper": "2554039827/12500000",
+        "width": "1/100000000",
+        "generate_including_self_check_median_us": 35.019,
+        "verify_only_median_us": 21.939,
+        "proof": {
+          "seconds": [
+            2.309864,
+            2.322844,
+            2.322671
+          ],
+          "median_seconds": 2.322671,
+          "axioms": [
+            "Classical.choice",
+            "Quot.sound",
+            "propext"
+          ],
+          "source_lines_including_import": 4
+        }
+      },
+      "B": {
+        "dyadic": {
+          "precision_bits": 27,
+          "runtime_median_us": 6.821,
+          "lower": "27423793823/134217728",
+          "upper": "856993557/4194304",
+          "width": "1/134217728"
+        },
+        "dyadic_kernel_check": {
+          "seconds": [
+            2.663999
+          ],
+          "median_seconds": 2.663999,
+          "axioms": [
+            "Classical.choice",
+            "Quot.sound",
+            "propext"
+          ],
+          "source_lines_including_import": 8
+        },
+        "same_decimal_endpoints_as_A": {
+          "seconds": [
+            2.562329,
+            2.53719,
+            2.75535
+          ],
+          "median_seconds": 2.562329,
+          "axioms": [
+            "Classical.choice",
+            "Quot.sound",
+            "propext"
+          ],
+          "source_lines_including_import": 4
+        }
+      },
+      "C": {
+        "binary64_exact_rational": "1797245752001877/8796093022208",
+        "absolute_error_at_most": "1/20000000000000",
+        "symmetric_enclosure_lower": "2193903505861665722894713/10737418240000000000000",
+        "symmetric_enclosure_upper": "2193903505861666796636537/10737418240000000000000",
+        "symmetric_enclosure_width": "1/10000000000000",
+        "runtime_median_us": 73.258,
+        "proof": {
+          "seconds": [
+            2.913344,
+            2.932798,
+            3.005862
+          ],
+          "median_seconds": 2.932798,
+          "axioms": [
+            "Classical.choice",
+            "Quot.sound",
+            "propext"
+          ],
+          "source_lines_including_import": 4
+        },
+        "forward_roundoff": {
+          "rounded_radicand": "2586755035970929/281474976710656",
+          "absolute_error_at_most": "1/1000000000000",
+          "symmetric_enclosure_width": "1/500000000000",
+          "proof": {
+            "seconds": [
+              4.152009,
+              4.144738,
+              4.117761
+            ],
+            "median_seconds": 4.144738,
+            "axioms": [
+              "Classical.choice",
+              "Quot.sound",
+              "propext"
+            ],
+            "source_lines_including_import": 6
+          }
+        },
+        "signed_error_lower": "34285222056773/838860800000000000000000000",
+        "signed_error_upper": "34285230445381/838860800000000000000000000",
+        "signed_error_kernel_check": {
+          "seconds": [
+            3.126146
+          ],
+          "median_seconds": 3.126146,
+          "axioms": [
+            "Classical.choice",
+            "Quot.sound",
+            "propext"
+          ],
+          "source_lines_including_import": 12
+        }
+      }
+    },
+    {
+      "inputs": {
+        "h0": "70",
+        "omega_m": "0",
+        "z": "11"
+      },
+      "model_square_exact": "4900",
+      "decimal_estimate": "70",
+      "A": {
+        "lower": "70",
+        "upper": "70",
+        "width": "0",
+        "generate_including_self_check_median_us": 30.676,
+        "verify_only_median_us": 37.261,
+        "proof": {
+          "seconds": [
+            2.630165,
+            2.443665,
+            2.431939
+          ],
+          "median_seconds": 2.443665,
+          "axioms": [
+            "Classical.choice",
+            "Quot.sound",
+            "propext"
+          ],
+          "source_lines_including_import": 4
+        }
+      },
+      "B": {
+        "dyadic": {
+          "precision_bits": 27,
+          "runtime_median_us": 5.168,
+          "lower": "70",
+          "upper": "70",
+          "width": "0"
+        },
+        "dyadic_kernel_check": {
+          "seconds": [
+            2.687628
+          ],
+          "median_seconds": 2.687628,
+          "axioms": [
+            "Classical.choice",
+            "Quot.sound",
+            "propext"
+          ],
+          "source_lines_including_import": 8
+        },
+        "same_decimal_endpoints_as_A": {
+          "seconds": [
+            2.608615,
+            2.640968,
+            2.519096
+          ],
+          "median_seconds": 2.608615,
+          "axioms": [
+            "Classical.choice",
+            "Quot.sound",
+            "propext"
+          ],
+          "source_lines_including_import": 4
+        }
+      },
+      "C": {
+        "binary64_exact_rational": "70",
+        "absolute_error_at_most": "0",
+        "symmetric_enclosure_lower": "70",
+        "symmetric_enclosure_upper": "70",
+        "symmetric_enclosure_width": "0",
+        "runtime_median_us": 66.588,
+        "proof": {
+          "seconds": [
+            2.776434,
+            2.910561,
+            2.93835
+          ],
+          "median_seconds": 2.910561,
+          "axioms": [
+            "Classical.choice",
+            "Quot.sound",
+            "propext"
+          ],
+          "source_lines_including_import": 4
+        },
+        "forward_roundoff": {
+          "rounded_radicand": "1",
+          "absolute_error_at_most": "1/1000000000000",
+          "symmetric_enclosure_width": "1/500000000000",
+          "proof": {
+            "seconds": [
+              4.075801,
+              3.976413,
+              4.083249
+            ],
+            "median_seconds": 4.075801,
+            "axioms": [
+              "Classical.choice",
+              "Quot.sound",
+              "propext"
+            ],
+            "source_lines_including_import": 6
+          }
+        },
+        "signed_error_lower": "0",
+        "signed_error_upper": "0",
+        "signed_error_kernel_check": {
+          "seconds": [
+            2.928048
+          ],
+          "median_seconds": 2.928048,
+          "axioms": [
+            "Classical.choice",
+            "Quot.sound",
+            "propext"
+          ],
+          "source_lines_including_import": 12
+        }
+      }
+    },
+    {
+      "inputs": {
+        "h0": "70",
+        "omega_m": "1",
+        "z": "3"
+      },
+      "model_square_exact": "313600",
+      "decimal_estimate": "560",
+      "A": {
+        "lower": "560",
+        "upper": "560",
+        "width": "0",
+        "generate_including_self_check_median_us": 29.62,
+        "verify_only_median_us": 20.988,
+        "proof": {
+          "seconds": [
+            2.327322,
+            2.424481,
+            2.34083
+          ],
+          "median_seconds": 2.34083,
+          "axioms": [
+            "Classical.choice",
+            "Quot.sound",
+            "propext"
+          ],
+          "source_lines_including_import": 4
+        }
+      },
+      "B": {
+        "dyadic": {
+          "precision_bits": 27,
+          "runtime_median_us": 4.607,
+          "lower": "560",
+          "upper": "560",
+          "width": "0"
+        },
+        "dyadic_kernel_check": {
+          "seconds": [
+            2.472661
+          ],
+          "median_seconds": 2.472661,
+          "axioms": [
+            "Classical.choice",
+            "Quot.sound",
+            "propext"
+          ],
+          "source_lines_including_import": 8
+        },
+        "same_decimal_endpoints_as_A": {
+          "seconds": [
+            2.663218,
+            2.570566,
+            2.47627
+          ],
+          "median_seconds": 2.570566,
+          "axioms": [
+            "Classical.choice",
+            "Quot.sound",
+            "propext"
+          ],
+          "source_lines_including_import": 4
+        }
+      },
+      "C": {
+        "binary64_exact_rational": "560",
+        "absolute_error_at_most": "0",
+        "symmetric_enclosure_lower": "560",
+        "symmetric_enclosure_upper": "560",
+        "symmetric_enclosure_width": "0",
+        "runtime_median_us": 60.84,
+        "proof": {
+          "seconds": [
+            2.8784,
+            3.157963,
+            2.758782
+          ],
+          "median_seconds": 2.8784,
+          "axioms": [
+            "Classical.choice",
+            "Quot.sound",
+            "propext"
+          ],
+          "source_lines_including_import": 4
+        },
+        "forward_roundoff": {
+          "rounded_radicand": "64",
+          "absolute_error_at_most": "1/500000000000",
+          "symmetric_enclosure_width": "1/250000000000",
+          "proof": {
+            "seconds": [
+              4.246035,
+              4.236395,
+              4.109749
+            ],
+            "median_seconds": 4.236395,
+            "axioms": [
+              "Classical.choice",
+              "Quot.sound",
+              "propext"
+            ],
+            "source_lines_including_import": 6
+          }
+        },
+        "signed_error_lower": "0",
+        "signed_error_upper": "0",
+        "signed_error_kernel_check": {
+          "seconds": [
+            3.075234
+          ],
+          "median_seconds": 3.075234,
+          "axioms": [
+            "Classical.choice",
+            "Quot.sound",
+            "propext"
+          ],
+          "source_lines_including_import": 12
+        }
+      }
+    },
+    {
+      "inputs": {
+        "h0": "337/5",
+        "omega_m": "63/200",
+        "z": "0"
+      },
+      "model_square_exact": "113569/25",
+      "decimal_estimate": "67.4",
+      "A": {
+        "lower": "337/5",
+        "upper": "337/5",
+        "width": "0",
+        "generate_including_self_check_median_us": 31.021,
+        "verify_only_median_us": 20.609,
+        "proof": {
+          "seconds": [
+            2.240629,
+            2.314482,
+            2.337322
+          ],
+          "median_seconds": 2.314482,
+          "axioms": [
+            "Classical.choice",
+            "Quot.sound",
+            "propext"
+          ],
+          "source_lines_including_import": 4
+        }
+      },
+      "B": {
+        "dyadic": {
+          "precision_bits": 27,
+          "runtime_median_us": 5.739,
+          "lower": "9046274867/134217728",
+          "upper": "2261568717/33554432",
+          "width": "1/134217728"
+        },
+        "dyadic_kernel_check": {
+          "seconds": [
+            2.410547
+          ],
+          "median_seconds": 2.410547,
+          "axioms": [
+            "Classical.choice",
+            "Quot.sound",
+            "propext"
+          ],
+          "source_lines_including_import": 8
+        },
+        "same_decimal_endpoints_as_A": {
+          "seconds": [
+            2.518604,
+            2.583591,
+            2.550228
+          ],
+          "median_seconds": 2.550228,
+          "axioms": [
+            "Classical.choice",
+            "Quot.sound",
+            "propext"
+          ],
+          "source_lines_including_import": 4
+        }
+      },
+      "C": {
+        "binary64_exact_rational": "2371426678787277/35184372088832",
+        "absolute_error_at_most": "3/500000000000000",
+        "symmetric_enclosure_lower": "72370198937599999661064681/1073741824000000000000000",
+        "symmetric_enclosure_upper": "72370198937600012545966569/1073741824000000000000000",
+        "symmetric_enclosure_width": "3/250000000000000",
+        "runtime_median_us": 64.876,
+        "proof": {
+          "seconds": [
+            2.772375,
+            2.844104,
+            3.015031
+          ],
+          "median_seconds": 2.844104,
+          "axioms": [
+            "Classical.choice",
+            "Quot.sound",
+            "propext"
+          ],
+          "source_lines_including_import": 4
+        },
+        "forward_roundoff": {
+          "rounded_radicand": "1",
+          "absolute_error_at_most": "1/1000000000000",
+          "symmetric_enclosure_width": "1/500000000000",
+          "proof": {
+            "seconds": [
+              4.129062,
+              4.111645,
+              4.258318
+            ],
+            "median_seconds": 4.129062,
+            "axioms": [
+              "Classical.choice",
+              "Quot.sound",
+              "propext"
+            ],
+            "source_lines_including_import": 6
+          }
+        },
+        "signed_error_lower": "1/175921860444160",
+        "signed_error_upper": "1/175921860444160",
+        "signed_error_kernel_check": {
+          "seconds": [
+            3.106823
+          ],
+          "median_seconds": 3.106823,
+          "axioms": [
+            "Classical.choice",
+            "Quot.sound",
+            "propext"
+          ],
+          "source_lines_including_import": 12
+        }
+      }
+    }
+  ],
+  "cpu_model": "AMD EPYC 9V74 80-Core Processor",
+  "linux_cpu_quota_and_period_us": "400000 100000",
+  "corrupted_witness": {
+    "case_index": 0,
+    "replacement_upper": "12324771803/100000000",
+    "lean_rejected": true,
+    "wall_seconds": 2.326259
+  }
+}

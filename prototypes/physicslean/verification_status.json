@@ -1,12 +1,48 @@
 {
-  "date": "2026-11-23",
+  "date": "2026-11-24",
   "physlib_ref": "db96e88549c3ed2b1211fe34cd751f30847e5386",
   "lean_version_target": "v4.36.0",
-  "python_unit_tests": {"total": 8, "passed": 8},
-  "additional_rational_certificates": {"total": 250, "passed": 250},
+  "python_unit_tests": {
+    "total": 10,
+    "passed": 10
+  },
+  "additional_rational_certificates": {
+    "total": 250,
+    "passed": 250,
+    "checker": "Python exact rational arithmetic",
+    "seed": 20261124
+  },
   "exact_rational_certificate": "passed",
-  "lean_compiler_available_in_execution_environment": false,
-  "lean_kernel_check": "not run",
+  "lean_compiler_available_in_execution_environment": true,
+  "lean_kernel_check": "passed",
   "scope": "flat matter+Lambda FLRW H(z) for exact rational H0, Omega_m and z",
-  "not_certified": ["instrument measurements", "input parameter uncertainties", "detailed FLRW solution existence", "Lean proof syntax and kernel verification until lake build succeeds"]
+  "not_certified": [
+    "observational and instrument uncertainties",
+    "existence of an FLRW solution matching the supplied numerical parameters",
+    "compiled hardware behavior beyond the logical native Float model"
+  ],
+  "timezone": "Asia/Tokyo",
+  "mathlib_ref": "fc4f59e577feb1a4956671bc04ac18aaaf8cd842",
+  "floatlib_ref": "d24844f039320a024c7548f992920562d9a71a60",
+  "audited_declarations": 148,
+  "approved_axioms": [
+    "propext",
+    "Classical.choice",
+    "Quot.sound"
+  ],
+  "sources_with_proof_placeholders": [],
+  "checked_examples": {
+    "physical_inputs": 5,
+    "A_decimal_square_certificate": 5,
+    "B_interval_decimal": 5,
+    "B_verified_dyadic_generator": 5,
+    "C_forward_roundoff": 5,
+    "C_finite_decoding_and_absolute_error": 5
+  },
+  "logs": {
+    "baseline": "results/baseline.txt",
+    "floatlib_dependencies": "results/floatlib-build.txt",
+    "integrated_build_audit_and_replay": "results/verification.txt",
+    "per_input_measurements": "results/benchmarks.json"
+  }
 }

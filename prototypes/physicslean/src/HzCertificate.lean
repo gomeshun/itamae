@@ -23,20 +23,24 @@ noncomputable def modelH (H₀ Ωm z : ℝ) : ℝ :=
   H₀ * reducedHubble (1 - Ωm) Ωm 0 0 (1 / (1 + z))
 
 /-- Convert Physlib's inverse-scale-factor power into the standard redshift form. -/
-private theorem inverseScale_pow (z : ℝ) (hz : 0 ≤ z) :
+private theorem inverseScale_pow (z : ℝ) :
     (1 / (1 + z) : ℝ) ^ (-3 : ℝ) = (1 + z) ^ 3 := by
-  have hpositive : 0 < (1 : ℝ) + z := add_pos_of_pos_of_nonneg zero_lt_one hz
-  have hx : 0 < (1 / (1 + z) : ℝ) := one_div_pos.mpr hpositive
   rw [show (-3 : ℝ) = -((3 : ℕ) : ℝ) by norm_num,
-      Real.rpow_neg hx.le, Real.rpow_natCast]
-  simp [one_div, inv_pow]
+      Real.rpow_neg_eq_inv_rpow, Real.rpow_natCast]
+  simp [one_div]
 
-/-- The mathematical definition inherited from Physlib equals flat-ΛCDM H(z). -/
-theorem modelH_eq (H₀ Ωm z : ℝ) (hz : 0 ≤ z) :
+/-- Algebraic identity for the total real operations used by Physlib and FloatLib. -/
+theorem modelH_eq_unconditional (H₀ Ωm z : ℝ) :
     modelH H₀ Ωm z = H₀ * Real.sqrt ((1 - Ωm) + Ωm * (1 + z) ^ 3) := by
   unfold modelH reducedHubble
-  have hp := inverseScale_pow z hz
-  simp only [zero_mul, add_zero, hp]
+  simp only [zero_mul, add_zero, inverseScale_pow]
+
+-- Keep the original named redshift hypothesis for callers of the physical-domain API.
+set_option linter.unusedVariables false in
+/-- Redshift form on the physical redshift domain. -/
+theorem modelH_eq (H₀ Ωm z : ℝ) (hz : 0 ≤ z) :
+    modelH H₀ Ωm z = H₀ * Real.sqrt ((1 - Ωm) + Ωm * (1 + z) ^ 3) :=
+  modelH_eq_unconditional H₀ Ωm z
 
 /-- Nonnegativity of the expanding-model prediction. -/
 theorem modelH_nonneg (H₀ Ωm z : ℝ) (hH : 0 ≤ H₀) (hz : 0 ≤ z) :
@@ -76,6 +80,7 @@ theorem modelH_bounds (H₀ Ωm z lower upper : ℝ)
   rw [← hs] at hSqLower hSqUpper
   exact ⟨(sq_le_sq₀ hLower hn).mp hSqLower, (sq_le_sq₀ hn hUpper).mp hSqUpper⟩
 
+#print axioms modelH_eq_unconditional
 #print axioms modelH_eq
 #print axioms modelH_nonneg
 #print axioms modelH_pos

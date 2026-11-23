@@ -7,6 +7,11 @@ name = "Physlib"
 git = "https://github.com/leanprover-community/physlib.git"
 rev = "db96e88549c3ed2b1211fe34cd751f30847e5386"
 
+[[require]]
+name = "floatlib"
+git = "https://github.com/lean-dojo/FloatLib.git"
+rev = "d24844f039320a024c7548f992920562d9a71a60"
+
 [[lean_lib]]
 name = "HzCertificate"
 srcDir = "src"
@@ -17,4 +22,28 @@ srcDir = "generated"
 
 [[lean_lib]]
 name = "HzAudit"
+srcDir = "src"
+
+[[lean_lib]]
+name = "HzFriedmann"
+srcDir = "src"
+
+[[lean_lib]]
+name = "HzInterval"
+srcDir = "src"
+
+[[lean_lib]]
+name = "HzRoundoff"
+srcDir = "src"
+
+[[lean_lib]]
+name = "HzRoundoffExamples"
+srcDir = "generated"
+
+[[lean_lib]]
+name = "HzNative"
+srcDir = "src"
+
+[[lean_lib]]
+name = "HzExceptional"
 srcDir = "src"

@@ -1,0 +1,222 @@
+2026-11-24 JST, Linux x86_64, AMD EPYC 9V74, CPU quota 4 cores, 16 GiB cgroup memory limit
+
+Toolchain
+$ lean --version
+Lean (version 4.36.0, x86_64-unknown-linux-gnu, commit 611c117bfaf7b7ae1cfcf246ce6fba31e8f509e9, Release)
+exit=0 wall_seconds=0.032
+
+Lake
+$ lake --version
+Lake version 5.0.0-src+611c117 (Lean version 4.36.0)
+exit=0 wall_seconds=0.032
+
+Python
+$ python3 --version
+Python 3.12.14
+exit=0 wall_seconds=0.002
+
+Working checkout: regenerate + compare JSON/Lean, test Python, build, audit
+$ ./run_demo.sh
+H(z) ≈ 123.2477180316130640203845972354760550030866007636231778377015569128726 km s^-1 Mpc^-1
+Guaranteed exact rational enclosure: [12324771803/100000000, 3081192951/25000000]
+H(z)^2 = 15190 exactly
+Exact-rational certificate verification: PASSED
+Lean kernel verification: requires `lake build` (not run by this script)
+Exact-rational verification: PASSED
+test_lambda_only (test_hz_cert.CertificateTests.test_lambda_only) ... ok
+test_lean_contains_physlib_bridge (test_hz_cert.CertificateTests.test_lean_contains_physlib_bridge) ... ok
+test_nonzero_radicand (test_hz_cert.CertificateTests.test_nonzero_radicand) ... ok
+test_reject_bad_input (test_hz_cert.CertificateTests.test_reject_bad_input) ... ok
+test_reject_boolean_precision (test_hz_cert.CertificateTests.test_reject_boolean_precision) ... ok
+test_reject_mislabeled_model (test_hz_cert.CertificateTests.test_reject_mislabeled_model) ... ok
+test_tamper_input_detected (test_hz_cert.CertificateTests.test_tamper_input_detected) ... ok
+test_tamper_upper_detected (test_hz_cert.CertificateTests.test_tamper_upper_detected) ... ok
+test_z0_exact (test_hz_cert.CertificateTests.test_z0_exact) ... ok
+test_z1 (test_hz_cert.CertificateTests.test_z1) ... ok
+
+----------------------------------------------------------------------
+Ran 10 tests in 0.001s
+
+OK
+⚠ [5852/6425] Replayed HzCertificate
+warning: src/HzCertificate.lean: imports `Mathlib.Tactic.NormNum` from package `mathlib`, which is designed for use with the module system; consider adding `module` to the start of this file
+info: src/HzCertificate.lean:83:0: 'HzCertificate.modelH_eq_unconditional' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: src/HzCertificate.lean:84:0: 'HzCertificate.modelH_eq' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: src/HzCertificate.lean:85:0: 'HzCertificate.modelH_nonneg' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: src/HzCertificate.lean:86:0: 'HzCertificate.modelH_pos' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: src/HzCertificate.lean:87:0: 'HzCertificate.modelH_sq' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: src/HzCertificate.lean:88:0: 'HzCertificate.modelH_bounds' depends on axioms: [propext, Classical.choice, Quot.sound]
+⚠ [5853/6425] Ran HzCertificate:irArts
+warning: src/HzCertificate.lean: imports `Mathlib.Tactic.NormNum` from package `mathlib`, which is designed for use with the module system; consider adding `module` to the start of this file
+⚠ [5855/6425] Replayed HzExample
+warning: generated/HzExample.lean:14:89: Unused tactic linter: `<;>` can be replaced with `;`.
+
+Note: This linter can be disabled with `set_option linter.unusedTactic false`
+warning: generated/HzExample.lean:14:89: Used `tac1 <;> tac2` where `(tac1; tac2)` would suffice
+
+Note: This linter can be disabled with `set_option linter.unnecessarySeqFocus false`
+info: generated/HzExample.lean:28:0: 'HzExample.certified_square' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: generated/HzExample.lean:29:0: 'HzExample.certified_interval' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: generated/HzExample.lean:30:0: 'HzExample.certified_width' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [8324/8348] Replayed HzRoundoff
+info: src/HzRoundoff.lean:119:0: 'HzRoundoff.hubble64_roundoff' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: src/HzRoundoff.lean:120:0: 'HzRoundoff.evaluate_roundoff' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: src/HzRoundoff.lean:121:0: 'HzRoundoff.accurate_of_decode' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [8334/8348] Replayed HzFriedmann
+info: src/HzFriedmann.lean:42:0: 'HzFriedmann.hubbleConstant_eq_modelH' depends on axioms: [propext, Classical.choice, Quot.sound]
+⚠ [8338/8348] Replayed HzInterval
+warning: src/HzInterval.lean: imports `Mathlib.Tactic.NormNum.RealSqrt` from package `mathlib`, which is designed for use with the module system; consider adding `module` to the start of this file
+info: src/HzInterval.lean:64:0: 'HzInterval.enclose_sound' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: src/HzInterval.lean:65:0: 'HzInterval.certified_interval' depends on axioms: [propext, Classical.choice, Quot.sound]
+⚠ [8339/8348] Ran HzInterval:irArts
+warning: src/HzInterval.lean: imports `Mathlib.Tactic.NormNum.RealSqrt` from package `mathlib`, which is designed for use with the module system; consider adding `module` to the start of this file
+ℹ [8340/8348] Replayed HzRoundoffExamples
+info: generated/HzRoundoffExamples.lean:52:0: 'HzRoundoffExamples.forward_redshift_one' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: generated/HzRoundoffExamples.lean:53:0: 'HzRoundoffExamples.forward_redshift_two' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: generated/HzRoundoffExamples.lean:54:0: 'HzRoundoffExamples.forward_lambda_only' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: generated/HzRoundoffExamples.lean:55:0: 'HzRoundoffExamples.forward_matter_only' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: generated/HzRoundoffExamples.lean:56:0: 'HzRoundoffExamples.forward_today' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: generated/HzRoundoffExamples.lean:57:0: 'HzRoundoffExamples.stored_inputs' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: generated/HzRoundoffExamples.lean:58:0: 'HzRoundoffExamples.redshift_one' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: generated/HzRoundoffExamples.lean:59:0: 'HzRoundoffExamples.redshift_two' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: generated/HzRoundoffExamples.lean:60:0: 'HzRoundoffExamples.lambda_only' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: generated/HzRoundoffExamples.lean:61:0: 'HzRoundoffExamples.matter_only' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: generated/HzRoundoffExamples.lean:62:0: 'HzRoundoffExamples.today' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [8342/8348] Built HzExceptional (2.5s)
+info: src/HzExceptional.lean:37:0: 'HzExceptional.lambda_only' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: src/HzExceptional.lean:38:0: 'HzExceptional.input_overflow' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: src/HzExceptional.lean:39:0: 'HzExceptional.input_underflow' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: src/HzExceptional.lean:40:0: 'HzExceptional.intermediate_nan' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: src/HzExceptional.lean:41:0: 'HzExceptional.nonfinite_redshift_nan' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [8344/8348] Built HzNative (3.9s)
+info: src/HzNative.lean:29:0: 'HzNative.hubble_roundoff' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: src/HzNative.lean:30:0: 'HzNative.reference_words' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [8346/8348] Built HzAudit (3.4s)
+info: src/HzAudit.lean:13:0: PhysicsLean axiom audit passed on 148 declarations
+Build completed successfully (8348 jobs).
+exit=0 wall_seconds=9.670
+
+Clean project output and fresh writable Lake cache; identical prebuilt external packages
+$ lake build
+⚠ [8328/8348] Built HzCertificate (1.7s)
+warning: src/HzCertificate.lean: imports `Mathlib.Tactic.NormNum` from package `mathlib`, which is designed for use with the module system; consider adding `module` to the start of this file
+info: src/HzCertificate.lean:83:0: 'HzCertificate.modelH_eq_unconditional' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: src/HzCertificate.lean:84:0: 'HzCertificate.modelH_eq' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: src/HzCertificate.lean:85:0: 'HzCertificate.modelH_nonneg' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: src/HzCertificate.lean:86:0: 'HzCertificate.modelH_pos' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: src/HzCertificate.lean:87:0: 'HzCertificate.modelH_sq' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: src/HzCertificate.lean:88:0: 'HzCertificate.modelH_bounds' depends on axioms: [propext, Classical.choice, Quot.sound]
+⚠ [8329/8348] Ran HzCertificate:irArts
+warning: src/HzCertificate.lean: imports `Mathlib.Tactic.NormNum` from package `mathlib`, which is designed for use with the module system; consider adding `module` to the start of this file
+⚠ [8331/8348] Built HzExample (1.7s)
+warning: generated/HzExample.lean:14:89: Unused tactic linter: `<;>` can be replaced with `;`.
+
+Note: This linter can be disabled with `set_option linter.unusedTactic false`
+warning: generated/HzExample.lean:14:89: Used `tac1 <;> tac2` where `(tac1; tac2)` would suffice
+
+Note: This linter can be disabled with `set_option linter.unnecessarySeqFocus false`
+info: generated/HzExample.lean:28:0: 'HzExample.certified_square' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: generated/HzExample.lean:29:0: 'HzExample.certified_interval' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: generated/HzExample.lean:30:0: 'HzExample.certified_width' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [8334/8348] Built HzFriedmann (1.8s)
+info: src/HzFriedmann.lean:42:0: 'HzFriedmann.hubbleConstant_eq_modelH' depends on axioms: [propext, Classical.choice, Quot.sound]
+⚠ [8336/8348] Built HzInterval (2.2s)
+warning: src/HzInterval.lean: imports `Mathlib.Tactic.NormNum.RealSqrt` from package `mathlib`, which is designed for use with the module system; consider adding `module` to the start of this file
+info: src/HzInterval.lean:64:0: 'HzInterval.enclose_sound' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: src/HzInterval.lean:65:0: 'HzInterval.certified_interval' depends on axioms: [propext, Classical.choice, Quot.sound]
+⚠ [8337/8348] Ran HzInterval:irArts
+warning: src/HzInterval.lean: imports `Mathlib.Tactic.NormNum.RealSqrt` from package `mathlib`, which is designed for use with the module system; consider adding `module` to the start of this file
+ℹ [8338/8348] Built HzRoundoff (7.9s)
+info: src/HzRoundoff.lean:119:0: 'HzRoundoff.hubble64_roundoff' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: src/HzRoundoff.lean:120:0: 'HzRoundoff.evaluate_roundoff' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: src/HzRoundoff.lean:121:0: 'HzRoundoff.accurate_of_decode' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [8340/8348] Built HzExceptional (2.5s)
+info: src/HzExceptional.lean:37:0: 'HzExceptional.lambda_only' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: src/HzExceptional.lean:38:0: 'HzExceptional.input_overflow' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: src/HzExceptional.lean:39:0: 'HzExceptional.input_underflow' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: src/HzExceptional.lean:40:0: 'HzExceptional.intermediate_nan' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: src/HzExceptional.lean:41:0: 'HzExceptional.nonfinite_redshift_nan' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [8342/8348] Built HzNative (3.9s)
+info: src/HzNative.lean:29:0: 'HzNative.hubble_roundoff' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: src/HzNative.lean:30:0: 'HzNative.reference_words' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [8344/8348] Built HzRoundoffExamples (9.5s)
+info: generated/HzRoundoffExamples.lean:52:0: 'HzRoundoffExamples.forward_redshift_one' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: generated/HzRoundoffExamples.lean:53:0: 'HzRoundoffExamples.forward_redshift_two' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: generated/HzRoundoffExamples.lean:54:0: 'HzRoundoffExamples.forward_lambda_only' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: generated/HzRoundoffExamples.lean:55:0: 'HzRoundoffExamples.forward_matter_only' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: generated/HzRoundoffExamples.lean:56:0: 'HzRoundoffExamples.forward_today' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: generated/HzRoundoffExamples.lean:57:0: 'HzRoundoffExamples.stored_inputs' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: generated/HzRoundoffExamples.lean:58:0: 'HzRoundoffExamples.redshift_one' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: generated/HzRoundoffExamples.lean:59:0: 'HzRoundoffExamples.redshift_two' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: generated/HzRoundoffExamples.lean:60:0: 'HzRoundoffExamples.lambda_only' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: generated/HzRoundoffExamples.lean:61:0: 'HzRoundoffExamples.matter_only' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: generated/HzRoundoffExamples.lean:62:0: 'HzRoundoffExamples.today' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [8346/8348] Built HzAudit (3.7s)
+info: src/HzAudit.lean:13:0: PhysicsLean axiom audit passed on 148 declarations
+Build completed successfully (8348 jobs).
+exit=0 wall_seconds=25.657
+
+All targets already built (incremental no-change check)
+$ lake build
+⚠ [5852/6335] Replayed HzCertificate
+warning: src/HzCertificate.lean: imports `Mathlib.Tactic.NormNum` from package `mathlib`, which is designed for use with the module system; consider adding `module` to the start of this file
+info: src/HzCertificate.lean:83:0: 'HzCertificate.modelH_eq_unconditional' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: src/HzCertificate.lean:84:0: 'HzCertificate.modelH_eq' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: src/HzCertificate.lean:85:0: 'HzCertificate.modelH_nonneg' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: src/HzCertificate.lean:86:0: 'HzCertificate.modelH_pos' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: src/HzCertificate.lean:87:0: 'HzCertificate.modelH_sq' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: src/HzCertificate.lean:88:0: 'HzCertificate.modelH_bounds' depends on axioms: [propext, Classical.choice, Quot.sound]
+⚠ [5853/6335] Ran HzCertificate:irArts
+warning: src/HzCertificate.lean: imports `Mathlib.Tactic.NormNum` from package `mathlib`, which is designed for use with the module system; consider adding `module` to the start of this file
+⚠ [5855/6335] Replayed HzExample
+warning: generated/HzExample.lean:14:89: Unused tactic linter: `<;>` can be replaced with `;`.
+
+Note: This linter can be disabled with `set_option linter.unusedTactic false`
+warning: generated/HzExample.lean:14:89: Used `tac1 <;> tac2` where `(tac1; tac2)` would suffice
+
+Note: This linter can be disabled with `set_option linter.unnecessarySeqFocus false`
+info: generated/HzExample.lean:28:0: 'HzExample.certified_square' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: generated/HzExample.lean:29:0: 'HzExample.certified_interval' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: generated/HzExample.lean:30:0: 'HzExample.certified_width' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [8324/8348] Replayed HzRoundoff
+info: src/HzRoundoff.lean:119:0: 'HzRoundoff.hubble64_roundoff' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: src/HzRoundoff.lean:120:0: 'HzRoundoff.evaluate_roundoff' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: src/HzRoundoff.lean:121:0: 'HzRoundoff.accurate_of_decode' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [8326/8348] Replayed HzExceptional
+info: src/HzExceptional.lean:37:0: 'HzExceptional.lambda_only' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: src/HzExceptional.lean:38:0: 'HzExceptional.input_overflow' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: src/HzExceptional.lean:39:0: 'HzExceptional.input_underflow' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: src/HzExceptional.lean:40:0: 'HzExceptional.intermediate_nan' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: src/HzExceptional.lean:41:0: 'HzExceptional.nonfinite_redshift_nan' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [8336/8348] Replayed HzFriedmann
+info: src/HzFriedmann.lean:42:0: 'HzFriedmann.hubbleConstant_eq_modelH' depends on axioms: [propext, Classical.choice, Quot.sound]
+⚠ [8340/8348] Replayed HzInterval
+warning: src/HzInterval.lean: imports `Mathlib.Tactic.NormNum.RealSqrt` from package `mathlib`, which is designed for use with the module system; consider adding `module` to the start of this file
+info: src/HzInterval.lean:64:0: 'HzInterval.enclose_sound' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: src/HzInterval.lean:65:0: 'HzInterval.certified_interval' depends on axioms: [propext, Classical.choice, Quot.sound]
+⚠ [8341/8348] Ran HzInterval:irArts
+warning: src/HzInterval.lean: imports `Mathlib.Tactic.NormNum.RealSqrt` from package `mathlib`, which is designed for use with the module system; consider adding `module` to the start of this file
+ℹ [8342/8348] Replayed HzNative
+info: src/HzNative.lean:29:0: 'HzNative.hubble_roundoff' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: src/HzNative.lean:30:0: 'HzNative.reference_words' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [8344/8348] Replayed HzRoundoffExamples
+info: generated/HzRoundoffExamples.lean:52:0: 'HzRoundoffExamples.forward_redshift_one' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: generated/HzRoundoffExamples.lean:53:0: 'HzRoundoffExamples.forward_redshift_two' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: generated/HzRoundoffExamples.lean:54:0: 'HzRoundoffExamples.forward_lambda_only' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: generated/HzRoundoffExamples.lean:55:0: 'HzRoundoffExamples.forward_matter_only' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: generated/HzRoundoffExamples.lean:56:0: 'HzRoundoffExamples.forward_today' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: generated/HzRoundoffExamples.lean:57:0: 'HzRoundoffExamples.stored_inputs' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: generated/HzRoundoffExamples.lean:58:0: 'HzRoundoffExamples.redshift_one' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: generated/HzRoundoffExamples.lean:59:0: 'HzRoundoffExamples.redshift_two' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: generated/HzRoundoffExamples.lean:60:0: 'HzRoundoffExamples.lambda_only' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: generated/HzRoundoffExamples.lean:61:0: 'HzRoundoffExamples.matter_only' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: generated/HzRoundoffExamples.lean:62:0: 'HzRoundoffExamples.today' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [8346/8348] Replayed HzAudit
+info: src/HzAudit.lean:13:0: PhysicsLean axiom audit passed on 148 declarations
+Build completed successfully (8348 jobs).
+exit=0 wall_seconds=2.075
+
+Replay concrete binary64 proofs from .olean in their import environment
+$ lake env leanchecker -v HzRoundoffExamples
+replaying HzRoundoffExamples
+exit=0 wall_seconds=4.663

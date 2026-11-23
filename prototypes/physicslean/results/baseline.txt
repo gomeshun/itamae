@@ -1,0 +1,61 @@
+PhysicsLean rational baseline, 2026-11-24 JST
+ZIP SHA256 339bf695896a4e979ac83b0a0815aa260eea0b6d7d21f130f0dcc347d02db4ff
+Original ZIP: python3 -m unittest discover -s tests -v -> 8 tests, OK
+Original ZIP: lake build -> exit 1 (2.976 s)
+Original ZIP: lake env lean src/HzCertificate.lean -> exit 1
+  line 12: invalid 'import' command, it must be used in the beginning of the file
+Original ZIP: lake env lean generated/HzExample.lean -> exit 1
+  line 6: invalid 'import' command, it must be used in the beginning of the file
+
+Checked-out fixes: gomeshun/itamae@9351c3894313a3d8a0291f9315343af0e1698d0b
+Project: prototypes/physicslean
+Official Lean v4.36.0 linux x86_64 tar.zst SHA256:
+2b7ab1ed8b92d2e6abfaf41344823b510064dbc9c0260cac73eb496ab2dea6eb
+Dependency revisions: lake-manifest.json at the commit above.
+$ python3 scripts/fetch_mathlib_cache.py HzExample
+Official Mathlib cache: retrieved and decompressed 2894 files, 28.912 s.
+$ lake build
+First invocation failed after 4.892 s writing /home/agent/.cache/lake (read-only).
+Reused partial outputs. Retried with XDG_CACHE_HOME set to a writable directory.
+$ lake build
+✔ [5817/5861] Built Physlib.Electromagnetism.Charge.ChargeUnit (1.5s)
+✔ [5818/5861] Built Physlib.Thermodynamics.Temperature.TemperatureUnits (1.6s)
+✔ [5819/5861] Built Physlib.Units.Dimension (1.5s)
+✔ [5820/5861] Built Physlib.SpaceAndTime.Space.Origin (1.8s)
+✔ [5825/5861] Built Physlib.ClassicalMechanics.Mass.MassUnit (1.5s)
+✔ [5826/5861] Built Physlib.SpaceAndTime.Time.InnerProductSpace (3.2s)
+✔ [5828/5861] Built Physlib.SpaceAndTime.Space.LengthUnit (1.6s)
+✔ [5831/5861] Built Physlib.Units.LTMCTDimensionBase (1.4s)
+✔ [5833/5861] Built Physlib.SpaceAndTime.Time.TimeUnit (1.8s)
+✔ [5835/5861] Built Physlib.Units.Basic (2.1s)
+✔ [5837/5861] Built Physlib.SpaceAndTime.Space.Module (4.7s)
+✔ [5839/5861] Built Physlib.Units.UnitDependent (2.0s)
+✔ [5841/5861] Built Physlib.SpaceAndTime.Time.Derivatives (2.2s)
+✔ [5843/5861] Built Physlib.Units.WithDim.Basic (1.9s)
+✔ [5845/5861] Built Physlib.Relativity.SpeedOfLight (892ms)
+✔ [5847/5861] Built Physlib.Cosmology.FLRW.Basic (1.5s)
+✔ [5849/5861] Built Physlib.Cosmology.FLRW.DensityParameters (1.2s)
+✔ [5851/5861] Built Physlib.Cosmology.FLRW.ReducedHubble (1.2s)
+⚠ [5853/5861] Built HzCertificate (1.7s)
+warning: src/HzCertificate.lean: imports `Mathlib.Tactic.NormNum` from package `mathlib`, which is designed for use with the module system; consider adding `module` to the start of this file
+info: src/HzCertificate.lean:79:0: 'HzCertificate.modelH_eq' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: src/HzCertificate.lean:80:0: 'HzCertificate.modelH_nonneg' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: src/HzCertificate.lean:81:0: 'HzCertificate.modelH_pos' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: src/HzCertificate.lean:82:0: 'HzCertificate.modelH_sq' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: src/HzCertificate.lean:83:0: 'HzCertificate.modelH_bounds' depends on axioms: [propext, Classical.choice, Quot.sound]
+⚠ [5854/5861] Ran HzCertificate:irArts
+warning: src/HzCertificate.lean: imports `Mathlib.Tactic.NormNum` from package `mathlib`, which is designed for use with the module system; consider adding `module` to the start of this file
+⚠ [5856/5861] Built HzExample (1.5s)
+warning: generated/HzExample.lean:14:89: Unused tactic linter: `<;>` can be replaced with `;`.
+
+Note: This linter can be disabled with `set_option linter.unusedTactic false`
+warning: generated/HzExample.lean:14:89: Used `tac1 <;> tac2` where `(tac1; tac2)` would suffice
+
+Note: This linter can be disabled with `set_option linter.unnecessarySeqFocus false`
+info: generated/HzExample.lean:28:0: 'HzExample.certified_square' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: generated/HzExample.lean:29:0: 'HzExample.certified_interval' depends on axioms: [propext, Classical.choice, Quot.sound]
+info: generated/HzExample.lean:30:0: 'HzExample.certified_width' depends on axioms: [propext, Classical.choice, Quot.sound]
+ℹ [5859/5861] Built HzAudit (2.5s)
+info: src/HzAudit.lean:8:0: PhysicsLean axiom audit passed on 10 declarations
+Build completed successfully (5861 jobs).
+wall_seconds=22.318

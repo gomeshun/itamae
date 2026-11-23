@@ -5,7 +5,7 @@ import sys
 
 
 def main() -> None:
-    targets = sys.argv[1:] or ["HzExample"]
+    targets = sys.argv[1:] or ["HzAudit"]
     graph = subprocess.check_output(
         ["lake", "-q", "--json", "query", *(f"+{name}:transImports" for name in targets)],
         text=True,

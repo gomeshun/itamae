@@ -1,4 +1,9 @@
 import HzExample
+import HzExceptional
+import HzFriedmann
+import HzInterval
+import HzNative
+import HzRoundoffExamples
 import Lean.Elab.Command
 import Lean.Util.CollectAxioms
 
