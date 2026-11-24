@@ -4,20 +4,84 @@
     "enclosures": {
       "returned": 29,
       "end_to_end_kernel_checked": 29,
-      "plotted_value_inside": 0,
+      "plotted_value_inside": 29,
       "colossus_spline_inside": 0
     },
+    "references": {
+      "legacy": {
+        "reference_kind": "rational_midpoint",
+        "enclosures": 29,
+        "reference_inside": 29,
+        "residuals": {
+          "legacy": {
+            "coordinate": "0",
+            "signed_relative_difference": 0.0
+          },
+          "matched": {
+            "coordinate": "0",
+            "signed_relative_difference": 0.0
+          },
+          "sashimi": {
+            "coordinate": "25/4",
+            "signed_relative_difference": 3.0136765184422716e-16
+          },
+          "colossus_spline": {
+            "coordinate": "1/4",
+            "signed_relative_difference": 2.2338412195042505e-16
+          },
+          "colossus_direct": {
+            "coordinate": "1/4",
+            "signed_relative_difference": 2.2338412195042505e-16
+          },
+          "astropy_growth": {
+            "coordinate": "1/4",
+            "signed_relative_difference": 2.2338412195042505e-16
+          }
+        }
+      },
+      "matched": {
+        "reference_kind": "rational_midpoint",
+        "enclosures": 29,
+        "reference_inside": 29,
+        "residuals": {
+          "legacy": {
+            "coordinate": "0",
+            "signed_relative_difference": 0.0
+          },
+          "matched": {
+            "coordinate": "0",
+            "signed_relative_difference": 0.0
+          },
+          "sashimi": {
+            "coordinate": "25/4",
+            "signed_relative_difference": 3.0136765184422716e-16
+          },
+          "colossus_spline": {
+            "coordinate": "1/4",
+            "signed_relative_difference": 2.2338412195042505e-16
+          },
+          "colossus_direct": {
+            "coordinate": "1/4",
+            "signed_relative_difference": 2.2338412195042505e-16
+          },
+          "astropy_growth": {
+            "coordinate": "1/4",
+            "signed_relative_difference": 2.2338412195042505e-16
+          }
+        }
+      }
+    },
     "before": {
-      "coordinate": "5/4",
-      "signed_relative_difference": 2.039959146572892e-16
+      "coordinate": "1/4",
+      "signed_relative_difference": 2.2338412195042505e-16
     },
     "after": {
-      "coordinate": "5/4",
-      "signed_relative_difference": 2.039959146572892e-16
+      "coordinate": "1/4",
+      "signed_relative_difference": 2.2338412195042505e-16
     },
     "direct": {
-      "coordinate": "5/4",
-      "signed_relative_difference": 2.039959146572892e-16
+      "coordinate": "1/4",
+      "signed_relative_difference": 2.2338412195042505e-16
     }
   },
   "D": {
@@ -28,17 +92,81 @@
       "plotted_value_inside": 29,
       "colossus_spline_inside": 1
     },
+    "references": {
+      "legacy": {
+        "reference_kind": "rational_midpoint",
+        "enclosures": 29,
+        "reference_inside": 29,
+        "residuals": {
+          "legacy": {
+            "coordinate": "0",
+            "signed_relative_difference": 0.0
+          },
+          "matched": {
+            "coordinate": "1/2",
+            "signed_relative_difference": -0.0016631792606682256
+          },
+          "sashimi": {
+            "coordinate": "13/2",
+            "signed_relative_difference": -3.9153588334798204e-16
+          },
+          "colossus_spline": {
+            "coordinate": "1/2",
+            "signed_relative_difference": -0.0016547299711564465
+          },
+          "colossus_direct": {
+            "coordinate": "1/2",
+            "signed_relative_difference": -0.001663179260654611
+          },
+          "astropy_growth": {
+            "coordinate": "1/2",
+            "signed_relative_difference": -0.0016631792606540345
+          }
+        }
+      },
+      "matched": {
+        "reference_kind": "rational_midpoint",
+        "enclosures": 29,
+        "reference_inside": 29,
+        "residuals": {
+          "legacy": {
+            "coordinate": "1/2",
+            "signed_relative_difference": 0.0016659500342144406
+          },
+          "matched": {
+            "coordinate": "0",
+            "signed_relative_difference": 0.0
+          },
+          "sashimi": {
+            "coordinate": "1/2",
+            "signed_relative_difference": 0.001665950034214409
+          },
+          "colossus_spline": {
+            "coordinate": "5/4",
+            "signed_relative_difference": 3.172156053155716e-05
+          },
+          "colossus_direct": {
+            "coordinate": "7",
+            "signed_relative_difference": 2.946002845622642e-12
+          },
+          "astropy_growth": {
+            "coordinate": "23/4",
+            "signed_relative_difference": 1.4729500927577188e-14
+          }
+        }
+      }
+    },
     "before": {
       "coordinate": "1/2",
-      "signed_relative_difference": -0.0016547299711564152
+      "signed_relative_difference": -0.0016547299711564465
     },
     "after": {
       "coordinate": "5/4",
-      "signed_relative_difference": 3.172156053163698e-05
+      "signed_relative_difference": 3.172156053155716e-05
     },
     "direct": {
       "coordinate": "7",
-      "signed_relative_difference": 2.9459847116950578e-12
+      "signed_relative_difference": 2.946002845622642e-12
     }
   },
   "dD_dz": {
@@ -49,17 +177,81 @@
       "plotted_value_inside": 29,
       "colossus_spline_inside": 0
     },
+    "references": {
+      "legacy": {
+        "reference_kind": "rational_midpoint",
+        "enclosures": 29,
+        "reference_inside": 29,
+        "residuals": {
+          "legacy": {
+            "coordinate": "0",
+            "signed_relative_difference": 0.0
+          },
+          "matched": {
+            "coordinate": "0",
+            "signed_relative_difference": 0.02481720096771409
+          },
+          "sashimi": {
+            "coordinate": "0",
+            "signed_relative_difference": -8.359752497548443e-16
+          },
+          "colossus_spline": {
+            "coordinate": "0",
+            "signed_relative_difference": 0.0249054025385154
+          },
+          "colossus_direct": {
+            "coordinate": "0",
+            "signed_relative_difference": 0.024817200967740646
+          },
+          "astropy_growth": {
+            "coordinate": "0",
+            "signed_relative_difference": 0.024817200967741725
+          }
+        }
+      },
+      "matched": {
+        "reference_kind": "rational_midpoint",
+        "enclosures": 29,
+        "reference_inside": 29,
+        "residuals": {
+          "legacy": {
+            "coordinate": "0",
+            "signed_relative_difference": -0.024216222116763567
+          },
+          "matched": {
+            "coordinate": "0",
+            "signed_relative_difference": 0.0
+          },
+          "sashimi": {
+            "coordinate": "0",
+            "signed_relative_difference": -0.024216222116764382
+          },
+          "colossus_spline": {
+            "coordinate": "1/2",
+            "signed_relative_difference": -0.0005251724980313237
+          },
+          "colossus_direct": {
+            "coordinate": "7",
+            "signed_relative_difference": -4.376129362203825e-12
+          },
+          "astropy_growth": {
+            "coordinate": "0",
+            "signed_relative_difference": 2.6965629212786207e-14
+          }
+        }
+      }
+    },
     "before": {
       "coordinate": "0",
-      "signed_relative_difference": 0.02490540253851537
+      "signed_relative_difference": 0.0249054025385154
     },
     "after": {
       "coordinate": "1/2",
-      "signed_relative_difference": -0.0005251724980312783
+      "signed_relative_difference": -0.0005251724980313237
     },
     "direct": {
       "coordinate": "7",
-      "signed_relative_difference": -4.37621336466306e-12
+      "signed_relative_difference": -4.376129362203825e-12
     }
   },
   "delta_c": {
@@ -67,20 +259,84 @@
     "enclosures": {
       "returned": 29,
       "end_to_end_kernel_checked": 29,
-      "plotted_value_inside": 28,
+      "plotted_value_inside": 29,
       "colossus_spline_inside": 0
+    },
+    "references": {
+      "legacy": {
+        "reference_kind": "rational_midpoint",
+        "enclosures": 29,
+        "reference_inside": 29,
+        "residuals": {
+          "legacy": {
+            "coordinate": "0",
+            "signed_relative_difference": 0.0
+          },
+          "matched": {
+            "coordinate": "1/2",
+            "signed_relative_difference": 0.0016659500342144406
+          },
+          "sashimi": {
+            "coordinate": "13/2",
+            "signed_relative_difference": 2.9216375911076405e-16
+          },
+          "colossus_spline": {
+            "coordinate": "1/2",
+            "signed_relative_difference": 0.0016574726408115094
+          },
+          "colossus_direct": {
+            "coordinate": "1/2",
+            "signed_relative_difference": 0.0016659500342007957
+          },
+          "astropy_growth": {
+            "coordinate": "1/2",
+            "signed_relative_difference": 0.001665950034200187
+          }
+        }
+      },
+      "matched": {
+        "reference_kind": "rational_midpoint",
+        "enclosures": 29,
+        "reference_inside": 29,
+        "residuals": {
+          "legacy": {
+            "coordinate": "1/2",
+            "signed_relative_difference": -0.0016631792606682256
+          },
+          "matched": {
+            "coordinate": "0",
+            "signed_relative_difference": 0.0
+          },
+          "sashimi": {
+            "coordinate": "1/2",
+            "signed_relative_difference": -0.0016631792606682239
+          },
+          "colossus_spline": {
+            "coordinate": "5/4",
+            "signed_relative_difference": -3.172055430614425e-05
+          },
+          "colossus_direct": {
+            "coordinate": "7",
+            "signed_relative_difference": -2.9459869505170342e-12
+          },
+          "astropy_growth": {
+            "coordinate": "23/4",
+            "signed_relative_difference": -1.4833836277830407e-14
+          }
+        }
+      }
     },
     "before": {
       "coordinate": "1/2",
-      "signed_relative_difference": 0.001657472640811508
+      "signed_relative_difference": 0.0016574726408115094
     },
     "after": {
       "coordinate": "5/4",
-      "signed_relative_difference": -3.172055430613968e-05
+      "signed_relative_difference": -3.172055430614425e-05
     },
     "direct": {
       "coordinate": "7",
-      "signed_relative_difference": -2.9459473810118595e-12
+      "signed_relative_difference": -2.9459869505170342e-12
     }
   },
   "sigma": {
@@ -91,9 +347,73 @@
       "plotted_value_inside": 73,
       "colossus_spline_inside": 73
     },
+    "references": {
+      "legacy": {
+        "reference_kind": "rational_midpoint",
+        "enclosures": 73,
+        "reference_inside": 73,
+        "residuals": {
+          "legacy": {
+            "coordinate": "1/1000000",
+            "signed_relative_difference": 0.0
+          },
+          "matched": {
+            "coordinate": "1/1000000",
+            "signed_relative_difference": 0.016703272694586466
+          },
+          "sashimi": {
+            "coordinate": "1/1000000",
+            "signed_relative_difference": -1.6092382811336046e-15
+          },
+          "colossus_spline": {
+            "coordinate": "1/1000000",
+            "signed_relative_difference": 0.016722758880559865
+          },
+          "colossus_direct": {
+            "coordinate": "1/1000000",
+            "signed_relative_difference": 0.016713643584217307
+          },
+          "fixed_band": {
+            "coordinate": "1/1000000",
+            "signed_relative_difference": 0.01670327409584796
+          }
+        }
+      },
+      "matched": {
+        "reference_kind": "binary64",
+        "enclosures": 73,
+        "reference_inside": 73,
+        "residuals": {
+          "legacy": {
+            "coordinate": "1/1000000",
+            "signed_relative_difference": -0.01642885701579133
+          },
+          "matched": {
+            "coordinate": "1/1000000",
+            "signed_relative_difference": 0.0
+          },
+          "sashimi": {
+            "coordinate": "1/1000000",
+            "signed_relative_difference": -0.016428857015792914
+          },
+          "colossus_spline": {
+            "coordinate": "56234132519",
+            "signed_relative_difference": 0.00012348570120185298
+          },
+          "colossus_direct": {
+            "coordinate": "44456985251/25000000",
+            "signed_relative_difference": 0.00047990503649324737
+          },
+          "fixed_band": {
+            "coordinate": "56234132519/100",
+            "signed_relative_difference": 2.3486247199837693e-08
+          }
+        }
+      }
+    },
     "before": {
       "coordinate": "1/1000000",
-      "signed_relative_difference": 0.01672275888055987
+      "signed_relative_difference": 0.016722758880559865
     },
     "after": {
       "coordinate": "56234132519",
@@ -116,9 +436,73 @@
       "plotted_value_inside": 73,
       "colossus_spline_inside": 73
     },
+    "references": {
+      "legacy": {
+        "reference_kind": "rational_midpoint",
+        "enclosures": 73,
+        "reference_inside": 73,
+        "residuals": {
+          "legacy": {
+            "coordinate": "1/1000000",
+            "signed_relative_difference": 0.0
+          },
+          "matched": {
+            "coordinate": "1/1000000",
+            "signed_relative_difference": 0.033685544707882785
+          },
+          "sashimi": {
+            "coordinate": "1/1000000",
+            "signed_relative_difference": -3.210321844830819e-15
+          },
+          "colossus_spline": {
+            "coordinate": "1/1000000",
+            "signed_relative_difference": 0.033725168425697116
+          },
+          "colossus_direct": {
+            "coordinate": "1/1000000",
+            "signed_relative_difference": 0.03370663305029492
+          },
+          "fixed_band": {
+            "coordinate": "1/1000000",
+            "signed_relative_difference": 0.03368554755721706
+          }
+        }
+      },
+      "matched": {
+        "reference_kind": "binary64",
+        "enclosures": 73,
+        "reference_inside": 73,
+        "residuals": {
+          "legacy": {
+            "coordinate": "1/1000000",
+            "signed_relative_difference": -0.032587806688737474
+          },
+          "matched": {
+            "coordinate": "1/1000000",
+            "signed_relative_difference": 0.0
+          },
+          "sashimi": {
+            "coordinate": "1/1000000",
+            "signed_relative_difference": -0.03258780668874058
+          },
+          "colossus_spline": {
+            "coordinate": "56234132519",
+            "signed_relative_difference": 0.00024698665112219597
+          },
+          "colossus_direct": {
+            "coordinate": "44456985251/25000000",
+            "signed_relative_difference": 0.0009600403818307275
+          },
+          "fixed_band": {
+            "coordinate": "56234132519/100",
+            "signed_relative_difference": 4.6972494716999405e-08
+          }
+        }
+      }
+    },
     "before": {
       "coordinate": "1/1000000",
-      "signed_relative_difference": 0.03372516842569707
+      "signed_relative_difference": 0.033725168425697116
     },
     "after": {
       "coordinate": "56234132519",
@@ -141,9 +525,73 @@
       "plotted_value_inside": 73,
       "colossus_spline_inside": 73
     },
+    "references": {
+      "legacy": {
+        "reference_kind": "rational_midpoint",
+        "enclosures": 73,
+        "reference_inside": 73,
+        "residuals": {
+          "legacy": {
+            "coordinate": "1/1000000",
+            "signed_relative_difference": 0.0
+          },
+          "matched": {
+            "coordinate": "1/1000000",
+            "signed_relative_difference": 0.05597842334840258
+          },
+          "sashimi": {
+            "coordinate": "1/100000",
+            "signed_relative_difference": -6.020192279861874e-15
+          },
+          "colossus_spline": {
+            "coordinate": "1/1000000",
+            "signed_relative_difference": 0.05560787647982499
+          },
+          "colossus_direct": {
+            "coordinate": "1/1000000",
+            "signed_relative_difference": 0.05599050244362878
+          },
+          "fixed_band": {
+            "coordinate": "1/1000000",
+            "signed_relative_difference": 0.05597857348354721
+          }
+        }
+      },
+      "matched": {
+        "reference_kind": "binary64",
+        "enclosures": 73,
+        "reference_inside": 73,
+        "residuals": {
+          "legacy": {
+            "coordinate": "1/1000000",
+            "signed_relative_difference": -0.053010953737956654
+          },
+          "matched": {
+            "coordinate": "1/1000000",
+            "signed_relative_difference": 0.0
+          },
+          "sashimi": {
+            "coordinate": "1/1000000",
+            "signed_relative_difference": -0.05301095373796014
+          },
+          "colossus_spline": {
+            "coordinate": "44456985251/250000",
+            "signed_relative_difference": -0.0008174831650036584
+          },
+          "colossus_direct": {
+            "coordinate": "88913970502/5",
+            "signed_relative_difference": 2.252431336739702e-05
+          },
+          "fixed_band": {
+            "coordinate": "100000000",
+            "signed_relative_difference": -2.9187228119609357e-05
+          }
+        }
+      }
+    },
     "before": {
       "coordinate": "1/1000000",
-      "signed_relative_difference": 0.05560787647982498
+      "signed_relative_difference": 0.05560787647982499
     },
     "after": {
       "coordinate": "44456985251/250000",
@@ -166,9 +614,73 @@
       "plotted_value_inside": 72,
       "colossus_spline_inside": 72
     },
+    "references": {
+      "legacy": {
+        "reference_kind": "rational_midpoint",
+        "enclosures": 72,
+        "reference_inside": 72,
+        "residuals": {
+          "legacy": {
+            "coordinate": "1/1000000",
+            "signed_relative_difference": 0.0
+          },
+          "matched": {
+            "coordinate": "316227766017/10",
+            "signed_relative_difference": 0.0453798406091388
+          },
+          "sashimi": {
+            "coordinate": "44456985251/25000000000000000",
+            "signed_relative_difference": 3.842383140375748e-15
+          },
+          "colossus_spline": {
+            "coordinate": "1/1000000",
+            "signed_relative_difference": -0.04521975653026211
+          },
+          "colossus_direct": {
+            "coordinate": "316227766017/10",
+            "signed_relative_difference": 0.045412187478239135
+          },
+          "fixed_band": {
+            "coordinate": "316227766017/10",
+            "signed_relative_difference": 0.04537981536086434
+          }
+        }
+      },
+      "matched": {
+        "reference_kind": "binary64",
+        "enclosures": 72,
+        "reference_inside": 72,
+        "residuals": {
+          "legacy": {
+            "coordinate": "1/1000000",
+            "signed_relative_difference": 0.047257593612834645
+          },
+          "matched": {
+            "coordinate": "1/1000000",
+            "signed_relative_difference": 0.0
+          },
+          "sashimi": {
+            "coordinate": "1/1000000",
+            "signed_relative_difference": 0.04725759361283855
+          },
+          "colossus_spline": {
+            "coordinate": "56234132519",
+            "signed_relative_difference": -0.0005859706665684632
+          },
+          "colossus_direct": {
+            "coordinate": "44456985251/25000000",
+            "signed_relative_difference": -0.0014904547414927036
+          },
+          "fixed_band": {
+            "coordinate": "56234132519/100",
+            "signed_relative_difference": -8.450745726227673e-08
+          }
+        }
+      }
+    },
     "before": {
       "coordinate": "1/1000000",
-      "signed_relative_difference": -0.04521975653026217
+      "signed_relative_difference": -0.04521975653026211
     },
     "after": {
       "coordinate": "56234132519",
@@ -191,9 +703,65 @@
       "plotted_value_inside": 29,
       "colossus_spline_inside": 29
     },
+    "references": {
+      "legacy": {
+        "reference_kind": "rational_midpoint",
+        "enclosures": 29,
+        "reference_inside": 29,
+        "residuals": {
+          "legacy": {
+            "coordinate": "0",
+            "signed_relative_difference": 0.0
+          },
+          "matched": {
+            "coordinate": "7",
+            "signed_relative_difference": -0.08160201958543108
+          },
+          "sashimi": {
+            "coordinate": "13/2",
+            "signed_relative_difference": -4.375948886633783e-15
+          },
+          "colossus_spline": {
+            "coordinate": "7",
+            "signed_relative_difference": -0.08168429528782847
+          },
+          "colossus_direct": {
+            "coordinate": "7",
+            "signed_relative_difference": -0.08153424127057916
+          }
+        }
+      },
+      "matched": {
+        "reference_kind": "binary64",
+        "enclosures": 29,
+        "reference_inside": 29,
+        "residuals": {
+          "legacy": {
+            "coordinate": "7",
+            "signed_relative_difference": 0.08885256863108036
+          },
+          "matched": {
+            "coordinate": "0",
+            "signed_relative_difference": 0.0
+          },
+          "sashimi": {
+            "coordinate": "7",
+            "signed_relative_difference": 0.0888525686310759
+          },
+          "colossus_spline": {
+            "coordinate": "7",
+            "signed_relative_difference": -8.958610989132039e-05
+          },
+          "colossus_direct": {
+            "coordinate": "7",
+            "signed_relative_difference": 7.380059222400281e-05
+          }
+        }
+      }
+    },
     "before": {
       "coordinate": "7",
-      "signed_relative_difference": -0.08168429528782843
+      "signed_relative_difference": -0.08168429528782847
     },
     "after": {
       "coordinate": "7",
@@ -212,9 +780,65 @@
       "plotted_value_inside": 29,
       "colossus_spline_inside": 29
     },
+    "references": {
+      "legacy": {
+        "reference_kind": "rational_midpoint",
+        "enclosures": 29,
+        "reference_inside": 29,
+        "residuals": {
+          "legacy": {
+            "coordinate": "0",
+            "signed_relative_difference": 0.0
+          },
+          "matched": {
+            "coordinate": "7",
+            "signed_relative_difference": -0.06733543078500914
+          },
+          "sashimi": {
+            "coordinate": "13/2",
+            "signed_relative_difference": -3.258263841387943e-15
+          },
+          "colossus_spline": {
+            "coordinate": "7",
+            "signed_relative_difference": -0.06741184407229248
+          },
+          "colossus_direct": {
+            "coordinate": "7",
+            "signed_relative_difference": -0.06728164657306579
+          }
+        }
+      },
+      "matched": {
+        "reference_kind": "binary64",
+        "enclosures": 29,
+        "reference_inside": 29,
+        "residuals": {
+          "legacy": {
+            "coordinate": "7",
+            "signed_relative_difference": 0.07219683582671561
+          },
+          "matched": {
+            "coordinate": "0",
+            "signed_relative_difference": 0.0
+          },
+          "sashimi": {
+            "coordinate": "7",
+            "signed_relative_difference": 0.07219683582671273
+          },
+          "colossus_spline": {
+            "coordinate": "0",
+            "signed_relative_difference": 8.583785275399518e-05
+          },
+          "colossus_direct": {
+            "coordinate": "7",
+            "signed_relative_difference": 5.7667261863102215e-05
+          }
+        }
+      }
+    },
     "before": {
       "coordinate": "7",
-      "signed_relative_difference": -0.0674118440722925
+      "signed_relative_difference": -0.06741184407229248
     },
     "after": {
       "coordinate": "0",

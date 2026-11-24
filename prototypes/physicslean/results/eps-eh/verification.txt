@@ -164,5 +164,7 @@ full-slopes/RejectedZero.log: Tactic `decide` failed to reduce
 invalid-out.log: Tactic `decide` failed to reduce
 
 Publication checks
-465 joined samples; 465 fully replayed primary enclosures; 291 two-resolution mass entries; 5 images verified. File links, witness names, input SHA-256 and exact endpoints checked.
+465 joined samples, 465 fully replayed primary EH/background enclosures and 291 two-resolution mass entries. File links, witness names, input SHA-256 and exact endpoints checked in the original certificate run.
+Dual-reference replot from those certificates: all 465 SASHIMI-model and 465 matched-model reference values fall in their respective exact primary intervals. All 5,464 populated signed difference fields in matched-samples.csv agree with (value-reference)/reference computed with rational arithmetic before conversion to binary64.
+The comparison PDF and diagnostics PDF each contain 3 pages; all 6 PNG files decode successfully. tests/test_plot_eh_comparison.py checks series identity, styling and signed values on all three axes against the archived inputs.
 See scripts/reproduce_eps_eh.sh for the full commands.
