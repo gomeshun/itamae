@@ -1,4 +1,4 @@
-"""Check the plotted series and both residuals against the published physical inputs."""
+"""Check five-panel comparisons against the published models and exact residuals."""
 
 from contextlib import contextmanager
 from fractions import Fraction
@@ -28,6 +28,22 @@ plots = import_module("plot_eh_match")
 
 MATCHED = PROJECT / "results" / "eps-eh"
 BASELINE = PROJECT / "results" / "eps-plots"
+SOURCES = {
+    "legacy",
+    "matched",
+    "sashimi",
+    "colossus_spline",
+    "colossus_direct",
+    "fixed_band",
+    "astropy_growth",
+}
+PANELS = (
+    (None, "value"),
+    ("legacy", "absolute"),
+    ("legacy", "signed"),
+    ("matched", "absolute"),
+    ("matched", "signed"),
+)
 
 
 def document(directory, name):
@@ -115,16 +131,19 @@ class MatchedComparisonTest(unittest.TestCase):
     def inspect_panel(self, q, rows, expected):
         selected = [row for row in rows if row["quantity"] == q.key]
         self.assertEqual({Fraction(row["coordinate"]) for row in selected}, set(expected))
-        fig, axes = plt.subplots(3, sharex=True)
+        fig, axes = plt.subplots(len(PANELS), sharex=True)
         try:
             plots.curves_panel(axes, q, selected)
             active = set(next(iter(expected.values())))
             xs = [float(x) for x in expected]
             styles = {}
-            for row_number, (ax, base) in enumerate(zip(axes, (None, "legacy", "matched"))):
-                with self.subTest(quantity=q.key, row=row_number):
-                    model_lines = [line for line in ax.lines if line.get_gid() is not None]
+            for (base, mode), ax in zip(PANELS, axes, strict=True):
+                with self.subTest(quantity=q.key, base=base, mode=mode):
+                    model_lines = [line for line in ax.lines if line.get_gid() in SOURCES]
                     self.assertCountEqual([line.get_gid() for line in model_lines], active)
+                    expected_zeros = {}
+                    if base is not None:
+                        self.assertEqual(ax.get_yscale(), "log" if mode == "absolute" else "linear")
                     for line in model_lines:
                         source = line.get_gid()
                         self.assertTrue(line.get_visible())
@@ -132,21 +151,44 @@ class MatchedComparisonTest(unittest.TestCase):
                         style = (line.get_color(), line.get_marker(), line.get_linestyle())
                         self.assertEqual(style, styles.setdefault(source, style))
                         np.testing.assert_array_equal(line.get_xdata(), xs)
-                        target = [
-                            float(v[source]) * q.factor
-                            if base is None
-                            else float(100 * (v[source] - v[base]) / v[base])
-                            for v in expected.values()
-                        ]
-                        # Percentage scaling may be rounded before or after float conversion.
-                        # Zero absolute tolerance preserves sub-ULP cancellations at the reference.
+                        if mode == "value":
+                            target = [float(v[source]) * q.factor for v in expected.values()]
+                        else:
+                            ratios = [
+                                100 * (v[source] - v[base]) / v[base] for v in expected.values()
+                            ]
+                            if mode == "absolute":
+                                target = [float(abs(r)) if r else np.nan for r in ratios]
+                                zero_xs = [x for x, r in zip(xs, ratios, strict=True) if not r]
+                                if zero_xs:
+                                    expected_zeros[f"zero-{source}"] = zero_xs
+                            else:
+                                target = [float(r) for r in ratios]
+                        data = np.asarray(line.get_ydata(), dtype=float)
+                        np.testing.assert_array_equal(np.isnan(data), np.isnan(target))
                         np.testing.assert_allclose(
-                            line.get_ydata(),
+                            data,
                             target,
                             rtol=4 * np.finfo(float).eps,
                             atol=0,
-                            err_msg=f"{q.key}: {source} against {base}",
+                            equal_nan=True,
+                            err_msg=f"{q.key}: {source} against {base} ({mode})",
                         )
+                    markers = [
+                        line for line in ax.lines if (line.get_gid() or "").startswith("zero-")
+                    ]
+                    self.assertCountEqual(
+                        [line.get_gid() for line in markers], expected_zeros.keys()
+                    )
+                    for marker in markers:
+                        self.assertTrue(marker.get_visible())
+                        self.assertNotIn(marker.get_marker(), (None, "None", ""))
+                        self.assertEqual(marker.get_transform(), ax.get_xaxis_transform())
+                        np.testing.assert_array_equal(
+                            marker.get_xdata(), expected_zeros[marker.get_gid()]
+                        )
+            np.testing.assert_array_equal(axes[1].get_ylim(), axes[3].get_ylim())
+            np.testing.assert_array_equal(axes[2].get_ylim(), axes[4].get_ylim())
         finally:
             plt.close(fig)
         for row in selected:
@@ -176,7 +218,7 @@ class MatchedComparisonTest(unittest.TestCase):
         self.assertNotEqual(midpoint(bound), values[x]["matched"])
         self.assertEqual(Fraction(row["matched_reference_exact"]), values[x]["matched"])
         legacy = by_coordinate(document(BASELINE, "kernel")["rows"], "mass_msun")[x]["F"]
-        fig, axes = plt.subplots(3, sharex=True)
+        fig, axes = plt.subplots(len(PANELS), sharex=True)
         try:
             plots.curves_panel(axes, q, [r for r in self.records if r["quantity"] == q.key])
             whiskers = [
@@ -202,6 +244,17 @@ class MatchedComparisonTest(unittest.TestCase):
         # The reference lines coincide, but the binary64 Colossus residual is nonzero.
         self.inspect_panel(q, self.records, sources)
 
+    def test_all_predictions_equal_gives_only_zero_markers_on_log_axes(self):
+        q = next(q for q in plots.BACKGROUND if q.key == "D")
+        row = next(
+            r for r in self.records if r["quantity"] == "D" and r["coordinate"] == "0"
+        ).copy()
+        # At z=0, replace the one rounded SASHIMI prediction by the exact normalization D(0)=1.
+        row.update(sashimi=1.0, rel_sashimi_vs_legacy=0.0, rel_sashimi_vs_matched=0.0)
+        values = dict(self.source_values(q)[0], sashimi=Fraction(1))
+        self.assertEqual(set(values.values()), {Fraction(1)})
+        self.inspect_panel(q, [row], {Fraction(0): values})
+
     def test_astropy_wholly_unavailable_for_a_quantity_is_omitted(self):
         q = next(q for q in plots.BACKGROUND if q.key == "D")
         expected = self.source_values(q)
@@ -213,7 +266,7 @@ class MatchedComparisonTest(unittest.TestCase):
     def test_incomplete_astropy_grid_is_reported(self):
         q = next(q for q in plots.BACKGROUND if q.key == "D")
         with without_astropy_growth_at({Fraction(1, 4)}) as baseline:
-            fig, axes = plt.subplots(3, sharex=True)
+            fig, axes = plt.subplots(len(PANELS), sharex=True)
             try:
                 with self.assertRaisesRegex(ValueError, "astropy_growth"):
                     rows = plots.comparison_rows(MATCHED, baseline)

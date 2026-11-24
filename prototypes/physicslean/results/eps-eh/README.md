@@ -4,15 +4,19 @@
 
 ## 比較図と基準値
 
-[比較 PDF](matched-comparison.pdf) の各量について、上段に各実装の計算値と、旧処方・整合後それぞれの Lean カーネル検査済み区間を示す。中段の「Lean · SASHIMI 基準」は従来の SASHIMI-C 処方を Lean で評価した値、下段の「Lean · Colossus 基準」は Colossus に処方をそろえて Lean で評価した値を基準にする。各量で三つの段に同じ計算系列を載せ、色と線種もそろえた。
+[比較 PDF](matched-comparison.pdf) は横長5ページで、各ページの左右に二つの量を並べる。それぞれの最上段は各実装の計算値と、両方の Lean モデルでカーネル検査した包含区間を示す。続く2段は従来の SASHIMI-C 処方を Lean で評価した値（SASHIMI 基準）、最後の2段は Colossus に処方をそろえて Lean で評価した値（Colossus 基準）からの相対差を示す。各量で5段を通して同じ系列、色、線種を使う。
 
-| ページ | 量と標本 |
-|---|---|
-| [1. 質量分散と条件付き密度](matched-mass.png) | 物理質量73点の $\sigma(M), S(M), dS/dM$ と、親自身を除いた72点の条件付き密度 $F$ |
-| [2. 背景膨張・成長・崩壊障壁](matched-background.png) | 赤方偏移29点の $H(z), D(z), dD/dz, \delta_c(z)$。Astropy の背景から得た量も併記 |
-| [3. ホストの質量履歴](matched-growth-host.png) | 同じ赤方偏移29点のホスト $M_{200}(z)$ と、SASHIMI-C のビリアル換算を用いた質量変化率 |
+| ページ | 左の量 | 右の量 | 標本 |
+|---|---|---|---|
+| [1. 質量ゆらぎと分散](matched-mass.png) | $\sigma(M)$ | $S(M)=\sigma^2$ | 物理質量73点 |
+| [2. 分散の質量微分と条件付き密度](matched-derivative-kernel.png) | $dS/dM$ | $F$ | 質量微分は73点、条件付き密度は親自身を除く72点 |
+| [3. 背景膨張と線形成長](matched-background.png) | $H(z)$ | $D(z)$ | 赤方偏移29点 |
+| [4. 成長率と崩壊障壁](matched-growth-barrier.png) | $dD/dz$ | $\delta_c(z)$ | 赤方偏移29点 |
+| [5. ホストの質量履歴](matched-growth-host.png) | $M_{200}(z)$ | SASHIMI-C のビリアル換算を含む質量変化率 | 赤方偏移29点 |
 
-各計算系列の値を $x$、基準値を $b$ とすると、図の相対差は $100(x/b-1)$ [%] である。負の微分にも元の符号でこの式を適用する。各量の中段と下段は同じ縦軸範囲を使う。$H(z)$ の相対差は線形目盛、他の量はゼロの両側を表示する対称対数目盛で、$\pm 10^{-6}$ % の内側は線形である。CSV の `legacy_reference_exact`、`matched_reference_exact` はこの分母の正確な有理数を記録する。`rel_{key}_vs_legacy` と `rel_{key}_vs_matched` は各系列の $x/b-1$ を符号付きで保存する。例えば 0.001 は図の +0.1% に対応する。[数値比較 CSV](matched-samples.csv)
+系列の値を $x$、基準値を $b$ とおく。各基準の上の段は $100|x/b-1|$ [%] を対数目盛で示す。厳密に一致する標本は各対数軸に付けたゼロ専用欄に表示する。同じ基準の下の段は $100(x/b-1)$ [%] を線形目盛で示し、差の向きとゼロを読み取れる。負の微分にも元の符号で $x/b$ を計算する。同じ量の二つの対数パネルには共通の縦軸範囲を使い、二つの線形パネルの範囲もそろえた。
+
+CSV の `legacy_reference_exact` と `matched_reference_exact` は分母の正確な有理数を、`rel_{key}_vs_legacy` と `rel_{key}_vs_matched` は各系列の $x/b-1$ を符号付きで記録する。例えば CSV の −0.001 は、図の対数パネルで 0.1%、線形パネルで −0.1% に対応する。[数値比較 CSV](matched-samples.csv)
 
 - 旧処方の基準値（`legacy`）には、全量で前回の Lean 証明区間の有理数端点から計算した中点 $(L+U)/2$ を使う。[前回の結果](../eps-plots/README.md)
 - 整合後の基準値（`matched`）のうち $H,D,dD/dz,\delta_c$ は、対応する証明区間の有理数中点を使う。$H$ は両処方で共通なので、二つの相対差が一致する。$\sigma,S,dS/dM$ は Lean の binary64 数値積分の出力を使う。$F,M_{200}$、質量変化率はその分散を入力として Lean で下流の式を区間評価し、中点を binary64 に丸めた値を使う。相対差の分母には保存した各 binary64 値を正確な有理数として読み込む。これらの値が960セルの主計算で得た証明区間に入ることを各標本で確認した。真のモデル値 $y$ に対して、表示値 $x$ の絶対誤差は $|x-y|\le\max(|x-L|,|U-x|)$ で抑えられる。[区間端点 CSV](enclosures.csv) · [Lean の数値積分](lean.json)

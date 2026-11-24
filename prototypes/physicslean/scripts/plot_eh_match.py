@@ -14,6 +14,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.lines import Line2D
+from matplotlib.patches import Rectangle
 from matplotlib.ticker import LogLocator, MaxNLocator, NullLocator
 import numpy as np
 
@@ -363,7 +364,6 @@ SERIES_STYLE = {
     "fixed_band": ("Colossus · 同一帯域で再積分", "#246fa0", (0, (5, 2, 1, 2)), "+"),
     "astropy_growth": ("Astropy（成長量は積分）", "#555b34", (0, (2, 2, 5, 2)), "v"),
 }
-LINEAR_CORE_PCT = 1e-6
 
 
 def line_style(key):
@@ -380,33 +380,89 @@ def line_style(key):
     )
 
 
-def residual_axes(axes, peak):
-    """Keep both reference models on one signed percentage scale per observable."""
-    for ax in axes:
-        if peak <= 10 * LINEAR_CORE_PCT:
-            ax.yaxis.set_major_locator(MaxNLocator(nbins=3, symmetric=True))
-            ax.ticklabel_format(
-                axis="y", style="sci", scilimits=(-3, 3), useOffset=False, useMathText=True
-            )
-            limit = 1.12 * peak if peak else LINEAR_CORE_PCT
-            ax.set_ylim(-limit, limit)
+def exact_zero_strip(ax, zeros):
+    """Give exact matches their own categorical strip, outside the logarithmic axis."""
+    bottom, height = -0.24, 0.20
+    ax.add_patch(
+        Rectangle(
+            (0, bottom), 1, height, transform=ax.transAxes, fc="#f0f3f5", ec="none", clip_on=False
+        )
+    )
+    center = bottom + height / 2
+    ax.text(
+        -0.017,
+        center,
+        "0",
+        transform=ax.transAxes,
+        ha="right",
+        va="center",
+        color=MUTED,
+        fontsize=8,
+    )
+    # Separate coincident sources vertically without moving their sampled coordinates.
+    for index, (key, xs) in enumerate(zeros.items()):
+        lane = bottom + (index + 0.5) * height / len(zeros)
+        _, color, _, marker = SERIES_STYLE[key]
+        ax.plot(
+            xs,
+            np.full(len(xs), lane),
+            transform=ax.get_xaxis_transform(),
+            clip_on=False,
+            scaley=False,
+            linestyle="none",
+            marker=marker,
+            color=color,
+            mfc="none",
+            ms=3,
+            mew=0.65,
+            gid=f"zero-{key}",
+        )
+
+
+def set_residual_scales(log_axes, linear_axes, positive):
+    """Use the same scale for a given quantity across its two choices of reference."""
+    if positive:
+        log_min, log_max = np.log10([min(positive), max(positive)])
+        margin = np.clip((log_max - log_min) * 0.045, 0.12, 0.55)
+        log_limits = (10 ** (log_min - margin), 10 ** (log_max + margin))
+        peak = max(positive)
+    else:
+        log_limits, peak = (0.1, 10), 0.0
+
+    for ax in log_axes:
+        ax.set_ylim(*log_limits)
+        ax.set_yscale("log", base=10)
+        if positive:
+            ax.yaxis.set_major_locator(LogLocator(base=10, numticks=5))
         else:
-            ax.set_yscale("symlog", base=10, linthresh=LINEAR_CORE_PCT, linscale=0.65)
-            outer_exp = int(np.floor(np.log10(peak)))
-            inner_exp = (outer_exp + int(np.log10(LINEAR_CORE_PCT))) // 2
-            outer, inner = 10.0**outer_exp, 10.0**inner_exp
-            a, b = ["1" if e == 0 else rf"10^{{{e}}}" for e in (outer_exp, inner_exp)]
-            ax.set_yticks(
-                [-outer, -inner, 0, inner, outer],
-                ["$-" + a + "$", "$-" + b + "$", "0", "$" + b + "$", "$" + a + "$"],
+            ax.set_yticks([])
+            ax.text(
+                0.5,
+                0.5,
+                "全標本で相対差 0",
+                transform=ax.transAxes,
+                ha="center",
+                va="center",
+                color=MUTED,
+                fontsize=10,
             )
-            ax.set_ylim(-2 * peak, 2 * peak)
         ax.yaxis.set_minor_locator(NullLocator())
 
+    for ax in linear_axes:
+        limit = 1.10 * peak if peak else 1
+        ax.set_ylim(-limit, limit)
+        ax.yaxis.set_major_locator(MaxNLocator(nbins=4, symmetric=True))
+        # Keep the exponent on the actual ticks where the signed residuals are sub-ULP.
+        if 0 < peak < 0.001:
+            ax.yaxis.set_major_formatter(lambda y, _: f"{y:g}".replace("-", "−"))
+        ax.yaxis.set_minor_locator(NullLocator())
+        ax.axhline(0, color="#97a7ae", lw=0.85, zorder=1)
 
-def curves_panel(ax_tuple, q, ps):
-    top, mid, low = ax_tuple
-    x = [float(Q(p["coordinate"])) for p in ps]
+
+def curves_panel(axes, q, ps):
+    top, abs_sashimi, signed_sashimi, abs_colossus, signed_colossus = axes
+    x = np.array([float(Q(p["coordinate"])) for p in ps])
+    series = active_series(ps)
     for base in BASES:
         verified = [
             (
@@ -421,96 +477,123 @@ def curves_panel(ax_tuple, q, ps):
             top.vlines(
                 x_verified, lo, hi, color=SERIES_STYLE[base][1], lw=1.4, alpha=0.27, zorder=1
             )
-    peak = 0
-    for key in active_series(ps):
-        style = line_style(key)
-        style["gid"] = key
-        # Stagger the markers, never the data, so coincident series remain identifiable.
-        style["markevery"] = (SERIES_KEYS.index(key), max(len(SERIES_KEYS), len(ps) // 8))
+
+    styles = {
+        key: dict(
+            **line_style(key),
+            gid=key,
+            markevery=(SERIES_KEYS.index(key), max(len(SERIES_KEYS), len(ps) // 8)),
+        )
+        for key in series
+    }
+    for key, style in styles.items():
         top.plot(x, [float(point_value(p, key)) * q.factor for p in ps], **style)
-        for ax, base in zip((mid, low), BASES, strict=True):
-            pct = [float(100 * relative_difference(p, key, base)) for p in ps]
-            ax.plot(x, pct, **style)
-            peak = max(peak, max(map(abs, pct)))
-    residual_axes((mid, low), peak)
-    top.set_title(q.title, loc="left", fontsize=13.5, weight="bold", pad=8)
+    positive = []
+    for base, log_ax, lin_ax in (
+        ("legacy", abs_sashimi, signed_sashimi),
+        ("matched", abs_colossus, signed_colossus),
+    ):
+        zeros = {}
+        for key, style in styles.items():
+            exact = [100 * relative_difference(p, key, base) for p in ps]
+            signed = np.array([float(r) for r in exact])
+            is_zero = np.array([r == 0 for r in exact])
+            if np.any((signed == 0) & ~is_zero) or not np.isfinite(signed).all():
+                raise ValueError(
+                    f"Relative difference exceeds plotting precision for {q.key}, {key}"
+                )
+            magnitude = np.abs(signed)
+            positive.extend(magnitude[~is_zero])
+            if is_zero.any():
+                zeros[key] = x[is_zero]
+                magnitude[is_zero] = np.nan
+            log_ax.plot(x, magnitude, **style)
+            lin_ax.plot(x, signed, **style)
+        exact_zero_strip(log_ax, zeros)
+    set_residual_scales((abs_sashimi, abs_colossus), (signed_sashimi, signed_colossus), positive)
+
+    top.set_title(q.title, loc="left", fontsize=14, weight="bold", pad=8)
     top.set_ylabel(q.unit)
     if q.log_y:
         top.set_yscale("log")
         top.yaxis.set_major_locator(LogLocator(numticks=5))
     else:
         top.yaxis.set_major_locator(MaxNLocator(nbins=4))
-    mid.set_ylabel("Lean · SASHIMI 基準\n相対差 [%]", color=SERIES_STYLE["legacy"][1], fontsize=8.5)
-    low.set_ylabel(
-        "Lean · Colossus 基準\n相対差 [%]", color=SERIES_STYLE["matched"][1], fontsize=8.5
-    )
-    for ax in ax_tuple:
+    for ax in axes:
         ax.grid(axis="y", color=GRID, lw=0.65)
         ax.set_axisbelow(True)
         ax.margins(x=0.025)
-    for ax in (top, mid):
-        ax.tick_params(axis="x", which="both", labelbottom=False)
+    for ax in axes[:-1]:
+        ax.tick_params(axis="x", which="both", bottom=False, labelbottom=False)
     if q.group == "background":
-        low.set_xticks(range(8))
-        low.set_xlabel("赤方偏移 $z$")
+        signed_colossus.set_xticks(range(8))
+        signed_colossus.set_xlabel("赤方偏移 $z$")
     else:
-        low.set_xscale("log")
-        low.xaxis.set_major_locator(LogLocator(base=10, numticks=8))
-        low.xaxis.set_minor_locator(NullLocator())
-        low.set_xlabel(r"質量 $M$  [$M_\odot$]")
+        signed_colossus.set_xscale("log")
+        signed_colossus.xaxis.set_major_locator(LogLocator(base=10, numticks=8))
+        signed_colossus.xaxis.set_minor_locator(NullLocator())
+        signed_colossus.set_xlabel(r"物理質量 $M$  [$M_\odot$]")
 
 
 def curves(rows, quantities, title, subtitle, foot):
     groups = [[r for r in rows if r["quantity"] == q.key] for q in quantities]
-    nrows = (len(quantities) + 1) // 2
-    fig = plt.figure(figsize=(13.0, 5.85 * nrows + 1.8))
-    fig.text(0.096, 0.967, title, fontsize=21, weight="bold", va="top")
-    fig.text(0.096, 0.926 if nrows == 2 else 0.900, subtitle, fontsize=10.5, color=MUTED, va="top")
+    fig = plt.figure(figsize=(14.4, 10.8))
+    fig.text(0.029, 0.977, title, fontsize=22, weight="bold", va="top")
+    fig.text(0.031, 0.930, subtitle, fontsize=11, color=MUTED, va="top")
     available = {key for group in groups for key in active_series(group)}
-    keys = [key for key in SERIES_KEYS if key in available]
     fig.legend(
-        handles=[Line2D([], [], **line_style(k)) for k in keys],
+        handles=[Line2D([], [], **line_style(k)) for k in SERIES_KEYS if k in available],
         loc="upper left",
-        bbox_to_anchor=(0.091, 0.903 if nrows == 2 else 0.864),
+        bbox_to_anchor=(0.026, 0.907),
         frameon=False,
         ncol=3,
-        handlelength=3.5,
-        columnspacing=2.4,
+        handlelength=3.6,
+        columnspacing=2.8,
         fontsize=10,
     )
-    cells = fig.add_gridspec(
-        nrows,
-        2,
-        left=0.10,
+    # The gaps after the logarithmic axes include the dedicated exact-zero strips.
+    grid = fig.add_gridspec(
+        9,
+        len(groups),
+        height_ratios=[1.30, 0.23, 1, 0.43, 1, 0.30, 1, 0.43, 1],
+        left=0.169,
         right=0.981,
-        top=0.813 if nrows == 2 else 0.718,
-        bottom=0.121 if nrows == 2 else 0.205,
-        wspace=0.29,
-        hspace=0.36,
+        top=0.812,
+        bottom=0.121,
+        wspace=0.26,
+        hspace=0,
     )
-    for cell, q, group in zip(cells, quantities, groups, strict=True):
-        sub = cell.subgridspec(3, 1, height_ratios=[1.33, 1, 1], hspace=0.18)
-        top = fig.add_subplot(sub[0])
-        mid = fig.add_subplot(sub[1], sharex=top)
-        low = fig.add_subplot(sub[2], sharex=top)
-        curves_panel((top, mid, low), q, group)
+    for col, (q, ps) in enumerate(zip(quantities, groups, strict=True)):
+        top = fig.add_subplot(grid[0, col])
+        axes = [top, *(fig.add_subplot(grid[row, col], sharex=top) for row in (2, 4, 6, 8))]
+        curves_panel(axes, q, ps)
+    for row, base, metric in (
+        (2, "legacy", "相対差の絶対値 [%] · 対数"),
+        (4, "legacy", "符号付き相対差 [%] · 線形"),
+        (6, "matched", "相対差の絶対値 [%] · 対数"),
+        (8, "matched", "符号付き相対差 [%] · 線形"),
+    ):
+        box = grid[row, 0].get_position(fig)
+        y = (box.y0 + box.y1) / 2
+        ref_name = "SASHIMI 準拠 Lean" if base == "legacy" else "Colossus 準拠 Lean"
+        fig.text(
+            0.023,
+            y + 0.007,
+            ref_name + " 基準",
+            fontsize=10,
+            weight="bold",
+            color=SERIES_STYLE[base][1],
+            va="bottom",
+        )
+        fig.text(0.023, y - 0.002, metric, fontsize=10, color=INK, va="top")
     fig.text(
-        0.096,
-        0.066 if nrows == 2 else 0.095,
-        "上段の縦線は両 Lean モデルの保証区間。中・下段は 100 × (各系列 / 指定モデルの Lean 代表値 − 1)。",
+        0.031,
+        0.055,
+        "上段の縦線は各標本の Lean 保証区間。相対差は 100 × (各系列 / 基準の Lean 代表値 − 1)。対数目盛の直下の灰色帯は厳密に 0 の標本。",
         fontsize=10,
         color=INK,
     )
-    h_note = "膨張率のみ線形軸。" if any(q.key == "H" for q in quantities) else ""
-    fig.text(
-        0.096,
-        0.044 if nrows == 2 else 0.064,
-        h_note
-        + rf"相対差は符号付き対数軸（ゼロ付近の $\pm 10^{{{int(np.log10(LINEAR_CORE_PCT))}}}$ % は線形）。同じ量の中・下段は共通目盛。",
-        fontsize=9.5,
-        color=MUTED,
-    )
-    fig.text(0.096, 0.022 if nrows == 2 else 0.032, foot, fontsize=9.5, color=MUTED)
+    fig.text(0.031, 0.031, foot, fontsize=9.5, color=MUTED)
     return fig
 
 
@@ -527,39 +610,48 @@ def _render(data, baseline, out):
     out.mkdir(parents=True, exist_ok=True)
     save_tables(out, rows)
     style()
-    comparison = [
+    pages = [
         (
             "matched-mass",
-            curves(
-                rows,
-                MASS,
-                "質量分散と条件付き密度",
-                r"$z=0$ の質量分散　　親 $10^{12}M_\odot$・$z=0$、子 $z=1$ の EPS 条件付き密度",
-                "同一帯域の参照値は Colossus の伝達関数を再積分し、基準半径でも再規格化。条件付き密度は各方式の分散と成長を同じ Yang 式に入力。",
-            ),
+            MASS[:2],
+            "密度揺らぎの標準偏差と分散",
+            r"$z=0$ の $\sigma(M)$ と $S(M)=\sigma^2(M)$　　物理質量 $10^{-6}$–$10^{12}\,M_\odot$",
+            "SASHIMI は Ludlow フィット、Colossus は Eisenstein–Hu と球形トップハット。同一帯域の系列は Colossus の関数を再積分し、基準半径で再規格化。",
+        ),
+        (
+            "matched-derivative-kernel",
+            MASS[2:],
+            "分散の質量微分と EPS 条件付き密度",
+            r"親 $10^{12}\,M_\odot$・$z=0$、子 $z=1$ の条件付き密度",
+            "左上は負の質量微分の大きさ。相対差は元の符号で計算。右の条件付き密度は各処方の分散と成長を同じ Yang 式に入力。",
         ),
         (
             "matched-background",
-            curves(
-                rows,
-                BACKGROUND,
-                "宇宙膨張・線形成長・崩壊障壁",
-                r"平坦 ΛCDM　　$h=0.674$　　$\Omega_m=0.315$　　$D(0)=1$",
-                "膨張率は両 Lean モデルで同じ式。Astropy の成長量にはその膨張率から求めた成長積分を使用。",
-            ),
+            BACKGROUND[:2],
+            "宇宙膨張と線形成長",
+            r"平坦 ΛCDM　　$h=0.674$　　$\Omega_m=0.315$　　$D(0)=1$",
+            "膨張率は両 Lean モデルで同じ式。Astropy の成長因子はその背景膨張率から積分して評価。",
+        ),
+        (
+            "matched-growth-barrier",
+            BACKGROUND[2:],
+            "成長因子の赤方偏移微分と崩壊障壁",
+            r"平坦 ΛCDM　　$h=0.674$　　$\Omega_m=0.315$　　$\delta_c(z)=1.686/D(z)$",
+            "両処方で同じ崩壊閾値を採用。Astropy の成長量はその背景膨張率から評価。",
         ),
         (
             "matched-growth-host",
-            curves(
-                rows,
-                HOST,
-                "ホストハローの質量履歴と質量変化率",
-                r"$M_{200}(0)=10^{12}M_\odot$　　各方式の分散と成長を同じ SASHIMI-C の質量処方に入力",
-                "質量変化率は SASHIMI-C が用いるビリアル質量フィットを含む。重なる線は異なる位置のマーカーで表示。",
-            ),
+            HOST,
+            "ホストハローの質量履歴と質量変化率",
+            r"$M_{200}(0)=10^{12}\,M_\odot$　　各処方の分散と成長を同じ SASHIMI-C の質量履歴の式に入力",
+            "右の質量変化率は SASHIMI-C のビリアル質量フィットを含む。",
         ),
     ]
-    write_figures(out, "matched-comparison.pdf", comparison)
+    write_figures(
+        out,
+        "matched-comparison.pdf",
+        ((name, curves(rows, qs, title, sub, foot)) for name, qs, title, sub, foot in pages),
+    )
     diagnostics = [
         ("matched-enclosures", save_and_plot(mass_boxes, bounds, out)),
         ("matched-precision", error_budget(mass_boxes)),
