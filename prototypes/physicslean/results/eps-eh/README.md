@@ -1,5 +1,7 @@
 # Colossus とモデルをそろえた SASHIMI-C の EPS 計算
 
+両処方の物理的な仮定、比較した10量の数式、各区間をどこまで Lean カーネルで検査したかは、[数式と証明範囲の解説](models.md)（[PDF](models.pdf)）にまとめた。
+
 物理質量 $10^{-6}$～$10^{12}\,M_\odot$ の73点で、分散 $S(M)=\sigma^2(M,0)$ と Colossus 既定値の最大相対差は旧処方の **0.033725** から整合後の **0.0002470** になった。両実装で積分の上下限と振幅の決め方もそろえると **4.70 × 10⁻⁸**。これらは同じ入力で計算した二つの数値の差であり、数学的な誤差上限は別途区間評価で求めた。[比較 PDF](matched-comparison.pdf) · [数値比較 CSV](matched-samples.csv) · [質量・EPS の区間端点 CSV](enclosures.csv)
 
 ## 比較図と基準値
@@ -31,7 +33,7 @@
 
 ## 共通の物理モデルと単位
 
-- Colossus **1.4.0** の `modelEisenstein98` と同じバリオン音響振動を含む CDM＋バリオン伝達関数を実装した。背景は空間的に平坦な物質＋Λ。$h=0.674,\ \Omega_m=0.315,\ \Omega_b=0.049,\ n_s=0.965,\ \sigma_8=0.811$。$T_{\rm CMB}=2.7255\,\mathrm K$ は伝達関数の入力で、低赤方偏移の背景と成長では放射を無視した。今回の図は線形 CDM スペクトルを使う。Colossus が CAMB と照合したと記載する約 $100\,h/\mathrm{Mpc}$ を超える領域では、このフィットの外挿が微小質量の予測に入る。証明の範囲は指定された実数式の評価である。[Eisenstein & Hu (1998)](https://arxiv.org/abs/astro-ph/9709112) · [Colossus のパワースペクトル](https://bdiemer.bitbucket.io/colossus/cosmology_power_spectrum.html) · [Lean の伝達関数](../../src/SashimiEisensteinHu.lean)
+- Colossus **1.4.0** の `modelEisenstein98` と同じバリオン音響振動を含む CDM＋バリオン伝達関数を実装した。背景は空間的に平坦な物質＋Λ。$h=0.674,\ \Omega_m=0.315,\ \Omega_b=0.049,\ n_s=0.965,\ \sigma_8=0.811$。$T_{\rm CMB}=2.7255\,\mathrm K$ は伝達関数の入力で、低赤方偏移の背景と成長では放射を無視した。今回の図は線形 CDM スペクトルを使う。Colossus が CAMB と照合したと記載する約 $100\,h/\mathrm{Mpc}$ を超える領域では、このフィットの外挿が微小質量の予測に入る。証明の範囲は指定された実数式の評価である。[Eisenstein & Hu (1998)](https://arxiv.org/abs/astro-ph/9709112) · [Colossus のパワースペクトル](https://bdiemer.bitbucket.io/colossus/cosmology_cosmology.html#cosmology.power_spectrum.modelEisenstein98) · [Lean の伝達関数](../../src/SashimiEisensteinHu.lean)
 - 入力質量 $M$ は物理太陽質量。Colossus には $hM$ を渡す。窓半径 $R=(3hM/[4\pi\Omega_m\rho_{\rm crit,0}])^{1/3}$ は Mpc/h、$k$ は h/Mpc。ここで臨界密度の数値は Colossus と同じ $277536627245.708$。伝達関数の内部では $hk$ を使う。窓は $W(x)=3(\sin x-x\cos x)/x^3,\ W(0)=1$。[参照実装と単位換算](../../scripts/eps_eh_reference.py)
 - $P(k)=A k^{n_s}T(k)^2$。$J(R)=\int k^{2+n_s}T(k)^2W(kR)^2\,dk$ として、$S(M)=\sigma_8^2J(R)/J(8)$ を使う。分子と基準半径の積分を独立に囲み、共通の $2\pi^2$ を消去する。質量微分は同じ窓を積分内で解析微分したもの。赤方偏移の成長は平坦物質＋Λの Heath 解 $D(a)\propto E(a)\int_0^a da'/(a'E(a'))^3$ を $D(z=0)=1$ で規格化した。[分散の実装](../../src/SashimiEhVariance.lean) · [微分の成立条件](../../src/SashimiEhContinuity.lean) · [成長解](../../src/SashimiHeath.lean)
 - 前回と共通の物理質量と赤方偏移 $z=0,0.25,\ldots,7$ を使った。Yang の条件付き密度 $F$ は親 $10^{12}M_\odot,z=0$、子 $M,z=1$ の72組。各実装の $S$ と障壁 $1.686/D$ を同一の式に代入した。ホスト量も同じ SASHIMI-C の質量履歴とビリアル質量への換算に、各方式の分散と成長率を入力した。Astropy の成長比較は `FlatLambdaCDM` の $E(a)$ と SciPy 積分から得た。[前回の実装・参照データ](../eps-plots/README.md) · [ホストと EPS の入力](downstream.json)
