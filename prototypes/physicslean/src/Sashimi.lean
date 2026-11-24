@@ -1,6 +1,8 @@
 import SashimiBackground
 import SashimiCusp
 import SashimiDerived
+import SashimiEpsKernel
+import SashimiEpsLudlow
 import SashimiErf
 import SashimiGrowth
 import SashimiGrowthVariance

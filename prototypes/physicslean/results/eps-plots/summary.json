@@ -1,0 +1,94 @@
+{
+  "H": {
+    "n": 29,
+    "max_relative_full_width": 2.2499365203553503e-29,
+    "sashimi_inside": 0,
+    "max_abs_relative_difference": {
+      "sashimi": 3.0136765184422716e-16,
+      "colossus": 2.2338412195042505e-16,
+      "astropy": 2.2338412195042505e-16
+    }
+  },
+  "D": {
+    "n": 29,
+    "max_relative_full_width": 6.370774063829199e-16,
+    "sashimi_inside": 22,
+    "max_abs_relative_difference": {
+      "sashimi": 3.9153588334798204e-16,
+      "colossus": 0.0016547299711564465,
+      "astropy": 0.0016631792606540345
+    }
+  },
+  "dD_dz": {
+    "n": 29,
+    "max_relative_full_width": 3.393070636658215e-15,
+    "sashimi_inside": 21,
+    "max_abs_relative_difference": {
+      "sashimi": 8.359752497548443e-16,
+      "colossus": 0.0249054025385154,
+      "astropy": 0.024817200967741725
+    }
+  },
+  "delta_c": {
+    "n": 29,
+    "max_relative_full_width": 6.370774063829319e-16,
+    "sashimi_inside": 20,
+    "max_abs_relative_difference": {
+      "sashimi": 2.9216375911076405e-16,
+      "colossus": 0.0016574726408115094,
+      "astropy": 0.001665950034200187
+    }
+  },
+  "sigma": {
+    "n": 73,
+    "max_relative_full_width": 5.234508013480017e-18,
+    "sashimi_inside": 1,
+    "max_abs_relative_difference": {
+      "sashimi": 1.6092382811336046e-15,
+      "colossus": 0.016722758880559865
+    }
+  },
+  "S": {
+    "n": 73,
+    "max_relative_full_width": 1.0469016026960033e-17,
+    "sashimi_inside": 0,
+    "max_abs_relative_difference": {
+      "sashimi": 3.210321844830819e-15,
+      "colossus": 0.033725168425697116
+    }
+  },
+  "dS_dM": {
+    "n": 73,
+    "max_relative_full_width": 5.735499507924262e-17,
+    "sashimi_inside": 1,
+    "max_abs_relative_difference": {
+      "sashimi": 6.020192279861874e-15,
+      "colossus": 0.05560787647982512
+    }
+  },
+  "F": {
+    "n": 72,
+    "max_relative_full_width": 4.451782195797133e-15,
+    "sashimi_inside": 31,
+    "max_abs_relative_difference": {
+      "sashimi": 3.842383140375748e-15,
+      "colossus": 0.04521975653026211
+    }
+  },
+  "M200": {
+    "n": 29,
+    "max_relative_full_width": 1.1441217929348097e-12,
+    "sashimi_inside": 29,
+    "max_abs_relative_difference": {
+      "sashimi": 4.375948886633783e-15
+    }
+  },
+  "dM_dz": {
+    "n": 29,
+    "max_relative_full_width": 1.701413790364999e-12,
+    "sashimi_inside": 29,
+    "max_abs_relative_difference": {
+      "sashimi": 3.258263841387943e-15
+    }
+  }
+}

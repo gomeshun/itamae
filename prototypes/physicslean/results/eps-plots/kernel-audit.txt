@@ -1,0 +1,4 @@
+'EpsKernel.sound' depends on axioms: [propext, Classical.choice, Quot.sound]
+'EpsLudlow.sound' depends on axioms: [propext, Classical.choice, Quot.sound]
+'EpsLudlow.variance_derivative' depends on axioms: [propext, Classical.choice, Quot.sound]
+'concrete' depends on axioms: [propext, Classical.choice, Quot.sound]
