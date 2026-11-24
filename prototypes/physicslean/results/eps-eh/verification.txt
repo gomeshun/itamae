@@ -171,5 +171,13 @@ The relative difference is x/b - 1 for the fixed rational reference b. An indepe
 The 5 landscape pages of matched-comparison.pdf pair (sigma,S), (dS/dM,F), (H,D), (dD/dz,delta_c) and (M200,dM/dz). Dimensionless residuals use the same units as the CSV in both the signed linear panels and the absolute log panels. Positive log ordinates are drawn above the display floor; separate strip markers identify exact equality of the displayed point and zero membership of the checked interval.
 The 3 pages of matched-linear-zoom.pdf repeat the mass, derivative/conditional density, and host pairs. For all 6 quantities, the original-value and both log axis limits match the full view, while both signed linear panels contain every nominal curve. matched-diagnostics.pdf has 3 pages. All 8 PNG files decode successfully.
 python -m unittest discover -s tests -p test_plot_eh_comparison.py -v passed. The suite checks series and their signed and absolute residuals, the interval glyphs under both references, negative divisors, zero-containing and singleton intervals, and the treatment of unchecked inputs.
-SHA-256 comparisons matched the previous publication for matched-samples.csv, enclosures.csv, matched-summary.json, matched-enclosures.png, matched-precision.png and matched-transfer-growth.png.
+7,680-cell comparison replot
+The main and zoom PDFs use all 349 refined intervals for the Colossus model wherever those reports provide a resolved, verified evaluator result. All 349 contain the corresponding numerical reference and are contained in the 960-cell intervals. Of these, 348 are strictly narrower and M200 at z=0 is the same singleton. The remaining 116 Colossus-model intervals and all 465 SASHIMI-model intervals use their closed kernel certificates.
+Each of the following commands exited 0. The selected intervals use finite integral bounds obtained from the evaluation of the proved Lean functions. The Lean files below check the downstream claims with finite input premises.
+lake env lean results/eps-eh/full-fine.lean
+lake env lean results/eps-eh/ConditionalFullDerivative.lean
+lake env lean results/eps-eh/kernel-bounds-fine.lean
+lake env lean results/eps-eh/host-bounds-fine.lean
+Axioms printed by these checks: propext, Classical.choice, Quot.sound.
+Every previous matched-samples.csv field compares equal. New columns identify the plotted rational endpoints, archive and validation status. SHA-256 comparisons still match enclosures.csv, matched-summary.json, matched-enclosures.png, matched-precision.png and matched-transfer-growth.png.
 See scripts/reproduce_eps_eh.sh for the full commands.

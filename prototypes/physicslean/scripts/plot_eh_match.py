@@ -28,6 +28,9 @@ else:
 
 
 BASES = ("legacy", "matched")
+KERNEL_CHECKED = "kernel_checked"
+EVALUATOR_RUNTIME = "proved_evaluator_runtime"
+FINE_CELLS = 7680
 SERIES_KEYS = (
     *BASES,
     "sashimi",
@@ -242,10 +245,17 @@ def _comparison_data(data, baseline):
     mass_lookup = {(r["quantity"], r["mass_msun"]): r for r in mass_boxes}
     host_report = load(data, "host-bounds")
     host_rows = keyed(host_report["rows"], "z")
-    host_fine = keyed(load(data, "host-bounds-fine")["rows"], "z")
+    fine_reports = dict(bounds)
+    if (data / "host-bounds-fine.json").exists():
+        fine_reports["host-bounds-fine"] = load(data, "host-bounds-fine")
+    fine_inputs = refined_inputs(fine_reports)
+    host_keys = {q.key for q in HOST}
     for r in rows:
         key = r["quantity"]
         r["matched_fine_lo_exact"], r["matched_fine_hi_exact"] = "", ""
+        r["matched_fine_enclosure_source"] = ""
+        r["matched_fine_enclosure_status"] = "unresolved"
+        coordinate = Q(r["coordinate"])
         result = mass_lookup.get((key, r["coordinate"]))
         if result is not None:
             r["matched_lo_exact"], r["matched_hi_exact"] = result["lo"], result["hi"]
@@ -254,10 +264,10 @@ def _comparison_data(data, baseline):
                 result["fine_hi"],
             )
             source, checked = result["inputs"], result["end_to_end_kernel_replay"]
-        elif key in {q.key for q in HOST}:
-            host = host_rows[Q(r["coordinate"])]
+        elif key in host_keys:
+            host = host_rows[coordinate]
             box = host[key]
-            tight = host_fine[Q(r["coordinate"])][key]
+            tight = fine_inputs.get("host-bounds-fine", {}).get(coordinate, {}).get(key)
             if tight:
                 r["matched_fine_lo_exact"], r["matched_fine_hi_exact"] = tight["lo"], tight["hi"]
             r["matched_lo_exact"], r["matched_hi_exact"] = (
@@ -274,12 +284,22 @@ def _comparison_data(data, baseline):
             )
         r["enclosure_source"] = source
         r["enclosure_status"] = (
-            ("kernel_checked" if checked else "proved_evaluator_runtime")
+            (KERNEL_CHECKED if checked else EVALUATOR_RUNTIME)
             if r["matched_lo_exact"]
             else "unresolved"
         )
         r["matched_enclosure_source"] = source
         r["matched_enclosure_status"] = r["enclosure_status"]
+        fine_name = Path(source).stem + "-fine"
+        fine_row = fine_inputs.get(fine_name, {}).get(coordinate, {})
+        if fine_row.get(key) and fine_row.get("status") not in ("unresolved", "unavailable"):
+            r["matched_fine_enclosure_source"] = fine_name + ".json"
+            r["matched_fine_enclosure_status"] = (
+                KERNEL_CHECKED
+                if fine_row.get("end_to_end_kernel_replayed", fine_row.get("kernel_replayed"))
+                is True
+                else EVALUATOR_RUNTIME
+            )
         # Keep the nominal numerical line even when an integral was unresolved.
         # Every published bound is checked against the exact reference used for this chart.
         for lo, hi in (
@@ -292,7 +312,66 @@ def _comparison_data(data, baseline):
                 raise ValueError(
                     f"Matched reference outside {lo}/{hi} for {key} at {r['coordinate']}"
                 )
+        selected = plot_enclosure_prefix(r, "matched")
+        for field in ("lo_exact", "hi_exact", "enclosure_source", "enclosure_status"):
+            r["matched_plot_" + field] = (
+                r[selected + "_" + field]
+                if selected
+                else ("unresolved" if field == "enclosure_status" else "")
+            )
     return rows, bounds, mass_boxes
+
+
+def refined_inputs(reports):
+    """Recognize the four archived 7,680-cell evaluator outputs and their checked implications."""
+    result = {}
+    for name in ("full-fine", "derivative-full-fine", "kernel-bounds-fine", "host-bounds-fine"):
+        if name not in reports:
+            continue
+        doc = reports[name]
+        if doc.get("mesh", {}).get("cells", doc.get("cells")) != FINE_CELLS:
+            continue
+        rows = doc["rows"]
+        coordinate = "mass_msun"
+        if name == "full-fine":
+            if not (doc.get("propagation_kernel_replayed") and doc.get("radius_kernel_replayed")):
+                continue
+        elif name == "derivative-full-fine":
+            rows = [
+                r
+                for r in rows
+                if r.get("conditional_implication_kernel_checked") or r.get("kernel_replayed")
+            ]
+        elif name == "kernel-bounds-fine":
+            if not doc.get("kernel_replayed"):
+                continue
+        else:
+            if not doc.get("witness"):
+                continue
+            coordinate = "z"
+            rows = [r for r in rows if r.get("resolved")]
+        result[name] = keyed(rows, coordinate)
+    return result
+
+
+def plot_enclosure_prefix(row, source):
+    """Prefer a refined evaluator interval and otherwise use the closed kernel interval."""
+    fine = source == "matched" and row.get("matched_fine_enclosure_status") in (
+        KERNEL_CHECKED,
+        EVALUATOR_RUNTIME,
+    )
+    if fine and row.get("matched_fine_lo_exact") and row.get("matched_fine_hi_exact"):
+        return "matched_fine"
+    if row[source + "_enclosure_status"] == KERNEL_CHECKED:
+        return source
+    return None
+
+
+def plotting_enclosure(row, source):
+    selected = plot_enclosure_prefix(row, source)
+    if selected is None:
+        return None
+    return Q(row[selected + "_lo_exact"]), Q(row[selected + "_hi_exact"])
 
 
 def comparison_rows(data, baseline):
@@ -408,10 +487,11 @@ def residual_intervals(rows, source, base):
     """Map each checked numerator interval to the residual of its mathematical value."""
     xs, lower, upper = [], [], []
     for row in rows:
-        if row[source + "_enclosure_status"] != "kernel_checked":
+        enclosure = plotting_enclosure(row, source)
+        if enclosure is None:
             continue
         b = point_value(row, base)
-        lo, hi = sorted((Q(row[f"{source}_{side}_exact"]) - b) / b for side in ("lo", "hi"))
+        lo, hi = sorted((end - b) / b for end in enclosure)
         xs.append(float(Q(row["coordinate"])))
         lower.append(ratio_for_plot(lo))
         upper.append(ratio_for_plot(hi))
@@ -554,10 +634,10 @@ def curves_panel(axes, q, ps, *, zoom=False):
         verified = [
             (
                 float(Q(p["coordinate"])),
-                *sorted(float(Q(p[f"{base}_{side}_exact"])) * q.factor for side in ("lo", "hi")),
+                *sorted(float(end) * q.factor for end in box),
             )
             for p in ps
-            if p[base + "_enclosure_status"] == "kernel_checked"
+            if (box := plotting_enclosure(p, base)) is not None
         ]
         if verified:
             x_verified, lo, hi = zip(*verified, strict=True)
@@ -662,7 +742,14 @@ def curves(rows, quantities, title, subtitle, foot, *, zoom=False):
     fig.text(0.031, 0.930, subtitle, fontsize=11, color=MUTED, va="top")
     available = {key for group in groups for key in active_series(group)}
     handles = [Line2D([], [], **line_style(k)) for k in SERIES_KEYS if k in available]
-    for key, model in zip(BASES, ("SASHIMI", "Colossus"), strict=True):
+    matched_sources = {plot_enclosure_prefix(row, "matched") for group in groups for row in group}
+    refined = "matched_fine" in matched_sources
+    matched_label = "Colossus · カーネル検査"
+    if refined:
+        matched_label = "Colossus · 7,680 分割"
+        if "matched" in matched_sources:
+            matched_label += "／カーネル検査"
+    for key, model in zip(BASES, ("SASHIMI · カーネル検査", matched_label), strict=True):
         handles.append(
             Line2D(
                 [],
@@ -672,7 +759,7 @@ def curves(rows, quantities, title, subtitle, foot, *, zoom=False):
                 ms=10,
                 mew=2.4,
                 color=SERIES_STYLE[key][1],
-                label=f"Lean 保証区間 · {model} モデル",
+                label=f"Lean 区間 · {model}",
             )
         )
     fig.legend(
@@ -723,15 +810,17 @@ def curves(rows, quantities, title, subtitle, foot, *, zoom=False):
     fig.text(
         0.031,
         0.055,
-        "各点の縦棒は両 Lean モデルの保証区間。下4段は r = (x − b) / b。各段の基準値 b を固定して区間も換算。",
+        "縦棒は各標本の区間。7,680 分割は証明済み評価器で積分和を計算し、上下限への伝播をカーネルで検査。"
+        if refined
+        else "縦棒は各標本でカーネル検査した Lean の区間。",
         fontsize=10,
         color=INK,
     )
     fig.text(
         0.031,
         0.033,
-        "「一致」は系列の値が b と等しい標本。「0 を含む」はそのモデルの保証区間が b を含む標本。"
-        + ("　線形段は計算値付近を拡大。枠外へ続く区間の全幅は通常版に掲載。" if zoom else ""),
+        "相対差は r = (x − b) / b。基準値 b を固定して区間を換算。「一致」は x = b、「0 を含む」は区間に b が含まれる標本。"
+        + ("　線形段の区間全幅は通常版に掲載。" if zoom else ""),
         fontsize=9.5,
         color=MUTED,
     )
