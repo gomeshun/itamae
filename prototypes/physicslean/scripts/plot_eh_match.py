@@ -2,6 +2,7 @@
 
 import argparse
 import csv
+from dataclasses import dataclass
 from fractions import Fraction as Q
 from hashlib import sha256
 import json
@@ -380,28 +381,98 @@ def line_style(key):
     )
 
 
-def exact_zero_strip(ax, zeros):
-    """Give exact matches their own categorical strip, outside the logarithmic axis."""
-    bottom, height = -0.24, 0.20
-    ax.add_patch(
-        Rectangle(
-            (0, bottom), 1, height, transform=ax.transAxes, fc="#f0f3f5", ec="none", clip_on=False
+@dataclass
+class ResidualIntervals:
+    x: np.ndarray
+    lo: np.ndarray
+    hi: np.ndarray
+
+    @property
+    def magnitude_lo(self):
+        return np.maximum(0, np.maximum(self.lo, -self.hi))
+
+    @property
+    def magnitude_hi(self):
+        return np.maximum(np.abs(self.lo), np.abs(self.hi))
+
+
+def ratio_for_plot(r):
+    """Refuse to display a nonzero exact ratio as a zero due to float conversion."""
+    y = float(r)
+    if not np.isfinite(y) or (y == 0 and r != 0):
+        raise ValueError(f"Relative difference exceeds plotting precision: {r}")
+    return y
+
+
+def residual_intervals(rows, source, base):
+    """Map each checked numerator interval to the residual of its mathematical value."""
+    xs, lower, upper = [], [], []
+    for row in rows:
+        if row[source + "_enclosure_status"] != "kernel_checked":
+            continue
+        b = point_value(row, base)
+        lo, hi = sorted((Q(row[f"{source}_{side}_exact"]) - b) / b for side in ("lo", "hi"))
+        xs.append(float(Q(row["coordinate"])))
+        lower.append(ratio_for_plot(lo))
+        upper.append(ratio_for_plot(hi))
+    return ResidualIntervals(np.array(xs), np.array(lower), np.array(upper))
+
+
+def interval_bars(ax, xs, lo, hi, source, gid, *, log_floor=None):
+    """Draw checked endpoints at sampled x only. A log boundary is never an endpoint."""
+    if log_floor is not None:
+        visible = hi >= log_floor
+        xs, lo, hi = xs[visible], lo[visible], hi[visible]
+    if not len(xs):
+        return
+    color = SERIES_STYLE[source][1]
+    # A slim stroke over a wider one keeps identical intervals from masking each other.
+    width, cap, layer = (0.9, 2.7, 1.35) if source == "legacy" else (1.8, 3.8, 1.20)
+    drawn_lo = lo if log_floor is None else np.maximum(lo, log_floor)
+    ax.vlines(xs, drawn_lo, hi, color=color, lw=width, alpha=0.29, zorder=layer, gid=gid)
+    real_lo = np.ones(len(lo), dtype=bool) if log_floor is None else lo >= log_floor
+    ax.plot(
+        np.r_[xs[real_lo], xs],
+        np.r_[lo[real_lo], hi],
+        ls="none",
+        marker="_",
+        ms=cap,
+        mew=0.9,
+        color=color,
+        alpha=0.65,
+        zorder=layer,
+    )
+
+
+def exact_zero_strip(ax, zeros, boxes):
+    """Separate exact equality of point values from membership of zero in a certificate."""
+    for bottom, height, label, background in (
+        (-0.20, 0.17, "一致", "#f1f3f5"),
+        (-0.38, 0.15, "0 を含む", "#eaf3f1"),
+    ):
+        ax.add_patch(
+            Rectangle(
+                (0, bottom),
+                1,
+                height,
+                transform=ax.transAxes,
+                fc=background,
+                ec="none",
+                clip_on=False,
+            )
         )
-    )
-    center = bottom + height / 2
-    ax.text(
-        -0.017,
-        center,
-        "0",
-        transform=ax.transAxes,
-        ha="right",
-        va="center",
-        color=MUTED,
-        fontsize=8,
-    )
-    # Separate coincident sources vertically without moving their sampled coordinates.
-    for index, (key, xs) in enumerate(zeros.items()):
-        lane = bottom + (index + 0.5) * height / len(zeros)
+        ax.text(
+            -0.017,
+            bottom + height / 2,
+            label,
+            transform=ax.transAxes,
+            ha="right",
+            va="center",
+            color=MUTED,
+            fontsize=8,
+        )
+    for i, (key, xs) in enumerate(zeros.items()):
+        lane = -0.20 + (i + 0.5) * 0.17 / len(zeros)
         _, color, _, marker = SERIES_STYLE[key]
         ax.plot(
             xs,
@@ -409,7 +480,7 @@ def exact_zero_strip(ax, zeros):
             transform=ax.get_xaxis_transform(),
             clip_on=False,
             scaley=False,
-            linestyle="none",
+            ls="none",
             marker=marker,
             color=color,
             mfc="none",
@@ -417,17 +488,33 @@ def exact_zero_strip(ax, zeros):
             mew=0.65,
             gid=f"zero-{key}",
         )
+    for key, lane in zip(BASES, (-0.269, -0.343), strict=True):
+        box = boxes[key]
+        xs = box.x[(box.lo <= 0) & (box.hi >= 0)]
+        if len(xs):
+            ax.plot(
+                xs,
+                np.full(len(xs), lane),
+                transform=ax.get_xaxis_transform(),
+                clip_on=False,
+                scaley=False,
+                ls="none",
+                marker="|",
+                color=SERIES_STYLE[key][1],
+                ms=3,
+                mew=1.0,
+                gid=f"interval-zero-{key}",
+            )
 
 
-def set_residual_scales(log_axes, linear_axes, positive):
+def set_residual_scales(log_axes, linear_axes, positive, linear_peak):
     """Use the same scale for a given quantity across its two choices of reference."""
     if positive:
         log_min, log_max = np.log10([min(positive), max(positive)])
         margin = np.clip((log_max - log_min) * 0.045, 0.12, 0.55)
         log_limits = (10 ** (log_min - margin), 10 ** (log_max + margin))
-        peak = max(positive)
     else:
-        log_limits, peak = (0.1, 10), 0.0
+        log_limits = (0.1, 10)
 
     for ax in log_axes:
         ax.set_ylim(*log_limits)
@@ -449,21 +536,21 @@ def set_residual_scales(log_axes, linear_axes, positive):
         ax.yaxis.set_minor_locator(NullLocator())
 
     for ax in linear_axes:
-        limit = 1.10 * peak if peak else 1
+        limit = 1.10 * linear_peak if linear_peak else 1
         ax.set_ylim(-limit, limit)
         ax.yaxis.set_major_locator(MaxNLocator(nbins=4, symmetric=True))
         # Keep the exponent on the actual ticks where the signed residuals are sub-ULP.
-        if 0 < peak < 0.001:
+        if 0 < linear_peak < 0.001:
             ax.yaxis.set_major_formatter(lambda y, _: f"{y:g}".replace("-", "−"))
         ax.yaxis.set_minor_locator(NullLocator())
         ax.axhline(0, color="#97a7ae", lw=0.85, zorder=1)
 
 
-def curves_panel(axes, q, ps):
+def curves_panel(axes, q, ps, *, zoom=False):
     top, abs_sashimi, signed_sashimi, abs_colossus, signed_colossus = axes
     x = np.array([float(Q(p["coordinate"])) for p in ps])
     series = active_series(ps)
-    for base in BASES:
+    for base in reversed(BASES):
         verified = [
             (
                 float(Q(p["coordinate"])),
@@ -474,8 +561,13 @@ def curves_panel(axes, q, ps):
         ]
         if verified:
             x_verified, lo, hi = zip(*verified, strict=True)
-            top.vlines(
-                x_verified, lo, hi, color=SERIES_STYLE[base][1], lw=1.4, alpha=0.27, zorder=1
+            interval_bars(
+                top,
+                np.array(x_verified),
+                np.array(lo),
+                np.array(hi),
+                base,
+                f"interval-value-{base}",
             )
 
     styles = {
@@ -489,19 +581,16 @@ def curves_panel(axes, q, ps):
     for key, style in styles.items():
         top.plot(x, [float(point_value(p, key)) * q.factor for p in ps], **style)
     positive = []
-    for base, log_ax, lin_ax in (
+    boxes_by_base = {}
+    panel_pairs = (
         ("legacy", abs_sashimi, signed_sashimi),
         ("matched", abs_colossus, signed_colossus),
-    ):
+    )
+    for base, log_ax, lin_ax in panel_pairs:
         zeros = {}
         for key, style in styles.items():
-            exact = [100 * relative_difference(p, key, base) for p in ps]
-            signed = np.array([float(r) for r in exact])
-            is_zero = np.array([r == 0 for r in exact])
-            if np.any((signed == 0) & ~is_zero) or not np.isfinite(signed).all():
-                raise ValueError(
-                    f"Relative difference exceeds plotting precision for {q.key}, {key}"
-                )
+            signed = np.array([ratio_for_plot(relative_difference(p, key, base)) for p in ps])
+            is_zero = signed == 0
             magnitude = np.abs(signed)
             positive.extend(magnitude[~is_zero])
             if is_zero.any():
@@ -509,8 +598,32 @@ def curves_panel(axes, q, ps):
                 magnitude[is_zero] = np.nan
             log_ax.plot(x, magnitude, **style)
             lin_ax.plot(x, signed, **style)
-        exact_zero_strip(log_ax, zeros)
-    set_residual_scales((abs_sashimi, abs_colossus), (signed_sashimi, signed_colossus), positive)
+        boxes = {key: residual_intervals(ps, key, base) for key in BASES}
+        boxes_by_base[base] = boxes
+        exact_zero_strip(log_ax, zeros, boxes)
+
+    nominal_peak = max(positive, default=0.0)
+    for boxes in boxes_by_base.values():
+        for box in boxes.values():
+            for ends in (box.magnitude_lo, box.magnitude_hi):
+                positive.extend(ends[ends > 0])
+    linear_peak = nominal_peak if zoom else max(positive, default=0.0)
+    set_residual_scales(
+        (abs_sashimi, abs_colossus), (signed_sashimi, signed_colossus), positive, linear_peak
+    )
+    for base, log_ax, lin_ax in panel_pairs:
+        for key in reversed(BASES):
+            box = boxes_by_base[base][key]
+            interval_bars(lin_ax, box.x, box.lo, box.hi, key, f"interval-signed-{key}")
+            interval_bars(
+                log_ax,
+                box.x,
+                box.magnitude_lo,
+                box.magnitude_hi,
+                key,
+                f"interval-abs-{key}",
+                log_floor=log_ax.get_ylim()[0],
+            )
 
     top.set_title(q.title, loc="left", fontsize=14, weight="bold", pad=8)
     top.set_ylabel(q.unit)
@@ -535,18 +648,39 @@ def curves_panel(axes, q, ps):
         signed_colossus.set_xlabel(r"物理質量 $M$  [$M_\odot$]")
 
 
-def curves(rows, quantities, title, subtitle, foot):
+def curves(rows, quantities, title, subtitle, foot, *, zoom=False):
     groups = [[r for r in rows if r["quantity"] == q.key] for q in quantities]
     fig = plt.figure(figsize=(14.4, 10.8))
-    fig.text(0.029, 0.977, title, fontsize=22, weight="bold", va="top")
+    fig.text(
+        0.029,
+        0.977,
+        title + ("　｜　線形段を拡大" if zoom else ""),
+        fontsize=22,
+        weight="bold",
+        va="top",
+    )
     fig.text(0.031, 0.930, subtitle, fontsize=11, color=MUTED, va="top")
     available = {key for group in groups for key in active_series(group)}
+    handles = [Line2D([], [], **line_style(k)) for k in SERIES_KEYS if k in available]
+    for key, model in zip(BASES, ("SASHIMI", "Colossus"), strict=True):
+        handles.append(
+            Line2D(
+                [],
+                [],
+                ls="none",
+                marker="|",
+                ms=10,
+                mew=2.4,
+                color=SERIES_STYLE[key][1],
+                label=f"Lean 保証区間 · {model} モデル",
+            )
+        )
     fig.legend(
-        handles=[Line2D([], [], **line_style(k)) for k in SERIES_KEYS if k in available],
+        handles=handles,
         loc="upper left",
         bbox_to_anchor=(0.026, 0.907),
         frameon=False,
-        ncol=3,
+        ncol=4,
         handlelength=3.6,
         columnspacing=2.8,
         fontsize=10,
@@ -555,23 +689,23 @@ def curves(rows, quantities, title, subtitle, foot):
     grid = fig.add_gridspec(
         9,
         len(groups),
-        height_ratios=[1.30, 0.23, 1, 0.43, 1, 0.30, 1, 0.43, 1],
+        height_ratios=[1.30, 0.23, 1, 0.56, 1, 0.30, 1, 0.56, 1],
         left=0.169,
         right=0.981,
         top=0.812,
-        bottom=0.121,
+        bottom=0.13,
         wspace=0.26,
         hspace=0,
     )
     for col, (q, ps) in enumerate(zip(quantities, groups, strict=True)):
         top = fig.add_subplot(grid[0, col])
         axes = [top, *(fig.add_subplot(grid[row, col], sharex=top) for row in (2, 4, 6, 8))]
-        curves_panel(axes, q, ps)
+        curves_panel(axes, q, ps, zoom=zoom)
     for row, base, metric in (
-        (2, "legacy", "相対差の絶対値 [%] · 対数"),
-        (4, "legacy", "符号付き相対差 [%] · 線形"),
-        (6, "matched", "相対差の絶対値 [%] · 対数"),
-        (8, "matched", "符号付き相対差 [%] · 線形"),
+        (2, "legacy", "相対差の絶対値 · 対数"),
+        (4, "legacy", "符号付き相対差 · 線形"),
+        (6, "matched", "相対差の絶対値 · 対数"),
+        (8, "matched", "符号付き相対差 · 線形"),
     ):
         box = grid[row, 0].get_position(fig)
         y = (box.y0 + box.y1) / 2
@@ -589,11 +723,19 @@ def curves(rows, quantities, title, subtitle, foot):
     fig.text(
         0.031,
         0.055,
-        "上段の縦線は各標本の Lean 保証区間。相対差は 100 × (各系列 / 基準の Lean 代表値 − 1)。対数目盛の直下の灰色帯は厳密に 0 の標本。",
+        "各点の縦棒は両 Lean モデルの保証区間。下4段は r = (x − b) / b。各段の基準値 b を固定して区間も換算。",
         fontsize=10,
         color=INK,
     )
-    fig.text(0.031, 0.031, foot, fontsize=9.5, color=MUTED)
+    fig.text(
+        0.031,
+        0.033,
+        "「一致」は系列の値が b と等しい標本。「0 を含む」はそのモデルの保証区間が b を含む標本。"
+        + ("　線形段は計算値付近を拡大。枠外へ続く区間の全幅は通常版に掲載。" if zoom else ""),
+        fontsize=9.5,
+        color=MUTED,
+    )
+    fig.text(0.031, 0.013, foot, fontsize=9, color=MUTED)
     return fig
 
 
@@ -652,6 +794,12 @@ def _render(data, baseline, out):
         "matched-comparison.pdf",
         ((name, curves(rows, qs, title, sub, foot)) for name, qs, title, sub, foot in pages),
     )
+    with PdfPages(out / "matched-linear-zoom.pdf") as pdf:
+        for _, qs, title, subtitle, foot in pages:
+            if qs[0] in MASS or qs[0] in HOST:
+                fig = curves(rows, qs, title, subtitle, foot, zoom=True)
+                pdf.savefig(fig)
+                plt.close(fig)
     diagnostics = [
         ("matched-enclosures", save_and_plot(mass_boxes, bounds, out)),
         ("matched-precision", error_budget(mass_boxes)),

@@ -144,6 +144,7 @@ class MatchedComparisonTest(unittest.TestCase):
                     expected_zeros = {}
                     if base is not None:
                         self.assertEqual(ax.get_yscale(), "log" if mode == "absolute" else "linear")
+                        self.assertNotRegex(ax.get_ylabel() + ax.get_title(), "[%％]")
                     for line in model_lines:
                         source = line.get_gid()
                         self.assertTrue(line.get_visible())
@@ -154,9 +155,7 @@ class MatchedComparisonTest(unittest.TestCase):
                         if mode == "value":
                             target = [float(v[source]) * q.factor for v in expected.values()]
                         else:
-                            ratios = [
-                                100 * (v[source] - v[base]) / v[base] for v in expected.values()
-                            ]
+                            ratios = [(v[source] - v[base]) / v[base] for v in expected.values()]
                             if mode == "absolute":
                                 target = [float(abs(r)) if r else np.nan for r in ratios]
                                 zero_xs = [x for x, r in zip(xs, ratios, strict=True) if not r]
@@ -203,6 +202,126 @@ class MatchedComparisonTest(unittest.TestCase):
         for q in (*plots.MASS, *plots.BACKGROUND[1:], *plots.HOST):
             with self.subTest(quantity=q.key):
                 self.inspect_panel(q, self.records, self.source_values(q))
+
+    def certificate_values(self, q, data=MATCHED):
+        coordinate = "z" if q.group == "background" else "mass_msun"
+        old_name = "kernel" if q.group == "conditional" else q.group
+        old = document(BASELINE, old_name)
+        new_name = {
+            "F": "kernel-bounds",
+            "dS_dM": "derivative-full",
+            "sigma": "full",
+            "S": "full",
+        }.get(q.key)
+        if q.key == "H":
+            new = old
+        else:
+            new = document(data, new_name or ("host-bounds" if q in plots.HOST else "growth"))
+        result = {}
+        for model, cert in (("legacy", old), ("matched", new)):
+            values = {}
+            table_checked = cert.get("kernel_replayed", cert.get("kernel_replay") == "passed")
+            for x, row in by_coordinate(cert["rows"], coordinate).items():
+                checked = row.get(
+                    "end_to_end_kernel_replayed", row.get("kernel_replayed", table_checked)
+                )
+                if checked and row[q.key] is not None:
+                    values[x] = tuple(Fraction(row[q.key][side]) for side in ("lo", "hi"))
+            result[model] = values
+        return result
+
+    def inspect_intervals(self, q, records, sources, certified):
+        selected = [r for r in records if r["quantity"] == q.key]
+        fig, axes = plt.subplots(len(PANELS), sharex=True)
+        try:
+            plots.curves_panel(axes, q, selected)
+            for (base, mode), ax in zip(PANELS[1:], axes[1:], strict=True):
+                plot_min, plot_max = ax.get_ylim()
+                absolute = mode == "absolute"
+                geometry = "abs" if absolute else "signed"
+                for model, bounds in certified.items():
+                    with self.subTest(quantity=q.key, base=base, mode=mode, interval=model):
+                        wanted, zeros = {}, []
+                        for x, (lo, hi) in bounds.items():
+                            ref = sources[x][base]
+                            a, b = sorted(((lo - ref) / ref, (hi - ref) / ref))
+                            nominal = (sources[x][model] - ref) / ref
+                            self.assertLessEqual(a, nominal)
+                            self.assertLessEqual(nominal, b)
+                            if absolute:
+                                contains_zero = a <= 0 <= b
+                                if contains_zero:
+                                    zeros.append(float(x))
+                                lower = Fraction(0) if contains_zero else min(abs(a), abs(b))
+                                upper = max(abs(a), abs(b))
+                                if not upper or float(upper) < plot_min or float(lower) > plot_max:
+                                    continue
+                                ends = (max(plot_min, float(lower)), min(plot_max, float(upper)))
+                            else:
+                                ends = (float(a), float(b))
+                            wanted[float(x)] = ends
+
+                        segments = {}
+                        for collection in ax.collections:
+                            if collection.get_gid() == f"interval-{geometry}-{model}":
+                                self.assertTrue(collection.get_visible())
+                                self.assertNotEqual(collection.get_alpha(), 0)
+                                for segment in collection.get_segments():
+                                    self.assertEqual(segment.shape, (2, 2))
+                                    x = segment[0, 0]
+                                    self.assertEqual(x, segment[1, 0])
+                                    self.assertNotIn(
+                                        x, segments, "duplicate interval at one mass/redshift"
+                                    )
+                                    segments[x] = segment[:, 1]
+                        self.assertEqual(segments.keys(), wanted.keys())
+                        if wanted:
+                            np.testing.assert_allclose(
+                                [segments[x] for x in wanted],
+                                list(wanted.values()),
+                                rtol=4 * np.finfo(float).eps,
+                                atol=0,
+                            )
+                        indicators = [
+                            line for line in ax.lines if line.get_gid() == f"interval-zero-{model}"
+                        ]
+                        shown = []
+                        for marker in indicators:
+                            self.assertTrue(marker.get_visible())
+                            self.assertEqual(marker.get_transform(), ax.get_xaxis_transform())
+                            self.assertNotIn(marker.get_marker(), (None, "", "None"))
+                            shown.extend(marker.get_xdata())
+                        self.assertCountEqual(shown, zeros)
+        finally:
+            plt.close(fig)
+
+    def test_certified_interval_glyphs_against_both_models(self):
+        for q in (*plots.BACKGROUND, *plots.MASS, *plots.HOST):
+            with self.subTest(quantity=q.key):
+                self.inspect_intervals(
+                    q, self.records, self.source_values(q), self.certificate_values(q)
+                )
+
+    def test_singleton_and_unchecked_intervals(self):
+        # Exercise a point enclosure and an unchecked proposal without changing the audited inputs.
+        q = next(q for q in plots.MASS if q.key == "F")
+        sources = self.source_values(q)
+        with TemporaryDirectory() as tmp:
+            data = Path(tmp)
+            for path in MATCHED.glob("*.json"):
+                if path.name != "kernel-bounds.json":
+                    copyfile(path, data / path.name)
+            kernel = document(MATCHED, "kernel-bounds")
+            first, second = kernel["rows"][:2]
+            x = Fraction(first["mass_msun"])
+            prediction = sources[x]["matched"]
+            self.assertNotEqual(prediction, sources[x]["legacy"])
+            first["F"] = {"lo": str(prediction), "hi": str(prediction)}
+            second["end_to_end_kernel_replayed"] = False
+            (data / "kernel-bounds.json").write_text(json.dumps(kernel))
+            self.inspect_intervals(
+                q, plots.comparison_rows(data, BASELINE), sources, self.certificate_values(q, data)
+            )
 
     def test_wide_eh_enclosure_does_not_move_the_central_prediction(self):
         q = next(q for q in plots.MASS if q.key == "F")
