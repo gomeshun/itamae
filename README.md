@@ -17,7 +17,7 @@ subhalo catalogs.
 
 ## Certified cosmology
 
-The Lean library computes rational enclosures for background quantities, growth, tabulated linear power, mass variance and halo inputs used by SASHIMI. It connects the background model to Physlib and supports explicit historical and current WDM transfer conventions. The Python entry point is `itamae.cosmology.certified`. [Library and examples](prototypes/physicslean/SASHIMI.md)
+The Lean library computes rational enclosures for background quantities, growth, tabulated linear power, mass variance and halo inputs used by SASHIMI. It connects the background model to Physlib and supports explicit historical and current WDM transfer conventions. The Python entry point is `itamae.cosmology.certified`. [Library and examples](prototypes/physicslean/SASHIMI.md) · [Eisenstein–Hu and top-hat comparison with Colossus](prototypes/physicslean/results/eps-eh/README.md)
 
 ## Motivation
 

@@ -1,0 +1,168 @@
+Toolchain and baseline
+Lean (version 4.36.0, x86_64-unknown-linux-gnu, commit 611c117bfaf7b7ae1cfcf246ce6fba31e8f509e9, Release)
+Lake version 5.0.0-src+611c117 (Lean version 4.36.0)
+floatlib d24844f039320a024c7548f992920562d9a71a60
+Physlib db96e88549c3ed2b1211fe34cd751f30847e5386
+mathlib fc4f59e577feb1a4956671bc04ac18aaaf8cd842
+
+Build with dependencies present
+$ lake build
+info: src/HzAudit.lean:37:0: PhysicsLean axiom audit passed on 2464 declarations
+Build completed successfully (8481 jobs).
+real_seconds=2.28 (incremental; other proof workers active)
+
+Existing regression suites
+$ PYTHONPATH=src python -m pytest -q tests (repository root)
+40 passed in 3.32s
+$ python -m pytest -q tests (prototype)
+31 passed, 36 subtests passed in 85.97s (0:01:25)
+
+Warm end-to-end audit and generated proof witnesses
+$ ./run_demo.sh (prototype, exit 0)
+Ran 31 tests in 115.084s
+OK
+Concrete axiom audit passed on 7 local proof declarations
+Concrete axiom audit passed on 2 local proof declarations
+Concrete axiom audit passed on 2 local proof declarations
+Concrete axiom audit passed on 23 local proof declarations
+Concrete axiom audit passed on 87 local proof declarations
+
+Selected proof logs
+
+tests/SashimiEisensteinAudit.lean 13.996s
+Concrete axiom audit passed on 2 local proof declarations
+tests/SashimiEisensteinIntegralCase.lean 11.548s
+'checked_local_EH_variance' depends on axioms: [propext, Classical.choice, Quot.sound]
+Concrete axiom audit passed on 2 local proof declarations
+tests/SashimiEhDerivativeCase.lean 13.254s
+'SashimiEhDerivativeCase.actual_derivative_negative' depends on axioms: [propext, Classical.choice, Quot.sound]
+Concrete axiom audit passed on 7 local proof declarations
+results/eps-eh/transfer.lean 26.998s
+'concrete' depends on axioms: [propext, Classical.choice, Quot.sound]
+Concrete axiom audit passed on 23 local proof declarations
+results/eps-eh/growth.lean 31.900s
+'SashimiHeath.check_sound' depends on axioms: [propext, Classical.choice, Quot.sound]
+'heathContains28' depends on axioms: [propext, Classical.choice, Quot.sound]
+Concrete axiom audit passed on 87 local proof declarations
+results/eps-eh/full-fine.lean 24.070s
+'SashimiEhFullGrid.check_sound' depends on axioms: [propext, Classical.choice, Quot.sound]
+Concrete axiom audit passed on 296 local proof declarations
+results/eps-eh/full-mass-72.lean 12.286s
+'fullComplete72' depends on axioms: [propext, Classical.choice, Quot.sound]
+Concrete axiom audit passed on 6 local proof declarations
+results/eps-eh/full.lean 29.859s
+'SashimiEhFullGrid.check_sound' depends on axioms: [propext, Classical.choice, Quot.sound]
+Concrete axiom audit passed on 296 local proof declarations
+results/eps-eh/kernel-bounds-fine.lean 37.013s
+'concrete' depends on axioms: [propext, Classical.choice, Quot.sound]
+Concrete axiom audit passed on 221 local proof declarations
+results/eps-eh/kernel-bounds.lean 38.424s
+'concrete' depends on axioms: [propext, Classical.choice, Quot.sound]
+Concrete axiom audit passed on 218 local proof declarations
+Negative control rejected inventedPhysicsAxiom.
+results/eps-eh/ConditionalFullDerivative.lean 18.216s
+'fullCompleteConditionalDerivative0' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative1' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative2' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative3' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative4' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative5' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative6' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative7' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative8' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative9' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative10' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative11' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative12' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative13' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative14' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative15' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative16' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative17' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative18' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative19' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative20' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative21' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative22' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative23' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative24' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative25' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative26' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative27' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative28' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative29' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative30' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative31' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative32' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative33' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative34' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative35' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative36' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative37' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative38' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative39' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative40' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative41' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative42' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative43' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative44' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative45' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative46' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative47' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative48' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative49' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative50' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative51' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative52' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative53' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative54' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative55' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative56' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative57' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative58' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative59' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative60' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative61' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative62' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative63' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative64' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative65' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative66' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative67' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative68' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative69' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative70' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative71' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullCompleteConditionalDerivative72' depends on axioms: [propext, Classical.choice, Quot.sound]
+Concrete axiom audit passed on 146 local proof declarations
+full.log
+'SashimiEhFullGrid.check_sound' depends on axioms: [propext, Classical.choice, Quot.sound]
+host-bounds.log
+'host_fit_q' depends on axioms: [propext, Classical.choice, Quot.sound]
+'host_dM_dz_28' depends on axioms: [propext, Classical.choice, Quot.sound]
+kernel-bounds-closed.log
+'yangComplete' depends on axioms: [propext, Classical.choice, Quot.sound]
+full-closed.log
+'fullComplete0' depends on axioms: [propext, Classical.choice, Quot.sound]
+'fullComplete73' depends on axioms: [propext, Classical.choice, Quot.sound]
+
+Exact primary enclosures
+full.json: 74/74 improper variance and square-root inputs
+kernel-bounds.json: 72/72 closed improper Yang density enclosures
+host-bounds.json: 58 fitted-host mass and rate theorems; end-to-end=True
+derivative-full.json: 73/73 signed mass derivatives
+kernel-derivative.json: 73/73 signed mass derivatives
+mass-replay.json: 74 physical finite-integral proofs using common kernel-checked transfer cells
+Analytic T at ten k and Heath D, dD/dz, and 1.686/D at 29 z were checked separately.
+All closed primary cosmology certificates permit only propext, Classical.choice and Quot.sound.
+7680-cell finer integrals use the proved native interval evaluator; finite-sum hypotheses are explicit in their downstream kernel checks.
+
+Negative controls
+EhMassCorrupted.log: Tactic `decide` failed to reduce
+derivative-reject.log: Tactic `decide` failed to reduce
+full-slopes/RejectedZero.log: Tactic `decide` failed to reduce
+invalid-out.log: Tactic `decide` failed to reduce
+
+Publication checks
+465 joined samples; 465 fully replayed primary enclosures; 291 two-resolution mass entries; 5 images verified. File links, witness names, input SHA-256 and exact endpoints checked.
+See scripts/reproduce_eps_eh.sh for the full commands.

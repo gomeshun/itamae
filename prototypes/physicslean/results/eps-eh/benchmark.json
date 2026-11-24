@@ -1,0 +1,66 @@
+{
+  "workload": {
+    "grid_masses": 73,
+    "extra_progenitor_msun": 297846489892.0939,
+    "mass_range_msun": [
+      1e-06,
+      1000000000000.0
+    ],
+    "redshift": 0,
+    "k_band_h_per_Mpc": [
+      1e-08,
+      10000000000.0
+    ],
+    "panels_per_decade": 8192,
+    "panels": 147456
+  },
+  "environment": {
+    "cpu": "AMD EPYC 9V74 80-Core Processor",
+    "available_affinity_cpus": 5,
+    "cgroup_cpu_max": "400000 100000",
+    "load_average_start": [
+      5.70947265625,
+      6.5869140625,
+      5.265625
+    ],
+    "load_average_end": [
+      7.75634765625,
+      6.96337890625,
+      5.4892578125
+    ],
+    "python": "3.11.17",
+    "packages": {
+      "colossus": "1.4.0",
+      "numpy": "2.4.6",
+      "scipy": "1.17.1"
+    },
+    "lean": "Lean (version 4.36.0, x86_64-unknown-linux-gnu, commit 611c117bfaf7b7ae1cfcf246ce6fba31e8f509e9, Release)",
+    "measurement": "Single host, unisolated scheduling; concurrent proof workers can affect wall time."
+  },
+  "lean": {
+    "workload_wall_seconds": 63.128163646,
+    "process_wall_seconds": 71.16521426499821,
+    "process_cpu_seconds": 33.499956000000005,
+    "scope": "Lean binary64, one Simpson mesh plus R8, radii, S and dS/dM and row output. Process timer also includes Lake, imports and elaboration with prebuilt oleans."
+  },
+  "colossus": {
+    "cold_table_wall_seconds": 0.1100160970017896,
+    "cold_table_cpu_seconds": 0.05864283400000003,
+    "cached_batch_wall_median_seconds": 6.026399933034554e-05,
+    "cached_batch_wall_min_seconds": 5.697499727830291e-05,
+    "cached_batch_cpu_mean_seconds": 6.738284999999954e-05,
+    "cached_repetitions": 100,
+    "scope": "Default z=0 top-hat spline. Fresh Cosmology with disk persistence disabled; table timing includes required power-spectrum construction. Cached array query includes mass-to-radius, S and spline dS/dM. Package imports and Cosmology constructor excluded."
+  },
+  "max_relative_reproduction_error": {
+    "lean_vs_stored_lean": {
+      "S": 0.0,
+      "dS_dM": 0.0
+    },
+    "spline_vs_stored_spline": {
+      "S": 0.0,
+      "dS_dM": 0.0
+    }
+  },
+  "scope": "Floating-point numerical predictions. Kernel proof checking and the initial Lake build are separate workloads and excluded."
+}

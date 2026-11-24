@@ -13,3 +13,13 @@ python3 -m unittest discover -s tests -v
 for test_file in tests/*.lean; do
   lake env lean "$test_file"
 done
+# Check the shipped concrete witnesses, including the per-redshift equalities.
+for proof in results/eps-eh/transfer.lean results/eps-eh/growth.lean; do
+  {
+    echo 'import HzAudit'
+    cat "$proof"
+    echo
+    echo 'run_cmd PhysicsLeanAudit.currentWitnesses'
+  } > "$example/CheckedWitness.lean"
+  lake env lean "$example/CheckedWitness.lean"
+done

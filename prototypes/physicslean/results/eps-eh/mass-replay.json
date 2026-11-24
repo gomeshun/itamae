@@ -1,0 +1,755 @@
+{
+  "sweep_sha256": "da23371d48b723342d27f121106834f7f6f72235c224db6e800074a2769742d7",
+  "kernel_replay": "passed",
+  "rows_checked": 74,
+  "mass_grid_rows": 73,
+  "extra_progenitor": 1,
+  "seconds_per_module": {
+    "min": 16.22410082299757,
+    "median": 25.098703464995197,
+    "max": 47.14474822900229,
+    "sum_while_concurrent": 1956.8014774249896
+  },
+  "rows": [
+    {
+      "index": 0,
+      "mass_msun": "1/1000000",
+      "seconds": 22.842237454999122,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 1,
+      "mass_msun": "44456985251/25000000000000000",
+      "seconds": 33.89468371299881,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 2,
+      "mass_msun": "316227766017/100000000000000000",
+      "seconds": 23.807793182997557,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 3,
+      "mass_msun": "56234132519/10000000000000000",
+      "seconds": 22.86754402599763,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 4,
+      "mass_msun": "1/100000",
+      "seconds": 19.88871154899971,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 5,
+      "mass_msun": "44456985251/2500000000000000",
+      "seconds": 18.170001954000327,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 6,
+      "mass_msun": "316227766017/10000000000000000",
+      "seconds": 23.16055892100121,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 7,
+      "mass_msun": "56234132519/1000000000000000",
+      "seconds": 23.538130986999022,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 8,
+      "mass_msun": "1/10000",
+      "seconds": 20.93892378500459,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 9,
+      "mass_msun": "44456985251/250000000000000",
+      "seconds": 26.635515743000724,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 10,
+      "mass_msun": "316227766017/1000000000000000",
+      "seconds": 17.648325096000917,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 11,
+      "mass_msun": "56234132519/100000000000000",
+      "seconds": 18.264185963998898,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 12,
+      "mass_msun": "1/1000",
+      "seconds": 19.35259266399953,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 13,
+      "mass_msun": "44456985251/25000000000000",
+      "seconds": 21.47908858700248,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 14,
+      "mass_msun": "316227766017/100000000000000",
+      "seconds": 25.164400414992997,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 15,
+      "mass_msun": "56234132519/10000000000000",
+      "seconds": 22.906114332996367,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 16,
+      "mass_msun": "1/100",
+      "seconds": 18.369785780996608,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 17,
+      "mass_msun": "44456985251/2500000000000",
+      "seconds": 16.22410082299757,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 18,
+      "mass_msun": "316227766017/10000000000000",
+      "seconds": 17.208004123000137,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 19,
+      "mass_msun": "56234132519/1000000000000",
+      "seconds": 27.306988223994267,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 20,
+      "mass_msun": "1/10",
+      "seconds": 22.129035461999592,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 21,
+      "mass_msun": "44456985251/250000000000",
+      "seconds": 22.987074466000195,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 22,
+      "mass_msun": "316227766017/1000000000000",
+      "seconds": 26.0990558170015,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 23,
+      "mass_msun": "56234132519/100000000000",
+      "seconds": 27.562614059002954,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 24,
+      "mass_msun": "1",
+      "seconds": 21.626203231004183,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 25,
+      "mass_msun": "44456985251/25000000000",
+      "seconds": 25.89995690000069,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 26,
+      "mass_msun": "316227766017/100000000000",
+      "seconds": 26.059744789999968,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 27,
+      "mass_msun": "56234132519/10000000000",
+      "seconds": 38.419403018000594,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 28,
+      "mass_msun": "10",
+      "seconds": 27.236055859997577,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 29,
+      "mass_msun": "44456985251/2500000000",
+      "seconds": 43.29998997600342,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 30,
+      "mass_msun": "316227766017/10000000000",
+      "seconds": 47.14474822900229,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 31,
+      "mass_msun": "56234132519/1000000000",
+      "seconds": 30.30147738600499,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 32,
+      "mass_msun": "100",
+      "seconds": 25.033006514997396,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 33,
+      "mass_msun": "44456985251/250000000",
+      "seconds": 37.50984152399906,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 34,
+      "mass_msun": "316227766017/1000000000",
+      "seconds": 42.89719268400222,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 35,
+      "mass_msun": "56234132519/100000000",
+      "seconds": 42.98348293199524,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 36,
+      "mass_msun": "1000",
+      "seconds": 35.90001438600302,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 37,
+      "mass_msun": "44456985251/25000000",
+      "seconds": 24.275013841994223,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 38,
+      "mass_msun": "316227766017/100000000",
+      "seconds": 34.71153514800244,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 39,
+      "mass_msun": "56234132519/10000000",
+      "seconds": 36.82477413099696,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 40,
+      "mass_msun": "10000",
+      "seconds": 37.75931411100464,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 41,
+      "mass_msun": "44456985251/2500000",
+      "seconds": 30.163609120005276,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 42,
+      "mass_msun": "316227766017/10000000",
+      "seconds": 27.54613675300061,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 43,
+      "mass_msun": "56234132519/1000000",
+      "seconds": 20.267612882998947,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 44,
+      "mass_msun": "100000",
+      "seconds": 18.811579367000377,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 45,
+      "mass_msun": "44456985251/250000",
+      "seconds": 24.46703318299842,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 46,
+      "mass_msun": "316227766017/1000000",
+      "seconds": 34.665915990997746,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 47,
+      "mass_msun": "56234132519/100000",
+      "seconds": 33.85704021700076,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 48,
+      "mass_msun": "1000000",
+      "seconds": 17.09995916900516,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 49,
+      "mass_msun": "44456985251/25000",
+      "seconds": 21.14831458399567,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 50,
+      "mass_msun": "316227766017/100000",
+      "seconds": 34.31387757700577,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 51,
+      "mass_msun": "56234132519/10000",
+      "seconds": 25.75505632199929,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 52,
+      "mass_msun": "10000000",
+      "seconds": 21.017546757000673,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 53,
+      "mass_msun": "44456985251/2500",
+      "seconds": 23.07655005400011,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 54,
+      "mass_msun": "316227766017/10000",
+      "seconds": 27.871709712002485,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 55,
+      "mass_msun": "56234132519/1000",
+      "seconds": 27.1021216070003,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 56,
+      "mass_msun": "100000000",
+      "seconds": 36.600078119998216,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 57,
+      "mass_msun": "44456985251/250",
+      "seconds": 39.21521573299833,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 58,
+      "mass_msun": "316227766017/1000",
+      "seconds": 27.659054531999573,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 59,
+      "mass_msun": "56234132519/100",
+      "seconds": 30.341632603995095,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 60,
+      "mass_msun": "1000000000",
+      "seconds": 20.94952309400105,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 61,
+      "mass_msun": "44456985251/25",
+      "seconds": 25.399840751997544,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 62,
+      "mass_msun": "316227766017/100",
+      "seconds": 25.684571172998403,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 63,
+      "mass_msun": "56234132519/10",
+      "seconds": 21.428792817001522,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 64,
+      "mass_msun": "10000000000",
+      "seconds": 28.10340620399802,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 65,
+      "mass_msun": "88913970502/5",
+      "seconds": 21.230948775002616,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 66,
+      "mass_msun": "316227766017/10",
+      "seconds": 20.973513226999785,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 67,
+      "mass_msun": "56234132519",
+      "seconds": 21.03620542900171,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 68,
+      "mass_msun": "100000000000",
+      "seconds": 21.82300416099315,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 69,
+      "mass_msun": "177827941004",
+      "seconds": 19.399129629004165,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 70,
+      "mass_msun": "316227766017",
+      "seconds": 21.702691637998214,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 71,
+      "mass_msun": "562341325190",
+      "seconds": 19.460046704996785,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 72,
+      "mass_msun": "1000000000000",
+      "seconds": 26.560239514001296,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    {
+      "index": 73,
+      "mass_msun": "2978464898920939/10000",
+      "seconds": 25.74229822900088,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    }
+  ]
+}

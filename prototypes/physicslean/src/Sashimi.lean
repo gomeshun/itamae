@@ -1,6 +1,24 @@
+import SashimiAnalyticWindow
 import SashimiBackground
 import SashimiCusp
 import SashimiDerived
+import SashimiEhCertificate
+import SashimiEhContinuity
+import SashimiEhDerivativeBounds
+import SashimiEhDerivativeDecay
+import SashimiEhFull
+import SashimiEhFullCalculus
+import SashimiEhFullDerivative
+import SashimiEhFullGrid
+import SashimiEhHost
+import SashimiEhPointDerivative
+import SashimiEhSlopeTails
+import SashimiEhSweep
+import SashimiEhVariance
+import SashimiEhYang
+import SashimiEisensteinHu
+import SashimiEisensteinIntegral
+import SashimiEisensteinTail
 import SashimiEpsKernel
 import SashimiEpsLudlow
 import SashimiErf
@@ -9,6 +27,7 @@ import SashimiGrowthVariance
 import SashimiHalo
 import SashimiHaloRoots
 import SashimiHaloWarm
+import SashimiHeath
 import SashimiIntegrable
 import SashimiMassCalculus
 import SashimiMassVariance
@@ -30,6 +49,7 @@ import SashimiTableRequest
 import SashimiTableWindow
 import SashimiThermal
 import SashimiTime
+import SashimiVarianceTails
 import SashimiWdm
 
 /-! ITAMAE cosmology and SASHIMI numerical enclosures. -/

@@ -1,0 +1,228 @@
+{
+  "H": {
+    "points": 29,
+    "enclosures": {
+      "returned": 29,
+      "end_to_end_kernel_checked": 29,
+      "plotted_value_inside": 0,
+      "colossus_spline_inside": 0
+    },
+    "before": {
+      "coordinate": "5/4",
+      "signed_relative_difference": 2.039959146572892e-16
+    },
+    "after": {
+      "coordinate": "5/4",
+      "signed_relative_difference": 2.039959146572892e-16
+    },
+    "direct": {
+      "coordinate": "5/4",
+      "signed_relative_difference": 2.039959146572892e-16
+    }
+  },
+  "D": {
+    "points": 29,
+    "enclosures": {
+      "returned": 29,
+      "end_to_end_kernel_checked": 29,
+      "plotted_value_inside": 29,
+      "colossus_spline_inside": 1
+    },
+    "before": {
+      "coordinate": "1/2",
+      "signed_relative_difference": -0.0016547299711564152
+    },
+    "after": {
+      "coordinate": "5/4",
+      "signed_relative_difference": 3.172156053163698e-05
+    },
+    "direct": {
+      "coordinate": "7",
+      "signed_relative_difference": 2.9459847116950578e-12
+    }
+  },
+  "dD_dz": {
+    "points": 29,
+    "enclosures": {
+      "returned": 29,
+      "end_to_end_kernel_checked": 29,
+      "plotted_value_inside": 29,
+      "colossus_spline_inside": 0
+    },
+    "before": {
+      "coordinate": "0",
+      "signed_relative_difference": 0.02490540253851537
+    },
+    "after": {
+      "coordinate": "1/2",
+      "signed_relative_difference": -0.0005251724980312783
+    },
+    "direct": {
+      "coordinate": "7",
+      "signed_relative_difference": -4.37621336466306e-12
+    }
+  },
+  "delta_c": {
+    "points": 29,
+    "enclosures": {
+      "returned": 29,
+      "end_to_end_kernel_checked": 29,
+      "plotted_value_inside": 28,
+      "colossus_spline_inside": 0
+    },
+    "before": {
+      "coordinate": "1/2",
+      "signed_relative_difference": 0.001657472640811508
+    },
+    "after": {
+      "coordinate": "5/4",
+      "signed_relative_difference": -3.172055430613968e-05
+    },
+    "direct": {
+      "coordinate": "7",
+      "signed_relative_difference": -2.9459473810118595e-12
+    }
+  },
+  "sigma": {
+    "points": 73,
+    "enclosures": {
+      "returned": 73,
+      "end_to_end_kernel_checked": 73,
+      "plotted_value_inside": 73,
+      "colossus_spline_inside": 73
+    },
+    "before": {
+      "coordinate": "1/1000000",
+      "signed_relative_difference": 0.01672275888055987
+    },
+    "after": {
+      "coordinate": "56234132519",
+      "signed_relative_difference": 0.00012348570120185298
+    },
+    "direct": {
+      "coordinate": "44456985251/25000000",
+      "signed_relative_difference": 0.00047990503649324737
+    },
+    "fixed": {
+      "coordinate": "56234132519/100",
+      "signed_relative_difference": 2.3486247199837693e-08
+    }
+  },
+  "S": {
+    "points": 73,
+    "enclosures": {
+      "returned": 73,
+      "end_to_end_kernel_checked": 73,
+      "plotted_value_inside": 73,
+      "colossus_spline_inside": 73
+    },
+    "before": {
+      "coordinate": "1/1000000",
+      "signed_relative_difference": 0.03372516842569707
+    },
+    "after": {
+      "coordinate": "56234132519",
+      "signed_relative_difference": 0.00024698665112219597
+    },
+    "direct": {
+      "coordinate": "44456985251/25000000",
+      "signed_relative_difference": 0.0009600403818307275
+    },
+    "fixed": {
+      "coordinate": "56234132519/100",
+      "signed_relative_difference": 4.6972494716999405e-08
+    }
+  },
+  "dS_dM": {
+    "points": 73,
+    "enclosures": {
+      "returned": 73,
+      "end_to_end_kernel_checked": 73,
+      "plotted_value_inside": 73,
+      "colossus_spline_inside": 73
+    },
+    "before": {
+      "coordinate": "1/1000000",
+      "signed_relative_difference": 0.05560787647982498
+    },
+    "after": {
+      "coordinate": "44456985251/250000",
+      "signed_relative_difference": -0.0008174831650036584
+    },
+    "direct": {
+      "coordinate": "88913970502/5",
+      "signed_relative_difference": 2.252431336739702e-05
+    },
+    "fixed": {
+      "coordinate": "100000000",
+      "signed_relative_difference": -2.9187228119609357e-05
+    }
+  },
+  "F": {
+    "points": 72,
+    "enclosures": {
+      "returned": 72,
+      "end_to_end_kernel_checked": 72,
+      "plotted_value_inside": 72,
+      "colossus_spline_inside": 72
+    },
+    "before": {
+      "coordinate": "1/1000000",
+      "signed_relative_difference": -0.04521975653026217
+    },
+    "after": {
+      "coordinate": "56234132519",
+      "signed_relative_difference": -0.0005859706665684632
+    },
+    "direct": {
+      "coordinate": "44456985251/25000000",
+      "signed_relative_difference": -0.0014904547414927036
+    },
+    "fixed": {
+      "coordinate": "56234132519/100",
+      "signed_relative_difference": -8.450745726227673e-08
+    }
+  },
+  "M200": {
+    "points": 29,
+    "enclosures": {
+      "returned": 29,
+      "end_to_end_kernel_checked": 29,
+      "plotted_value_inside": 29,
+      "colossus_spline_inside": 29
+    },
+    "before": {
+      "coordinate": "7",
+      "signed_relative_difference": -0.08168429528782843
+    },
+    "after": {
+      "coordinate": "7",
+      "signed_relative_difference": -8.958610989132039e-05
+    },
+    "direct": {
+      "coordinate": "7",
+      "signed_relative_difference": 7.380059222400281e-05
+    }
+  },
+  "dM_dz": {
+    "points": 29,
+    "enclosures": {
+      "returned": 29,
+      "end_to_end_kernel_checked": 29,
+      "plotted_value_inside": 29,
+      "colossus_spline_inside": 29
+    },
+    "before": {
+      "coordinate": "7",
+      "signed_relative_difference": -0.0674118440722925
+    },
+    "after": {
+      "coordinate": "0",
+      "signed_relative_difference": 8.583785275399518e-05
+    },
+    "direct": {
+      "coordinate": "7",
+      "signed_relative_difference": 5.7667261863102215e-05
+    }
+  }
+}

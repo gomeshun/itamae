@@ -6,6 +6,7 @@ from fractions import Fraction
 import json
 import os
 import re
+import shutil
 from pathlib import Path
 import subprocess
 import tempfile
@@ -19,8 +20,8 @@ else:
     from table_replay import check_proof, literal
 
 
-def check_modules(header, leaf_blocks, assembly, memory_mb, timeout, jobs):
-    """Compile disjoint proof groups in fresh kernels, then link and audit the root."""
+def check_modules(header, leaf_blocks, assembly, memory_mb, timeout, jobs, *, module_output=None):
+    """Compile disjoint proof groups, link the root and return its printed axioms."""
     deadline = time.monotonic() + timeout
     package_path = subprocess.check_output(
         ["lake", "env", "printenv", "LEAN_PATH"], cwd=PROJECT, text=True
@@ -82,10 +83,20 @@ def check_modules(header, leaf_blocks, assembly, memory_mb, timeout, jobs):
         for line in output.splitlines():
             audit = re.fullmatch(r"'concrete' depends on axioms: \[(.*?)\]", line)
             if audit and set(audit[1].split(", ")) <= {"propext", "Classical.choice", "Quot.sound"}:
-                return
+                axioms = audit[1].split(", ")
+                break
             if line == "'concrete' does not depend on any axioms":
-                return
-        raise RuntimeError("missing or unexpected final kernel axiom audit")
+                axioms = []
+                break
+        else:
+            raise RuntimeError("missing or unexpected final kernel axiom audit")
+        if module_output is not None:
+            saved = Path(module_output)
+            saved.mkdir(parents=True, exist_ok=True)
+            for source in base.iterdir():
+                if source.name.startswith("Window"):
+                    shutil.copy2(source, saved / source.name)
+        return axioms
 
 
 def replay_window(
