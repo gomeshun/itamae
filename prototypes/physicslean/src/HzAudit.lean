@@ -40,7 +40,7 @@ run_cmd
   for (name, _) in env.constants do
     let some idx := env.getModuleIdxFor? name | continue
     let mod := env.header.moduleNames[idx.toNat]!.toString
-    unless mod.startsWith "Hz" || mod.startsWith "Sashimi" do continue
+    unless ["Hz", "Sashimi", "Certified", "EhCentered"].any (fun p => mod.startsWith p) do continue
     checkAllowed name
     checked := checked + 1
   if checked == 0 then throwError "no PhysicsLean declarations were audited"

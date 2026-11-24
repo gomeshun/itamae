@@ -38,6 +38,22 @@ SASHIMI-W の sharp-k 質量較正も別々に指定する。$R$ を同じ物理
 
 同一の Planck 表、$m_{22}=1$、$M=5\times10^{11} M_\odot$、$k=0.690$〜$0.706$ Mpc⁻¹ の例を $z=2$ へ進めると、規格化 CPT 成長と積分の両方の誤差を含めて $S\in[0.0109226,0.0118522]$、$\sigma\in[0.1045113,0.1088677]$ になる。`--derivative-growth legacy-f-linear` は旧 F が返す単一の $D$ 倍を選ぶ。同じ $S=D^2S_0$ の数学的な質量微分には $D^2$ を用いる。[赤方偏移の合成定理](src/SashimiGrowthVariance.lean)・[実表入力の個別証明](tests/SashimiGrowthVarianceCases.lean)
 
+## 同じ積分セルで精度を上げる
+
+セル $[a,b]$ の幅を $h=b-a$、中点を $m$ とする。セル全体で $d_-\le f'(x)\le d_+$ を示せれば、次の実数不等式が成り立つ。
+
+$$
+\left|\int_a^b f(x)\,dx-h f(m)\right|\le \frac{h^2}{8}(d_+-d_-).
+$$
+
+中点を通る直線の傾きに $(d_-+d_+)/2$ を選ぶと、その一次の項は厳密に積分できる。残差の上界には $\int_a^b|x-m|\,dx=h^2/4$ を使う。傾きが一定なら右辺はゼロになる。中点値が区間 $C$ で得られたときは $hC$ をこの誤差だけ広げる。さらに、点ごとに $f(x)=v+d(x-m)$、$v\in C$、$d\in D$ の証人を選ぶ場合にも使える。FloatLib の式に対する区間自動微分を使うと、加減乗算、正の分母による除算、指数、正の引数の対数、正弦・余弦からこの包含に必要な区間を計算できる。例えば $t^2+p$ の係数 $p\in[-1,1]$ を区間のまま与えた具体例もカーネルで検査した。[中点公式と証明](src/CertifiedCenteredIntegral.lean) · [可測な関数・非負の重みに対する積分則](src/CertifiedWeightedIntegral.lean) · [汎用の区間自動微分](src/CertifiedExprDerivative.lean) · [多項式の例](tests/CertifiedExprDerivativeCase.lean)
+
+EH98 ではスペクトル重み $w(k)=k^{2+n_s}T(k)^2$ のセル積分を一度だけ囲む。各質量では同じ積分区間に対して、窓 $W^2$ と符号付き微分窓 $2W(\mathrm{sinc}-W)$ の値域を求める。$w\ge0$ により、$\int w\,g$ は $\int w$ の区間と $g$ の値域の区間積に入る。解析形の中点評価が使えないセルには、$k^2$ の厳密な積分または値域とセル幅による包含が使える。最後に $R=8\,\mathrm{Mpc}/h$ の積分で分散と微分を規格化する。7,680セルで以前の矩形評価と比較したセル積分幅の比（旧／新）は最小56.73、中央値106.01だった。[スペクトル重み](src/SashimiEhFixedWeight.lean) · [窓](src/SashimiTighterWindow.lean) · [有限帯域の評価器と健全性定理](src/SashimiEhFixedCells.lean) · [同一セルでの実測と入力ハッシュ](results/eps-eh/fixed-cell-widths.json)
+
+Lean API の `SashimiEhFixedCells.evaluate? m tol a ends bits degree` は、下端 `a`、順序付きの右端列 `ends`、質量 `m` を受け取る。`evaluate_sound` は成功した結果について $S(M)$ とその質量微分の包含、および両方の区間幅が `tol` 以下であることを証明する。ここでの $S$ は指定した有限帯域で規格化した関数である。比較図の全波数域の量には、既存の低波数・高波数の裾の上界も伝播させた。[全帯域の数値・検査範囲・比較図](results/eps-eh/README.md)
+
+分子と分母が同じ正のスペクトル重みを持つ場合は、比 $N/D$ の候補 $q$ に対して符号付き積分 $N-qD$ を直接囲む方法も使える。公開図は上記の共通アンカーによる区間を採用した。比の計算は `python scripts/eh_shared_ratio.py "$out/sweep-tight.json" "$out/ratio.json" --indices 72` で実行できる。[比の証明](src/CertifiedIntegralRatio.lean) · [セル積分と裾への適用](src/SashimiEhFixedReplay.lean)
+
 ## ビルドと信頼境界
 
 ```sh

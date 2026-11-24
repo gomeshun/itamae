@@ -1,3 +1,9 @@
+import CertifiedCenteredIntegral
+import CertifiedDyadicInterval
+import CertifiedExprDerivative
+import CertifiedIntegralRatio
+import CertifiedWeightedIntegral
+import EhCenteredWeight
 import SashimiAnalyticWindow
 import SashimiBackground
 import SashimiCusp
@@ -6,14 +12,19 @@ import SashimiEhCertificate
 import SashimiEhContinuity
 import SashimiEhDerivativeBounds
 import SashimiEhDerivativeDecay
+import SashimiEhFixedCells
+import SashimiEhFixedReplay
+import SashimiEhFixedWeight
 import SashimiEhFull
 import SashimiEhFullCalculus
 import SashimiEhFullDerivative
 import SashimiEhFullGrid
 import SashimiEhHost
+import SashimiEhMoment
 import SashimiEhPointDerivative
 import SashimiEhSlopeTails
 import SashimiEhSweep
+import SashimiEhTighterPower
 import SashimiEhVariance
 import SashimiEhYang
 import SashimiEisensteinHu
@@ -48,6 +59,7 @@ import SashimiTableJoin
 import SashimiTableRequest
 import SashimiTableWindow
 import SashimiThermal
+import SashimiTighterWindow
 import SashimiTime
 import SashimiVarianceTails
 import SashimiWdm

@@ -249,30 +249,32 @@ private theorem silk_small {a : Coefficients ℝ} {k : ℝ} (hr : 128 ≤ k*a.h/
 
 private def silkRatio : Expr := .binary .div (.var 0 * .var 1) (.var 6)
 
-/-- Integral-ready transfer enclosure. The exact analytic case split only
-changes how the proof bounds the Silk factor when the exponential is tiny. -/
-def rangeFast? (boxes : List RationalInterval) (K : RationalInterval) (bits degree : Nat) :
-    Option RationalInterval := do
+/-- Choose the analytic transfer expression and its k-independent input boxes.
+A frozen value in the extra Silk slot can be chosen separately for each target k. -/
+def fastForm? (boxes : List RationalInterval) (K : RationalInterval) (bits degree : Nat) :
+    Option (Expr × List RationalInterval) := do
   guard (0 < K.lo ∧ K.lo ≤ K.hi ∧ boxes.length = 11)
   let r ← silkRatio.gridEnclosureWith? (K::boxes) bits degree
-  if 128 ≤ r.lo then
-    dampedTransfer.gridEnclosureWith? ((K::boxes) ++ [silkBox]) bits degree
-  else range? boxes K bits degree
+  return if 128 ≤ r.lo then (dampedTransfer, boxes ++ [silkBox]) else (variableTransfer, boxes)
 
-theorem rangeFast_sound {a : Coefficients ℝ} {K boxes bits degree I} {k : ℝ}
+theorem fastForm_sound {a : Coefficients ℝ} {K boxes bits degree form} {k : ℝ}
     (hk : K.Contains k) (hb : ∀ (i : Nat) (J : RationalInterval), boxes[i]? = some J →
       J.Contains ((a.toList[i]?).getD 0))
-    (h : rangeFast? boxes K bits degree = some I) : I.Contains (transferReal a k) := by
-  unfold rangeFast? at h
+    (h : fastForm? boxes K bits degree = some form) :
+    ∃ v : Nat → ℝ, v 0 = k ∧
+      (∀ (i : Nat) (J : RationalInterval), (K::form.2)[i]? = some J → J.Contains (v i)) ∧
+      form.1.eval v = transferReal a k := by
+  unfold fastForm? at h
   obtain ⟨_,hg,h⟩ := Option.bind_eq_some_iff.mp h
   obtain ⟨r,hr,h⟩ := Option.bind_eq_some_iff.mp h
+  have inputs : ∀ (i : Nat) (J : RationalInterval), (K::boxes)[i]? = some J → J.Contains (env k a i) := by
+    intro i J hj; cases i with
+    | zero => simp at hj; subst J; exact hk
+    | succ n => exact hb n J (by simpa using hj)
   split at h
   · rename_i test
+    cases h
     have len : boxes.length = 11 := by by_contra hl; simp [guard, hl] at hg
-    have inputs : ∀ (i : Nat) (J : RationalInterval), (K::boxes)[i]? = some J → J.Contains (env k a i) := by
-      intro i J hj; cases i with
-      | zero => simp at hj; subst J; exact hk
-      | succ n => exact hb n J (by simpa using hj)
     have hratio := Expr.contains_gridEnclosureWith? inputs hr
     have low : (128 : ℝ) ≤ r.lo := by exact_mod_cast test
     have hd := silk_small (a := a) (k := k) (low.trans hratio.1)
@@ -291,8 +293,23 @@ theorem rangeFast_sound {a : Coefficients ℝ} {K boxes bits degree I} {k : ℝ}
         · have hp : 0 < i-12 := by simp [len] at hn; omega
           have none : [silkBox][i-12]? = none := List.getElem?_eq_none (by simp; omega)
           simp [none] at hj
-    exact Expr.contains_gridEnclosureWith? inputs' h
-  · exact range_sound hk hb h
+    exact ⟨v,rfl,inputs',rfl⟩
+  · cases h; exact ⟨env k a,rfl,inputs,rfl⟩
+
+/-- Integral-ready enclosure using the proof-backed high-k Silk bound. -/
+def rangeFast? (boxes : List RationalInterval) (K : RationalInterval) (bits degree : Nat) :
+    Option RationalInterval := do
+  let form ← fastForm? boxes K bits degree
+  form.1.gridEnclosureWith? (K::form.2) bits degree
+
+theorem rangeFast_sound {a : Coefficients ℝ} {K boxes bits degree I} {k : ℝ}
+    (hk : K.Contains k) (hb : ∀ (i : Nat) (J : RationalInterval), boxes[i]? = some J →
+      J.Contains ((a.toList[i]?).getD 0))
+    (h : rangeFast? boxes K bits degree = some I) : I.Contains (transferReal a k) := by
+  obtain ⟨form,hf,hI⟩ := Option.bind_eq_some_iff.mp h
+  obtain ⟨v,_,hv,he⟩ := fastForm_sound hk hb hf
+  rw [← he]
+  exact Expr.contains_gridEnclosureWith? hv hI
 
 def point? (h om ob tcmb k : ℚ) (bits degree : Nat) : Option RationalInterval := do
   let boxes ← coefficientBoxes? h om ob tcmb bits degree

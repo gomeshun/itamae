@@ -181,3 +181,59 @@ lake env lean results/eps-eh/host-bounds-fine.lean
 Axioms printed by these checks: propext, Classical.choice, Quot.sound.
 Every previous matched-samples.csv field compares equal. New columns identify the plotted rational endpoints, archive and validation status. SHA-256 comparisons still match enclosures.csv, matched-summary.json, matched-enclosures.png, matched-precision.png and matched-transfer-growth.png.
 See scripts/reproduce_eps_eh.sh for the full commands.
+
+Same-cell quadrature and signed windows, 128 cells per octave
+Lean 4.36.0, 112-bit external grid, expression degree 16. Original mesh and all 74 radii matched exactly against the archived standard run: 7680 cells, k = 1e-8 .. 1e10 h/Mpc. The interval derivative operations use outward-rounded intermediate values with guard bits.
+$ lake build
+The shared real analysis lemmas, FloatLib expression bounds, physical cells and standalone finite evaluator passed the local three-axiom whitelist (propext, Classical.choice, Quot.sound).
+$ python scripts/eh_sweep.py --subdivisions 128 --bits 112 --degree 16 --jobs 4 --grid results/eps-plots/grid.json --numerical "$out/lean.json" --output "$out/sweep-tight.json" --transport "$out/sweep-bins-tight.json" --fixed-cell-slopes "$out/derivative-tight.json"
+The two Lean worker programs used in this command evaluated all weights in 172.39 s and completed the finite mass and signed-derivative tables in 387.04 s total (wall, 4 workers, other proofs running). The historical 7680-cell variance and derivative runs took 198.02 s and 103.10 s respectively. They ran as separate commands. Downstream proof and plotting times are additional.
+The new cell-integral interval is strictly inside its old rectangle in 7680/7680 exact comparisons. Old/new width, minimum/median/maximum: 56.73/106.01/166.29. Using the improved pointwise rectangle as the denominator for comparison gives rectangle/new = 10.29/21.46/166.29.
+sweep-tight.json SHA256 (uncompressed): cc9e0f5a4f22531a88b88d77d77b002f29c56abae9d16d1e429b6259d01ba4e9
+Independent checks including rational endpoints, signs and fixed-band references: fixed-cell-widths.json.
+
+$ lake env lean tests/EhFixedCellCase.lean
+'EhFixedCellCase.normalized_cell' depends on axioms: [propext, Classical.choice, Quot.sound]
+'EhFixedCellCase.centered_cell' depends on axioms: [propext, Classical.choice, Quot.sound]
+The first theorem checks S and its signed mass derivative on one actual production cell with 112 bits and degree 16. The second recovers the enclosed physical power integral from fresh inputs and proves a greater than tenfold width improvement at 96 bits, degree 16. The domain is the single wavenumber cell in both statements.
+All seven added Lean test files passed individually. They also cover an affine integral, an uncertain-coefficient polynomial, the shared-weight ratio, the analytic moment fallback, alternate power expressions and signed spherical windows.
+
+Fixed-cell comparison on the original 7,680-bin mesh
+$ python scripts/eh_tight_downstream.py /tmp/eh-match/sweep-tight.json /tmp/eh-match/growth.json /tmp/eh-match --reference-sweep /tmp/eh-match/sweep-fine.json --finite-slope /tmp/eh-match/derivative-tight.json
+Exact rational equality of the two endpoints of every bin, 74 radius intervals, R8, settings and band checked. Input SHA-256 values and replay scope are in the full, derivative, EPS and host tight reports.
+Finite grid evaluation: 172.392 s for all spectral cells, 386.615 s in total for the cells and 74 mass/slope evaluations. Downstream generation and kernel checks, sequential wall clock: eh_full_grid.py 9.433 s, eps_eh_kernel_bounds.py 15.507 s, eh_host_bounds.py 17.396 s, eh_full_derivative.py 6.474 s.
+Numerical finite integrals ran in the Lean runtime. For the new endpoints Lean checked each full-integral/tail and downstream implication with finite enclosures as inputs; 7,680-bin runtime rows have no complete per-row kernel proof. The 960-bin unconditional certificates remain available. An independent lake env lean -j1 results/eps-eh/kernel-bounds-tight.lean returned "'concrete' depends on axioms: [propext, Classical.choice, Quot.sound]". The full integral checker, host and slope implication logs also reported only these three axioms.
+The nominal Lean predictions fall in all 349 new intervals. Against the original 7,680-bin intervals: 348 strict subsets, one identical singleton, zero nonnested. Fractions of the old nonzero width, median by quantity: sigma 0.059744064; S 0.059847530; dS/dM 0.040278557; F 0.058606156; M200 0.055243712; dM/dz 0.048473600. The 116 background intervals keep their closed-primary source. All 46 historic prediction, reference, residual and earlier proof columns agree with commit 6dd0a7c across all 465 coordinates; the other four historic columns explicitly select the newly plotted interval and its provenance.
+$ python -m unittest discover -s tests -p test_plot_eh_comparison.py -v
+12 tests passed (3.621 s) including comparison to the original exact endpoints on all panels, zoom viewport, absent/unchecked/non-nested candidates, and CSV archive provenance. The three PDFs have 5 (main), 3 (zoom), and 3 (diagnostic) pages respectively; the figures render with Japanese labels.
+
+Integrated test run for the fixed-cell version
+$ python -m pytest -q tests  (prototype)
+43 passed, 227 subtests passed in 48.53s.
+$ PYTHONPATH=src python -m pytest -q tests  (repository root)
+40 passed in 1.68s.
+
+Final integrated lake build: 8505 jobs, 2930 declarations passed the axiom whitelist (15.29 s incremental).
+Additional kernel replay of compiled declarations, one module per invocation:
+$ lake env leanchecker -v CertifiedDyadicInterval  (exit 0)
+$ lake env leanchecker -v CertifiedCenteredIntegral  (exit 0)
+$ lake env leanchecker -v CertifiedWeightedIntegral  (exit 0)
+$ lake env leanchecker -v CertifiedExprDerivative  (exit 0)
+$ lake env leanchecker -v EhCenteredWeight  (exit 0)
+$ lake env leanchecker -v SashimiEhTighterPower  (exit 0)
+$ lake env leanchecker -v SashimiEhMoment  (exit 0)
+$ lake env leanchecker -v SashimiEhFixedWeight  (exit 0)
+$ lake env leanchecker -v SashimiTighterWindow  (exit 0)
+$ lake env leanchecker -v SashimiEhFixedCells  (exit 0)
+$ lake env leanchecker -v CertifiedIntegralRatio  (exit 0)
+$ lake env leanchecker -v SashimiEhFixedReplay  (exit 0)
+The four-cell negative fixture passed: EhFixedCellCase.false_block_rejected proves that a reported zero integral disagrees with evaluation from the exact mesh edges. Its axiom closure is the same three names.
+
+Closed representative band at full production precision
+$ python scripts/eh_fixed_block_replay.py "$out/fixed-octave.lean" "$out/fixed-octave.json" --jobs 4
+Fresh input at R=8 Mpc/h on the original octave 23, 128 cells at 112 bits / degree 16. Source coefficient boxes, each cell, window subtotal and adjacent-interval combination checked by Lean. Generation 10.608 s, kernel 58.265 s. Transitive axioms: propext, Classical.choice, Quot.sound.
+The theorem encloses raw matched (32768/390625) (65536/390625) 8. Exact rational endpoints in fixed-octave.json; full closed proof fixed-octave.lean SHA256 99062e6d34096176079aadab4d082e4c08bbb44ca2602f56d562c70f7899395c.
+
+Published rational interval comparisons
+$ python scripts/eh_width_certificate.py --csv "$out/matched-samples.csv" --output "$out/fixed-widths.lean"
+FixedWidthCertificate.publication: 349 distinct physical quantity and coordinate pairs, 349 nested, 348 strict improvements, 1 exact singleton at M200(0). Kernel check 19.635 s. Transitive axioms: propext, Classical.choice, Quot.sound. This result checks endpoint relationships in the deposited tables.

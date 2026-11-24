@@ -1,3 +1,4 @@
+import CertifiedDyadicInterval
 import SashimiEhVariance
 import SashimiEisensteinIntegral
 
@@ -31,9 +32,7 @@ def build? (c : Cosmology) (boxes : List RationalInterval) (bits degree : Nat) (
     let P ← weight? c boxes a b bits degree
     return ⟨b,P⟩ :: (← build? c boxes bits degree b bs)
 
-def rounded (bits : Nat) (I : RationalInterval) : RationalInterval :=
-  let s : ℚ := 2^bits
-  ⟨⌊I.lo*s⌋/s,⌈I.hi*s⌉/s⟩
+abbrev rounded := CertifiedDyadicInterval.rounded
 
 def panel (R : RationalInterval) (bits degree : Nat) (a : ℚ) (q : Bin) : RationalInterval :=
   let W := SashimiTableWindow.windowSq (a*R.lo) (q.right*R.hi) bits degree
@@ -133,13 +132,7 @@ theorem totalBy_sound {w f : ℝ → ℝ} {a bins} {piece : ℚ → Bin → Rati
     exact ⟨hi.trans hj, (intervalIntegral.integral_add_adjacent_intervals hi hj) ▸ RationalInterval.contains_add hI hJ⟩
 
 theorem round_sound (bits : Nat) {I : RationalInterval} {x : ℝ} (h : I.Contains x) :
-    (rounded bits I).Contains x := by
-  let s : ℚ := 2^bits
-  have hs : 0 < s := by dsimp [s]; positivity
-  have hl : (⌊I.lo*s⌋ : ℚ)/s ≤ I.lo := (div_le_iff₀ hs).2 (Int.floor_le _)
-  have hu : I.hi ≤ (⌈I.hi*s⌉ : ℚ)/s := (le_div_iff₀ hs).2 (Int.le_ceil _)
-  exact ⟨(by exact_mod_cast hl : (((rounded bits I).lo : ℚ) : ℝ) ≤ I.lo).trans h.1,
-    h.2.trans (by exact_mod_cast hu : (I.hi : ℝ) ≤ ((rounded bits I).hi : ℝ))⟩
+    (rounded bits I).Contains x := CertifiedDyadicInterval.round_sound bits h
 
 theorem total_sound {c a bins} {R : RationalInterval} {r bits degree} (hgood : Good (weightReal c) a bins)
     (hR : R.Contains r) (hR0 : 0 ≤ R.lo) :

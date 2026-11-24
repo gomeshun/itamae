@@ -230,9 +230,10 @@ class MatchedComparisonTest(unittest.TestCase):
             reports.append(("matched", old, legacy_file, False))
         else:
             reports.append(("matched", document(data, primary), primary + ".json", False))
-            fine_path = data / (primary + "-fine.json")
-            if fine_path.exists():
-                reports.append(("matched", json.loads(fine_path.read_text()), fine_path.name, True))
+            for version in ("fine", "tight"):
+                path = data / f"{primary}-{version}.json"
+                if path.exists():
+                    reports.append(("matched", json.loads(path.read_text()), path.name, True))
         result = {"matched": {}, "legacy": {}}
         for model, cert, source, refined in reports:
             table_checked = cert.get("kernel_replayed", cert.get("kernel_replay") == "passed")
@@ -244,11 +245,14 @@ class MatchedComparisonTest(unittest.TestCase):
                     "end_to_end_kernel_replayed", row.get("kernel_replayed", table_checked)
                 )
                 if checked or refined:
-                    # The published 7680-cell reports evaluated the proved integrator at runtime.
-                    # A row-level full replay, when present, supplies a stronger status.
+                    low, high = Fraction(box["lo"]), Fraction(box["hi"])
+                    previous = result[model].get(x)
+                    if source.endswith("-tight.json") and previous is not None:
+                        if low < previous.lo or high > previous.hi or (low, high) == previous[:2]:
+                            continue
                     result[model][x] = ExpectedInterval(
-                        Fraction(box["lo"]),
-                        Fraction(box["hi"]),
+                        low,
+                        high,
                         source,
                         "kernel_checked" if checked else "proved_evaluator_runtime",
                     )
@@ -276,11 +280,11 @@ class MatchedComparisonTest(unittest.TestCase):
                 atol=0,
             )
 
-    def inspect_intervals(self, q, records, sources, certified):
+    def inspect_intervals(self, q, records, sources, certified, *, zoom=False):
         selected = [r for r in records if r["quantity"] == q.key]
         fig, axes = plt.subplots(len(PANELS), sharex=True)
         try:
-            plots.curves_panel(axes, q, selected)
+            plots.curves_panel(axes, q, selected, zoom=zoom)
             for model, expected in certified.items():
                 physical = {
                     float(x): sorted((float(i.lo) * q.factor, float(i.hi) * q.factor))
@@ -356,7 +360,9 @@ class MatchedComparisonTest(unittest.TestCase):
         with TemporaryDirectory() as tmp:
             data = Path(tmp)
             for path in MATCHED.glob("*.json"):
-                if path.name != "kernel-bounds.json" and not path.name.endswith("-fine.json"):
+                if path.name != "kernel-bounds.json" and not path.name.endswith(
+                    ("-fine.json", "-tight.json")
+                ):
                     copyfile(path, data / path.name)
             kernel = document(MATCHED, "kernel-bounds")
             first, second = kernel["rows"][:2]
@@ -379,7 +385,10 @@ class MatchedComparisonTest(unittest.TestCase):
         with TemporaryDirectory() as tmp:
             data = Path(tmp)
             for p in MATCHED.glob("*.json"):
-                if p.name not in ("kernel-bounds.json", "kernel-bounds-fine.json"):
+                if p.name not in (
+                    "kernel-bounds.json",
+                    "kernel-bounds-fine.json",
+                ) and not p.name.endswith("-tight.json"):
                     copyfile(p, data / p.name)
             primary = document(MATCHED, "kernel-bounds")
             primary["rows"][1]["end_to_end_kernel_replayed"] = False
@@ -395,6 +404,8 @@ class MatchedComparisonTest(unittest.TestCase):
             self.inspect_intervals(q, rows, self.source_values(q), expected)
 
     def test_csv_keeps_both_integral_meshes_and_the_selected_interval(self):
+        q = next(q for q in plots.MASS if q.key == "F")
+        expected = self.certificate_values(q)["matched"]
         primary = by_coordinate(document(MATCHED, "kernel-bounds")["rows"], "mass_msun")
         fine = by_coordinate(document(MATCHED, "kernel-bounds-fine")["rows"], "mass_msun")
         with TemporaryDirectory() as tmp:
@@ -415,9 +426,9 @@ class MatchedComparisonTest(unittest.TestCase):
                 ),
                 (
                     "matched_plot",
-                    fine[x]["F"],
-                    "kernel-bounds-fine.json",
-                    "proved_evaluator_runtime",
+                    {"lo": str(expected[x].lo), "hi": str(expected[x].hi)},
+                    expected[x].source,
+                    expected[x].status,
                 ),
             ):
                 self.assertEqual(
@@ -426,7 +437,11 @@ class MatchedComparisonTest(unittest.TestCase):
                 self.assertEqual(row[prefix + "_enclosure_source"], source)
                 self.assertEqual(row[prefix + "_enclosure_status"], state)
             # Populated endpoints alone cannot qualify an otherwise unresolved refinement.
-            stale = dict(row, matched_fine_enclosure_status="unresolved")
+            stale = dict(
+                row,
+                matched_fine_enclosure_status="unresolved",
+                matched_tight_enclosure_status="unresolved",
+            )
             self.assertEqual(
                 plots.plotting_enclosure(stale, "matched"),
                 tuple(Fraction(primary[x]["F"][k]) for k in ("lo", "hi")),
@@ -448,11 +463,73 @@ class MatchedComparisonTest(unittest.TestCase):
         fine = by_coordinate(document(MATCHED, "kernel-bounds-fine")["rows"], "mass_msun")[x]["F"]
         self.assertNotEqual(fine, bound)
         self.assertNotEqual(midpoint(fine), values[x]["matched"])
-        expected = tuple(Fraction(fine[k]) for k in ("lo", "hi"))
+        expected = self.certificate_values(q)["matched"][x][:2]
         self.assertEqual(plots.plotting_enclosure(row, "matched"), expected)
         self.assertEqual(row["matched_fine_enclosure_source"], "kernel-bounds-fine.json")
         self.assertEqual(row["matched_fine_enclosure_status"], "proved_evaluator_runtime")
         self.assertEqual(row["matched_enclosure_status"], "kernel_checked")
+
+    def test_fixed_cell_selection_and_zoom(self):
+        q = next(q for q in plots.MASS if q.key == "S")
+        self.inspect_intervals(
+            q, self.records, self.source_values(q), self.certificate_values(q), zoom=True
+        )
+        # The fixed-cell candidate must improve containment on both sides at this mass.
+        row = {
+            "matched_lo_exact": "2",
+            "matched_hi_exact": "15",
+            "matched_enclosure_status": "kernel_checked",
+            "matched_fine_lo_exact": "5",
+            "matched_fine_hi_exact": "10",
+            "matched_fine_enclosure_status": "proved_evaluator_runtime",
+            "matched_tight_enclosure_status": "proved_evaluator_runtime",
+        }
+        for lo, hi, want in (
+            (6, 10, (6, 10)),
+            (7, 11, (5, 10)),
+            (3, 11, (5, 10)),
+            (5, 10, (5, 10)),
+        ):
+            candidate = dict(row, matched_tight_lo_exact=str(lo), matched_tight_hi_exact=str(hi))
+            self.assertEqual(plots.plotting_enclosure(candidate, "matched"), want)
+            expected_source = "matched_tight" if lo == 6 else "matched_fine"
+            self.assertEqual(plots.plot_enclosure_prefix(candidate, "matched"), expected_source)
+
+    def test_fixed_cell_report_requires_matching_method_and_checked_propagation(self):
+        q = next(q for q in plots.MASS if q.key == "S")
+        sources = self.source_values(q)
+        with TemporaryDirectory() as tmp:
+            data = Path(tmp)
+            for p in MATCHED.glob("*.json"):
+                if not p.name.endswith("-tight.json"):
+                    copyfile(p, data / p.name)
+            report = document(MATCHED, "full-fine")
+            report["same_grid"] = {
+                "matched_cells": report["mesh"]["cells"],
+                "reference_sweep_sha256": report["finite_band_source_sha256"],
+            }
+            first = report["rows"][0]
+            value = sources[Fraction(first["mass_msun"])]["matched"]
+            # A smaller synthetic interval exercises archive selection; the actual published
+            # results are checked against the independent original certificates above.
+            first["S"] = {"lo": str(value), "hi": str(value)}
+            report["mesh"]["enclosure_method"] = "fixed_cell_enclosure"
+            for tag, checked, source in (
+                ("other", True, "full-fine.json"),
+                ("fixed_cell_enclosure", False, "full-fine.json"),
+                ("fixed_cell_enclosure", True, "full-tight.json"),
+            ):
+                report["mesh"]["enclosure_method"] = tag
+                report["propagation_kernel_replayed"] = checked
+                (data / "full-tight.json").write_text(json.dumps(report))
+                selected = next(
+                    r
+                    for r in plots.comparison_rows(data, BASELINE)
+                    if r["quantity"] == "S"
+                    and Fraction(r["coordinate"]) == Fraction(first["mass_msun"])
+                )
+                self.assertEqual(selected["matched_plot_enclosure_source"], source)
+                self.assertEqual(Fraction(selected["matched_reference_exact"]), value)
 
     def test_coincident_hubble_references_preserve_binary64_residual(self):
         q = next(q for q in plots.BACKGROUND if q.key == "H")

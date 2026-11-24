@@ -1,0 +1,29 @@
+{
+  "kernel_replayed": true,
+  "theorem": "certifiedFixedBand",
+  "kernel_axioms": [
+    "propext",
+    "Classical.choice",
+    "Quot.sound"
+  ],
+  "scope": "Unnormalized top-hat variance integral on the stated finite k band; the universal constant 1/(2\u03c0\u00b2) is omitted.",
+  "octave": 23,
+  "last_octave": 23,
+  "cells_per_octave": 128,
+  "k_band_h_per_Mpc": [
+    "32768/390625",
+    "65536/390625"
+  ],
+  "cells": 128,
+  "block_size": 4,
+  "parallel_jobs": 4,
+  "radius_mpc_h": "8",
+  "bits": 112,
+  "degree": 16,
+  "raw": {
+    "lo": "7738678629881947543061442093/5192296858534827628530496329220096",
+    "hi": "970218857625321911929616489/649037107316853453566312041152512"
+  },
+  "runtime_seconds": 10.607830773005844,
+  "kernel_seconds": 58.26470544299809
+}

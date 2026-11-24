@@ -7,6 +7,9 @@
       "plotted_value_inside": 29,
       "colossus_spline_inside": 0
     },
+    "plotted_interval_sources": {
+      "../eps-plots/background.json": 29
+    },
     "references": {
       "legacy": {
         "reference_kind": "rational_midpoint",
@@ -91,6 +94,9 @@
       "end_to_end_kernel_checked": 29,
       "plotted_value_inside": 29,
       "colossus_spline_inside": 1
+    },
+    "plotted_interval_sources": {
+      "growth.json": 29
     },
     "references": {
       "legacy": {
@@ -177,6 +183,9 @@
       "plotted_value_inside": 29,
       "colossus_spline_inside": 0
     },
+    "plotted_interval_sources": {
+      "growth.json": 29
+    },
     "references": {
       "legacy": {
         "reference_kind": "rational_midpoint",
@@ -262,6 +271,9 @@
       "plotted_value_inside": 29,
       "colossus_spline_inside": 0
     },
+    "plotted_interval_sources": {
+      "growth.json": 29
+    },
     "references": {
       "legacy": {
         "reference_kind": "rational_midpoint",
@@ -346,6 +358,17 @@
       "end_to_end_kernel_checked": 73,
       "plotted_value_inside": 73,
       "colossus_spline_inside": 73
+    },
+    "plotted_interval_sources": {
+      "full-tight.json": 73
+    },
+    "plotted_to_original_fine_width_ratio": {
+      "candidate_points": 73,
+      "strictly_narrower": 73,
+      "nonzero_fine_widths": 73,
+      "minimum": 0.05955805930139136,
+      "median": 0.05974406358813745,
+      "maximum": 0.06565407743274528
     },
     "references": {
       "legacy": {
@@ -436,6 +459,17 @@
       "plotted_value_inside": 73,
       "colossus_spline_inside": 73
     },
+    "plotted_interval_sources": {
+      "full-tight.json": 73
+    },
+    "plotted_to_original_fine_width_ratio": {
+      "candidate_points": 73,
+      "strictly_narrower": 73,
+      "nonzero_fine_widths": 73,
+      "minimum": 0.05963957847888912,
+      "median": 0.059847529634253646,
+      "maximum": 0.06545375496984251
+    },
     "references": {
       "legacy": {
         "reference_kind": "rational_midpoint",
@@ -524,6 +558,17 @@
       "end_to_end_kernel_checked": 73,
       "plotted_value_inside": 73,
       "colossus_spline_inside": 73
+    },
+    "plotted_interval_sources": {
+      "derivative-full-tight.json": 73
+    },
+    "plotted_to_original_fine_width_ratio": {
+      "candidate_points": 73,
+      "strictly_narrower": 73,
+      "nonzero_fine_widths": 73,
+      "minimum": 0.037456193234979326,
+      "median": 0.04027855656618904,
+      "maximum": 0.054796016073568064
     },
     "references": {
       "legacy": {
@@ -614,6 +659,17 @@
       "plotted_value_inside": 72,
       "colossus_spline_inside": 72
     },
+    "plotted_interval_sources": {
+      "kernel-bounds-tight.json": 72
+    },
+    "plotted_to_original_fine_width_ratio": {
+      "candidate_points": 72,
+      "strictly_narrower": 72,
+      "nonzero_fine_widths": 72,
+      "minimum": 0.05692667908638653,
+      "median": 0.058606156280213706,
+      "maximum": 0.1565275005539188
+    },
     "references": {
       "legacy": {
         "reference_kind": "rational_midpoint",
@@ -703,6 +759,18 @@
       "plotted_value_inside": 29,
       "colossus_spline_inside": 29
     },
+    "plotted_interval_sources": {
+      "host-bounds-fine.json": 1,
+      "host-bounds-tight.json": 28
+    },
+    "plotted_to_original_fine_width_ratio": {
+      "candidate_points": 29,
+      "strictly_narrower": 28,
+      "nonzero_fine_widths": 28,
+      "minimum": 0.053536163276540476,
+      "median": 0.05524371211640762,
+      "maximum": 0.055809441795003176
+    },
     "references": {
       "legacy": {
         "reference_kind": "rational_midpoint",
@@ -779,6 +847,17 @@
       "end_to_end_kernel_checked": 29,
       "plotted_value_inside": 29,
       "colossus_spline_inside": 29
+    },
+    "plotted_interval_sources": {
+      "host-bounds-tight.json": 29
+    },
+    "plotted_to_original_fine_width_ratio": {
+      "candidate_points": 29,
+      "strictly_narrower": 29,
+      "nonzero_fine_widths": 29,
+      "minimum": 0.04360020186594025,
+      "median": 0.0484735995821345,
+      "maximum": 0.05322577206505768
     },
     "references": {
       "legacy": {

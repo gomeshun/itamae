@@ -12,6 +12,7 @@ masses="$out/proofs/masses"
 slopes="$out/proofs/slopes"
 pairs="$out/proofs/pairs"
 lake build
+python scripts/eh_fixed_block_replay.py "$out/fixed-octave.lean" "$out/fixed-octave.json" --jobs "$jobs"
 python scripts/eps_eh_reference.py "$grid" "$out/colossus.json"
 python scripts/eh_transfer.py "$out/colossus.json" "$out/transfer.json"
 python scripts/eh_transfer_samples.py "$out/transfer-samples.json"
@@ -26,6 +27,9 @@ for subdivisions in 16 128; do
         --output "$out/sweep$suffix.json" --transport "$out/sweep-bins$suffix.json"
     python scripts/eh_derivative_bounds.py "$out/sweep-bins$suffix.json" "$grid" "$out/derivative$suffix.json"
 done
+python scripts/eh_sweep.py --subdivisions 128 --grid "$grid" --numerical "$out/lean.json" \
+    --output "$out/sweep-tight.json" --transport "$out/sweep-bins-tight.json" \
+    --fixed-cell-slopes "$out/derivative-tight.json" --jobs "$jobs"
 python scripts/eh_sweep_certificate.py "$out/sweep-bins.json" "$out/sweep.json" --mass 1e12 \
     --output "$out/kernel-host.json" --module-output "$host" --jobs "$jobs"
 python scripts/eh_sweep_masses.py --sweep "$out/sweep.json" --modules "$host" --output "$masses" --jobs "$jobs" \
@@ -44,4 +48,7 @@ python scripts/eh_host_bounds.py "$out/sweep-fine.json" "$out/growth.json" "$out
 python scripts/eh_host_bounds.py "$out/sweep.json" "$out/growth.json" "$out/host-bounds.json" --paired "$out/paired-73.json" --modules "$pairs" "$masses" "$host"
 python scripts/eps_eh_kernel_bounds.py "$out/full.json" "$out/growth.json" "$out/kernel-bounds.json" --paired "$out/paired-children.json" --modules "$pairs" "$masses" "$host"
 python scripts/eps_eh_kernel_bounds.py "$out/full-fine.json" "$out/growth.json" "$out/kernel-bounds-fine.json"
+python scripts/eh_tight_downstream.py "$out/sweep-tight.json" "$out/growth.json" "$out" \
+    --reference-sweep "$out/sweep-fine.json" --finite-slope "$out/derivative-tight.json"
 python scripts/plot_eh_match.py "$out" results/eps-plots "$out"
+python scripts/eh_width_certificate.py --csv "$out/matched-samples.csv" --output "$out/fixed-widths.lean"

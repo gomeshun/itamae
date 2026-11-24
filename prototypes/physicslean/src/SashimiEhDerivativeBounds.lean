@@ -108,13 +108,13 @@ open SashimiEhSweep SashimiEisensteinIntegral SashimiEhVariance
 noncomputable def rawSlope (c : Cosmology) (r : ℝ) (a b : ℚ) :=
   ∫ k in (a:ℝ)..(b:ℝ), weightReal c k * shape (k*r)
 
-private theorem measurable_weight (c : Cosmology) : Measurable (weightReal c) := by
+theorem measurable_weight (c : Cosmology) : Measurable (weightReal c) := by
   have hh := SashimiAnalyticWindow.measurableIntegrand (weighted c)
     (fun i => ((coefficients c).toList[i]?).getD 0) 0
   change Measurable (fun k => weightReal c k * topHat (k*0)^2) at hh
   simpa [topHat] using hh
 
-private theorem measurable_shape : Measurable shape := by
+theorem measurable_shape : Measurable shape := by
   have hw : Measurable topHat := by
     unfold topHat
     exact Measurable.ite (measurableSet_singleton 0) measurable_const (by fun_prop)

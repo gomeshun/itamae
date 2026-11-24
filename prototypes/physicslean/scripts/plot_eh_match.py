@@ -1,9 +1,11 @@
 """Plot the matched spectrum against Colossus on the published SASHIMI-C EPS grid."""
 
 import argparse
+from collections import Counter
 import csv
 from dataclasses import dataclass
 from fractions import Fraction as Q
+import gzip
 from hashlib import sha256
 import json
 from pathlib import Path
@@ -220,6 +222,46 @@ def join(data, baseline):
     return records
 
 
+def load_tight_reports(data, baseline_reports):
+    tight_reports = {}
+    for stem in ("full", "kernel-bounds", "derivative-full", "host-bounds"):
+        name = stem + "-tight"
+        if (data / (name + ".json")).exists():
+            tight_reports[name] = load(data, name)
+    if "full-tight" in tight_reports:
+        report = tight_reports["full-tight"]
+        for filename, opener in (("sweep-tight.json.gz", gzip.open), ("sweep-tight.json", open)):
+            finite = data / filename
+            if not finite.is_file():
+                continue
+            with opener(finite, "rb") as f:
+                if sha256(f.read()).hexdigest() != report["finite_band_source_sha256"]:
+                    raise ValueError(f"full-tight inputs differ from {filename}")
+        mesh = report["mesh"]
+        reference_name = "full-fine" if mesh["cells"] == FINE_CELLS else "full"
+        reference = baseline_reports.get(reference_name)
+        identity = report["same_grid"]
+        if identity["matched_cells"] != mesh["cells"] or (
+            reference is not None
+            and identity["reference_sweep_sha256"] != reference["finite_band_source_sha256"]
+        ):
+            raise ValueError("Fixed-cell report does not match the original integration mesh")
+    for stem in ("host-bounds-tight", "derivative-full-tight"):
+        if stem not in tight_reports:
+            continue
+        checks = tight_reports[stem]["inputs_sha256"]
+        if checks["sweep"] != tight_reports["full-tight"]["finite_band_source_sha256"]:
+            raise ValueError(f"{stem} and full-tight use different finite-band sweeps")
+        input_key, filename = (
+            ("growth", "growth.json")
+            if stem == "host-bounds-tight"
+            else ("finite_derivative", "derivative-tight.json")
+        )
+        if checks[input_key] != sha256((data / filename).read_bytes()).hexdigest():
+            raise ValueError(f"{stem} inputs differ from {filename}")
+    return tight_reports
+
+
 def _comparison_data(data, baseline):
     rows = join(data, baseline)
     bounds = {k: load(data, k) for k in ("full", "derivative", "kernel-bounds")}
@@ -233,10 +275,12 @@ def _comparison_data(data, baseline):
     ):
         if (data / (stem + ".json")).exists():
             bounds[stem] = load(data, stem)
-    for suffix in ("", "-fine"):
+    tight_reports = load_tight_reports(data, bounds)
+    for suffix in ("", "-fine", "-tight"):
         name = "kernel-bounds" + suffix
-        if name in bounds:
-            for k, expected in bounds[name]["inputs_sha256"].items():
+        report = (tight_reports if suffix == "-tight" else bounds).get(name)
+        if report is not None:
+            for k, expected in report["inputs_sha256"].items():
                 stems = {"full": "full" + suffix, "growth": "growth", "paired": "paired-children"}
                 file_name = stems[k] + ".json"
                 if sha256((data / file_name).read_bytes()).hexdigest() != expected:
@@ -248,28 +292,21 @@ def _comparison_data(data, baseline):
     fine_reports = dict(bounds)
     if (data / "host-bounds-fine.json").exists():
         fine_reports["host-bounds-fine"] = load(data, "host-bounds-fine")
-    fine_inputs = refined_inputs(fine_reports)
+    refined_tables = {
+        "fine": refined_inputs(fine_reports, "fine"),
+        "tight": refined_inputs(tight_reports, "tight"),
+    }
     host_keys = {q.key for q in HOST}
     for r in rows:
         key = r["quantity"]
-        r["matched_fine_lo_exact"], r["matched_fine_hi_exact"] = "", ""
-        r["matched_fine_enclosure_source"] = ""
-        r["matched_fine_enclosure_status"] = "unresolved"
         coordinate = Q(r["coordinate"])
         result = mass_lookup.get((key, r["coordinate"]))
         if result is not None:
             r["matched_lo_exact"], r["matched_hi_exact"] = result["lo"], result["hi"]
-            r["matched_fine_lo_exact"], r["matched_fine_hi_exact"] = (
-                result["fine_lo"],
-                result["fine_hi"],
-            )
             source, checked = result["inputs"], result["end_to_end_kernel_replay"]
         elif key in host_keys:
             host = host_rows[coordinate]
             box = host[key]
-            tight = fine_inputs.get("host-bounds-fine", {}).get(coordinate, {}).get(key)
-            if tight:
-                r["matched_fine_lo_exact"], r["matched_fine_hi_exact"] = tight["lo"], tight["hi"]
             r["matched_lo_exact"], r["matched_hi_exact"] = (
                 (box["lo"], box["hi"]) if box else ("", "")
             )
@@ -290,21 +327,32 @@ def _comparison_data(data, baseline):
         )
         r["matched_enclosure_source"] = source
         r["matched_enclosure_status"] = r["enclosure_status"]
-        fine_name = Path(source).stem + "-fine"
-        fine_row = fine_inputs.get(fine_name, {}).get(coordinate, {})
-        if fine_row.get(key) and fine_row.get("status") not in ("unresolved", "unavailable"):
-            r["matched_fine_enclosure_source"] = fine_name + ".json"
-            r["matched_fine_enclosure_status"] = (
-                KERNEL_CHECKED
-                if fine_row.get("end_to_end_kernel_replayed", fine_row.get("kernel_replayed"))
-                is True
-                else EVALUATOR_RUNTIME
+        for variant, tables in refined_tables.items():
+            name = f"{Path(source).stem}-{variant}"
+            sample = tables.get(name, {}).get(coordinate, {})
+            box = sample.get(key)
+            prefix = "matched_" + variant
+            available = box is not None and sample.get("status") not in (
+                "unresolved",
+                "unavailable",
             )
+            r[prefix + "_lo_exact"] = box["lo"] if available else ""
+            r[prefix + "_hi_exact"] = box["hi"] if available else ""
+            r[prefix + "_enclosure_source"] = name + ".json" if available else ""
+            r[prefix + "_enclosure_status"] = "unresolved"
+            if available:
+                closed = sample.get("end_to_end_kernel_replayed", sample.get("kernel_replayed"))
+                r[prefix + "_enclosure_status"] = KERNEL_CHECKED if closed else EVALUATOR_RUNTIME
+        tighter_source = Path(r["matched_tight_enclosure_source"]).stem
+        r["matched_tight_cells"] = (
+            tight_reports[tighter_source]["mesh"]["cells"] if tighter_source else ""
+        )
         # Keep the nominal numerical line even when an integral was unresolved.
         # Every published bound is checked against the exact reference used for this chart.
         for lo, hi in (
             ("matched_lo_exact", "matched_hi_exact"),
             ("matched_fine_lo_exact", "matched_fine_hi_exact"),
+            ("matched_tight_lo_exact", "matched_tight_hi_exact"),
         ):
             if bool(r[lo]) != bool(r[hi]):
                 raise ValueError(f"Incomplete bounds for {key} at {r['coordinate']}")
@@ -319,30 +367,40 @@ def _comparison_data(data, baseline):
                 if selected
                 else ("unresolved" if field == "enclosure_status" else "")
             )
+        if result is not None:
+            for side in ("lo", "hi"):
+                result["tight_" + side] = r[f"matched_tight_{side}_exact"]
+            result["plot_source"] = r["matched_plot_enclosure_source"]
     return rows, bounds, mass_boxes
 
 
-def refined_inputs(reports):
-    """Recognize the four archived 7,680-cell evaluator outputs and their checked implications."""
+def refined_inputs(reports, variant):
+    """Recognize evaluated mesh reports whose transfer to each physical quantity was checked."""
     result = {}
-    for name in ("full-fine", "derivative-full-fine", "kernel-bounds-fine", "host-bounds-fine"):
+    for stem in ("full", "derivative-full", "kernel-bounds", "host-bounds"):
+        name = stem + "-" + variant
         if name not in reports:
             continue
         doc = reports[name]
-        if doc.get("mesh", {}).get("cells", doc.get("cells")) != FINE_CELLS:
+        mesh = doc.get("mesh", {})
+        if variant == "fine" and mesh.get("cells", doc.get("cells")) != FINE_CELLS:
+            continue
+        if variant == "tight" and (
+            mesh.get("enclosure_method") != "fixed_cell_enclosure" or not mesh.get("cells")
+        ):
             continue
         rows = doc["rows"]
         coordinate = "mass_msun"
-        if name == "full-fine":
+        if stem == "full":
             if not (doc.get("propagation_kernel_replayed") and doc.get("radius_kernel_replayed")):
                 continue
-        elif name == "derivative-full-fine":
+        elif stem == "derivative-full":
             rows = [
                 r
                 for r in rows
                 if r.get("conditional_implication_kernel_checked") or r.get("kernel_replayed")
             ]
-        elif name == "kernel-bounds-fine":
+        elif stem == "kernel-bounds":
             if not doc.get("kernel_replayed"):
                 continue
         else:
@@ -355,16 +413,22 @@ def refined_inputs(reports):
 
 
 def plot_enclosure_prefix(row, source):
-    """Prefer a refined evaluator interval and otherwise use the closed kernel interval."""
-    fine = source == "matched" and row.get("matched_fine_enclosure_status") in (
-        KERNEL_CHECKED,
-        EVALUATOR_RUNTIME,
-    )
-    if fine and row.get("matched_fine_lo_exact") and row.get("matched_fine_hi_exact"):
-        return "matched_fine"
-    if row[source + "_enclosure_status"] == KERNEL_CHECKED:
-        return source
-    return None
+    """Use fixed-cell tightening only when it improves both-sided containment on this row."""
+    selected = source if row[source + "_enclosure_status"] == KERNEL_CHECKED else None
+    if source != "matched":
+        return selected
+    for prefix in ("matched_fine", "matched_tight"):
+        if row.get(prefix + "_enclosure_status") not in (KERNEL_CHECKED, EVALUATOR_RUNTIME):
+            continue
+        if not row.get(prefix + "_lo_exact") or not row.get(prefix + "_hi_exact"):
+            continue
+        if selected and prefix == "matched_tight":
+            lo, hi = Q(row[prefix + "_lo_exact"]), Q(row[prefix + "_hi_exact"])
+            old_lo, old_hi = Q(row[selected + "_lo_exact"]), Q(row[selected + "_hi_exact"])
+            if not (old_lo <= lo <= hi <= old_hi and (lo > old_lo or hi < old_hi)):
+                continue
+        selected = prefix
+    return selected
 
 
 def plotting_enclosure(row, source):
@@ -401,7 +465,31 @@ def save_tables(out, rows):
                 "plotted_value_inside": sum(inside(r, "matched") for r in enclosed),
                 "colossus_spline_inside": sum(inside(r, "colossus_spline") for r in enclosed),
             },
+            "plotted_interval_sources": dict(
+                Counter(r["matched_plot_enclosure_source"] for r in subset)
+            ),
         }
+        candidates = [
+            r for r in subset if r["matched_fine_lo_exact"] and r["matched_tight_lo_exact"]
+        ]
+        ratios = []
+        for r in candidates:
+            fine_width = Q(r["matched_fine_hi_exact"]) - Q(r["matched_fine_lo_exact"])
+            if fine_width:
+                width = Q(r["matched_plot_hi_exact"]) - Q(r["matched_plot_lo_exact"])
+                ratios.append(float(width / fine_width))
+        if ratios:
+            summary["plotted_to_original_fine_width_ratio"] = {
+                "candidate_points": len(candidates),
+                "strictly_narrower": sum(
+                    r["matched_plot_enclosure_source"] == r["matched_tight_enclosure_source"]
+                    for r in candidates
+                ),
+                "nonzero_fine_widths": len(ratios),
+                "minimum": min(ratios),
+                "median": float(np.median(ratios)),
+                "maximum": max(ratios),
+            }
         summary["references"] = {}
         for base in BASES:
             lo, hi = base + "_lo_exact", base + "_hi_exact"
@@ -743,12 +831,15 @@ def curves(rows, quantities, title, subtitle, foot, *, zoom=False):
     available = {key for group in groups for key in active_series(group)}
     handles = [Line2D([], [], **line_style(k)) for k in SERIES_KEYS if k in available]
     matched_sources = {plot_enclosure_prefix(row, "matched") for group in groups for row in group}
-    refined = "matched_fine" in matched_sources
-    matched_label = "Colossus · カーネル検査"
-    if refined:
-        matched_label = "Colossus · 7,680 分割"
-        if "matched" in matched_sources:
-            matched_label += "／カーネル検査"
+    methods = []
+    for method, label in (
+        ("matched_tight", "固定セル改良"),
+        ("matched_fine", "7,680 分割"),
+        ("matched", "カーネル検査"),
+    ):
+        if method in matched_sources:
+            methods.append(label)
+    matched_label = "Colossus · " + "／".join(methods)
     for key, model in zip(BASES, ("SASHIMI · カーネル検査", matched_label), strict=True):
         handles.append(
             Line2D(
@@ -810,8 +901,8 @@ def curves(rows, quantities, title, subtitle, foot, *, zoom=False):
     fig.text(
         0.031,
         0.055,
-        "縦棒は各標本の区間。7,680 分割は証明済み評価器で積分和を計算し、上下限への伝播をカーネルで検査。"
-        if refined
+        "縦棒は各標本の区間。積分和は証明済み評価器で計算し、上下限への伝播をカーネルで検査。各点の計算法を比較 CSV に記録。"
+        if any(s in matched_sources for s in ("matched_fine", "matched_tight"))
         else "縦棒は各標本でカーネル検査した Lean の区間。",
         fontsize=10,
         color=INK,

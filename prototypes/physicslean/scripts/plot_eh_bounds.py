@@ -84,6 +84,8 @@ def save_and_plot(records, data, output):
         Line2D([], [], color=dark, lw=1.8, label="Lean 数値積分"),
         Line2D([], [], ls="none", marker="o", color=orange, mfc="none", label="Colossus 既定"),
     ]
+    if any(r.get("tight_lo") for r in records):
+        handles.insert(2, Line2D([], [], color="#8b4283", lw=2, label="固定セル改良の区間"))
     if any(not r["lo"] for r in records):
         handles.append(
             Line2D([], [], ls="none", marker="x", color="#9e4856", label="960 分割で未確定")
@@ -125,17 +127,20 @@ def save_and_plot(records, data, output):
         positive = [v for v in low if v > 0]
         floor = min(positive + [r["native"] * q.factor for r in group]) * 0.7
         ax.vlines(vx, [max(floor, value) for value in low], high, color=blue, lw=1.35, zorder=0)
-        fine = [r for r in group if r["fine_lo"]]
-        if fine:
+        for prefix, shade, width in (("fine", "#176a61", 2.1), ("tight", "#8b4283", 1.15)):
+            fine = [r for r in group if r.get(prefix + "_lo")]
+            if not fine:
+                continue
             fboxes = [
-                sorted(float(Q(r[k])) * q.factor for k in ("fine_lo", "fine_hi")) for r in fine
+                sorted(float(Q(r[f"{prefix}_{side}"])) * q.factor for side in ("lo", "hi"))
+                for r in fine
             ]
             ax.vlines(
                 [float(Q(r["mass_msun"])) for r in fine],
                 [max(floor, pair[0]) for pair in fboxes],
                 [pair[1] for pair in fboxes],
-                color="#176a61",
-                lw=2.1,
+                color=shade,
+                lw=width,
                 zorder=1,
             )
         if missing:
@@ -202,22 +207,22 @@ def error_budget(records):
         fontsize=10.4,
         color=MUTED,
     )
-    colors = ["#658aa7", "#176a61", "#bd6209", "#826380"]
-    labels = [
-        "960 分割・誤差上限",
-        "7,680 分割・誤差上限",
-        "Colossus 既定との差",
-        "同一帯域・再規格化の差",
+    bounds = [
+        ("lo", "hi", "#658aa7", "960 分割・誤差上限"),
+        ("fine_lo", "fine_hi", "#176a61", "7,680 分割・誤差上限"),
     ]
-    handles = [
-        Line2D([], [], color=c, lw=1.8, ls=ls, label=lab)
-        for c, lab, ls in zip(colors, labels, ["-", "-", "--", ":"], strict=True)
-    ]
+    if any(r.get("tight_lo") for r in records):
+        bounds.append(("tight_lo", "tight_hi", "#8b4283", "固定セル改良・誤差上限"))
+    styles = [(color, "-", label) for _, _, color, label in bounds]
+    styles.extend(
+        [("#bd6209", "--", "Colossus 既定との差"), ("#826380", ":", "同一帯域・再規格化の差")]
+    )
+    handles = [Line2D([], [], color=c, lw=1.8, ls=ls, label=lab) for c, ls, lab in styles]
     fig.legend(
         handles=handles,
         loc="upper left",
         bbox_to_anchor=(0.083, 0.884),
-        ncol=4,
+        ncol=len(handles),
         frameon=False,
         fontsize=9.9,
     )
@@ -230,18 +235,14 @@ def error_budget(records):
             def rel(v):
                 return abs((Q(v) - native) / native)
 
-            def bound(lo, hi):
-                return max(rel(r[lo]), rel(r[hi])) if r[lo] else None
-
             return [
-                bound("lo", "hi"),
-                bound("fine_lo", "fine_hi"),
+                *(max(rel(r[lo]), rel(r[hi])) if r.get(lo) else None for lo, hi, _, _ in bounds),
                 rel(r["colossus"]),
                 rel(r["fixed_band"]),
             ]
 
         observations = [series(r) for r in subset]
-        for k, (c, ls) in enumerate(zip(colors, ["-", "-", "--", ":"], strict=True)):
+        for k, (c, ls, _) in enumerate(styles):
             drawable = [
                 (float(Q(row["mass_msun"])), float(vals[k]))
                 for row, vals in zip(subset, observations, strict=True)
